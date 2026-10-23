@@ -1,14 +1,14 @@
 # OrbisExtract
 
-Extrator de pacotes `.PKG` do PlayStation 4, com interface Avalonia e backend C# baseado no commit `92a4e7f8e5914cb06b52ba3ae6b0675da438a051` do [OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg).
+A cross-platform PlayStation 4 `.PKG` extractor with an Avalonia UI and a C# backend based on commit `92a4e7f8e5914cb06b52ba3ae6b0675da438a051` of [OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg).
 
-## Estado atual e limitações
+## Current status and limitations
 
-O motor integrado usa as APIs reais `PkgReader`, `Pkg.GetEkpfs` e `PfsReader`. Ele suporta PKGs que a biblioteca consegue abrir e descriptografar; PKGs comerciais que exigem passcode/chaves ainda precisam dessas credenciais e não são contornados. A UI desktop está em `src/OrbisExtract.App/OrbisExtract.App`; o projeto Avalonia multiplataforma gerado inclui Android, mas a validação Android exige SDK/workload e dispositivo ou emulador.
+The integrated engine uses the real `PkgReader`, `Pkg.GetEkpfs`, and `PfsReader` APIs. It supports PKGs that the library can open and decrypt; commercial PKGs requiring passcodes or missing keys still require those credentials and are not bypassed. The desktop UI is located in `src/OrbisExtract.App/OrbisExtract.App`; the Avalonia project also includes Android support, but Android validation requires the appropriate SDK, workload, and a physical device or emulator.
 
-O SDK instalado neste ambiente é .NET 8. Avalonia 12 requer .NET 8+ para desktop e .NET 10 para Android; por isso a variante Android deve ser compilada com .NET 10 e workload Android em uma máquina com esse SDK. O código comum e o backend compilam em `net8.0`.
+Avalonia desktop targets .NET 8 in the current project, while Android targets `net10.0-android`. The Android variant therefore requires the .NET 10 SDK and Android workload. The shared code and backend compile for `net8.0`.
 
-## Compilar e testar
+## Build and test
 
 ```powershell
 dotnet restore OrbisExtract.sln
@@ -16,24 +16,28 @@ dotnet build OrbisExtract.sln
 dotnet test OrbisExtract.sln --no-restore
 ```
 
-O desktop é compilável com .NET 8 pelo projeto `src/OrbisExtract.App/OrbisExtract.App.Desktop/OrbisExtract.App.Desktop.csproj`. O Android permanece em `net10.0-android`, pois Avalonia 12 exige .NET 10 para mobile; esse target requer SDK .NET 10 e workload Android.
+The desktop application can be built with .NET 8 using `src/OrbisExtract.App/OrbisExtract.App.Desktop/OrbisExtract.App.Desktop.csproj`. Android uses `net10.0-android` and requires the .NET 10 SDK and Android workload.
 
-## Publicação
+## Publishing
 
 - Windows: `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1`.
-- Linux: `bash scripts/publish-linux.sh` em ambiente Linux com .NET SDK.
-- AppImage: execute `bash scripts/build-appimage.sh` após publicar Linux; requer `appimagetool` no PATH.
-- Android local: instale o SDK .NET 10, `dotnet workload install android`, Android SDK e JDK 11+, e execute `bash scripts/publish-android.sh` no ambiente apropriado.
-- GitHub Actions: o workflow `.github/workflows/android-apk.yml` compila o APK em `workflow_dispatch` ou quando arquivos Android relevantes são alterados. O APK fica disponível como artifact `orbisextract-android-apk` por 14 dias. O workflow não instala o APK automaticamente em um telefone conectado ao PC.
+- Linux: `bash scripts/publish-linux.sh` in an environment with the .NET SDK.
+- AppImage: run `bash scripts/build-appimage.sh` after publishing Linux; `appimagetool` must be available on `PATH`.
+- Android local build: install the .NET 10 SDK, run `dotnet workload install android`, install the Android SDK and JDK 11+, then run `bash scripts/publish-android.sh` in the appropriate environment.
+- GitHub Actions: `.github/workflows/android-apk.yml` builds the APK through `workflow_dispatch` or when relevant Android project files change. The APK is uploaded as the `orbisextract-android-apk` artifact for 14 days. The workflow does not automatically install the APK on a phone connected to a developer's computer.
 
-`dotnet publish` não cria AppImage sozinho. O script monta um AppDir e chama `appimagetool`. No Android, o seletor SAF usa `IStorageFile.OpenReadAsync()` para URIs `content:` e `IStorageFolder` para criar os arquivos de saída sem converter a URI para caminho físico. As permissões/bookmarks persistentes dependem do provedor e ainda não foram validadas neste ambiente; a seleção é mantida durante a sessão atual.
+`dotnet publish` does not create an AppImage by itself. The AppImage script builds an AppDir and invokes `appimagetool`. On Android, the SAF picker uses `IStorageFile.OpenReadAsync()` for `content:` URIs and `IStorageFolder` to create output files without converting URIs into physical paths. Persistent permissions/bookmarks depend on the storage provider and have not been validated in the current environment; selections are retained for the current session.
 
-## Segurança
+## Security
 
-Nomes internos são normalizados e verificados contra traversal antes da escrita. Cada arquivo é escrito em temporário próprio e movido sem sobrescrever arquivos existentes. Cancelamento e falhas removem apenas temporários criados pela operação.
+Internal paths are normalized and checked against path traversal before writing. Each file is written to its own temporary file and committed without silently overwriting existing files. Cancellation and failures remove only temporary files created by the operation.
 
-Não há criação, reconstrução, conversão, instalação ou download de PKGs.
+The project does not create, rebuild, convert, install, download, or manage PKGs.
 
-## Testes de integração
+## Integration testing
 
-Não há amostra PKG autorizada incluída neste repositório. Portanto, a extração real com fixture legítima em Windows/Linux/Android ainda precisa ser executada pelo usuário e não é declarada como validada.
+No authorized PKG sample is included in this repository. Therefore, real extraction using a legitimate fixture on Windows, Linux, or Android still needs to be performed by the user and is not claimed as validated here.
+
+## License and third-party notices
+
+The main project license is provided in `LICENSE`. Third-party licenses, including OpenOrbis/LibOrbisPkg under LGPL-3.0, are documented in `THIRD-PARTY-NOTICES.md`.
