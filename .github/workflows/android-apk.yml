@@ -7,6 +7,7 @@ on:
       - 'src/**'
       - 'vendor/LibOrbisPkg/**'
       - 'scripts/publish-android.sh'
+      - 'scripts/publish-windows.ps1'
       - '.github/workflows/android-apk.yml'
       - '*.sln'
       - 'Directory.*'
@@ -55,6 +56,13 @@ jobs:
           test -d "$ANDROID_SDK_ROOT/platforms/android-35"
           test -d "$ANDROID_SDK_ROOT/build-tools/35.0.0"
 
+      - name: Clean Android build outputs
+        run: |
+          rm -rf src/OrbisExtract.App/OrbisExtract.App.Android/bin
+          rm -rf src/OrbisExtract.App/OrbisExtract.App.Android/obj
+          rm -rf artifacts/android
+          mkdir -p artifacts/android
+
       - name: Restore solution and Android project
         run: |
           dotnet restore OrbisExtract.sln
@@ -63,12 +71,8 @@ jobs:
       - name: Run automated tests
         run: dotnet test OrbisExtract.sln --no-restore --configuration Release
 
-      - name: Clean Android build outputs
-        run: |
-          rm -rf src/OrbisExtract.App/OrbisExtract.App.Android/bin
-          rm -rf src/OrbisExtract.App/OrbisExtract.App.Android/obj
-          rm -rf artifacts/android
-          mkdir -p artifacts/android
+      - name: Verify Android assets
+        run: test -f src/OrbisExtract.App/OrbisExtract.App.Android/obj/project.assets.json
 
       - name: Publish APK
         run: >-
@@ -86,5 +90,43 @@ jobs:
         with:
           name: orbisextract-android-apk
           path: artifacts/android/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-2025
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore desktop project
+        run: dotnet restore src/OrbisExtract.App/OrbisExtract.App.Desktop/OrbisExtract.App.Desktop.csproj -r win-x64
+
+      - name: Run automated tests
+        run: dotnet test OrbisExtract.sln --no-restore --configuration Release
+
+      - name: Publish Windows EXE
+        run: >-
+          dotnet publish
+          src/OrbisExtract.App/OrbisExtract.App.Desktop/OrbisExtract.App.Desktop.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          --no-restore
+          -o artifacts/windows
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbisextract-windows-exe
+          path: artifacts/windows/**
           if-no-files-found: error
           retention-days: 14
