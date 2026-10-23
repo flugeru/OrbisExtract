@@ -55,8 +55,10 @@ jobs:
           test -d "$ANDROID_SDK_ROOT/platforms/android-35"
           test -d "$ANDROID_SDK_ROOT/build-tools/35.0.0"
 
-      - name: Restore
-        run: dotnet restore src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
+      - name: Restore solution and Android project
+        run: |
+          dotnet restore OrbisExtract.sln
+          dotnet restore src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
 
       - name: Run automated tests
         run: dotnet test OrbisExtract.sln --no-restore --configuration Release

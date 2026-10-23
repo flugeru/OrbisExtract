@@ -1,5 +1,4 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -12,10 +11,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{BECAB958-ED7D-4D65-984C-2BFAB0359AA6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrbisExtract.Tests", "tests\OrbisExtract.Tests\OrbisExtract.Tests.csproj", "{B69AE7BD-7DEF-4A2B-A583-29DB668F90EF}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OrbisExtract.App", "OrbisExtract.App", "{73B58C5F-1F33-4A6C-814E-47482D4BB3D8}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrbisExtract.App", "src\OrbisExtract.App\OrbisExtract.App\OrbisExtract.App.csproj", "{98A22931-AE87-4EEF-9ED6-E93C35E1387F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,16 +33,10 @@ Global
 		{B69AE7BD-7DEF-4A2B-A583-29DB668F90EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B69AE7BD-7DEF-4A2B-A583-29DB668F90EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B69AE7BD-7DEF-4A2B-A583-29DB668F90EF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{98A22931-AE87-4EEF-9ED6-E93C35E1387F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{98A22931-AE87-4EEF-9ED6-E93C35E1387F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{98A22931-AE87-4EEF-9ED6-E93C35E1387F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{98A22931-AE87-4EEF-9ED6-E93C35E1387F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
+	GlobalSection(NestedProjects) = postSolution
 		{A6ED7DF2-3CD8-4EC6-9E8C-B5FA9D7E29D8} = {7AD55082-A1B8-4B72-897C-201B056C6AC9}
 		{CB1BB2CA-0970-4185-9BCA-4816CB7A2FC5} = {7AD55082-A1B8-4B72-897C-201B056C6AC9}
 		{B69AE7BD-7DEF-4A2B-A583-29DB668F90EF} = {BECAB958-ED7D-4D65-984C-2BFAB0359AA6}
-		{73B58C5F-1F33-4A6C-814E-47482D4BB3D8} = {7AD55082-A1B8-4B72-897C-201B056C6AC9}
-		{98A22931-AE87-4EEF-9ED6-E93C35E1387F} = {73B58C5F-1F33-4A6C-814E-47482D4BB3D8}
 	EndGlobalSection
 EndGlobal

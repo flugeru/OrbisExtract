@@ -9,3 +9,15 @@ C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Core\obj\Release\n
 C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\refint\OrbisExtract.Core.dll
 C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\OrbisExtract.Core.pdb
 C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\ref\OrbisExtract.Core.dll
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\bin\Release\net8.0\OrbisExtract.Core.deps.json
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\bin\Release\net8.0\OrbisExtract.Core.dll
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\bin\Release\net8.0\OrbisExtract.Core.pdb
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\OrbisExtract.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\OrbisExtract.Core.AssemblyInfoInputs.cache
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\OrbisExtract.Core.AssemblyInfo.cs
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\OrbisExtract.Core.csproj.CoreCompileInputs.cache
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\OrbisExtract.Core.sourcelink.json
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\OrbisExtract.Core.dll
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\refint\OrbisExtract.Core.dll
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\OrbisExtract.Core.pdb
+C:\Users\Flugel\Documents\GitHub\OrbisExtract\src\OrbisExtract.Core\obj\Release\net8.0\ref\OrbisExtract.Core.dll

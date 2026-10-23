@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj": {}
+    "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj": {
+    "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj",
+        "projectUniqueName": "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj",
         "projectName": "OrbisExtract.Core",
-        "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj",
+        "projectPath": "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj",
         "packagesPath": "C:\\Users\\Flugel\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\obj\\",
+        "outputPath": "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Core\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Flugel\\AppData\\Roaming\\NuGet\\NuGet.Config"

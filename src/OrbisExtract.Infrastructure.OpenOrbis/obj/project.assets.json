@@ -79,11 +79,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj",
+      "projectUniqueName": "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj",
       "projectName": "OrbisExtract.Infrastructure.OpenOrbis",
-      "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj",
+      "projectPath": "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj",
       "packagesPath": "C:\\Users\\Flugel\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\obj\\",
+      "outputPath": "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Flugel\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -99,11 +99,11 @@
           "framework": "net8.0",
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj": {
-              "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj"
+            "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj": {
+              "projectPath": "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj"
             },
-            "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj": {
-              "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj"
+            "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj": {
+              "projectPath": "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj"
             }
           }
         }
