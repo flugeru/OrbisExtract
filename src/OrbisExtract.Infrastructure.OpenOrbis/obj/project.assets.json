@@ -1,0 +1,147 @@
+{
+  "version": 4,
+  "targets": {
+    "net8.0": {
+      "System.Data.DataSetExtensions/4.5.0": {
+        "type": "package",
+        "compile": {
+          "ref/netstandard2.0/System.Data.DataSetExtensions.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/System.Data.DataSetExtensions.dll": {}
+        }
+      },
+      "LibOrbisPkg/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v8.0",
+        "dependencies": {
+          "System.Data.DataSetExtensions": "4.5.0"
+        },
+        "compile": {
+          "bin/placeholder/LibOrbisPkg.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/LibOrbisPkg.dll": {}
+        }
+      },
+      "OrbisExtract.Core/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v8.0",
+        "compile": {
+          "bin/placeholder/OrbisExtract.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/OrbisExtract.Core.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "System.Data.DataSetExtensions/4.5.0": {
+      "sha512": "221clPs1445HkTBZPL+K9sDBdJRB8UN8rgjO3ztB0CQ26z//fmJXtlsr6whGatscsKGBrhJl5bwJuKSA8mwFOw==",
+      "type": "package",
+      "path": "system.data.datasetextensions/4.5.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/net45/_._",
+        "lib/netstandard2.0/System.Data.DataSetExtensions.dll",
+        "ref/net45/_._",
+        "ref/netstandard2.0/System.Data.DataSetExtensions.dll",
+        "system.data.datasetextensions.4.5.0.nupkg.sha512",
+        "system.data.datasetextensions.nuspec",
+        "useSharedDesignerContext.txt",
+        "version.txt"
+      ]
+    },
+    "LibOrbisPkg/1.0.0": {
+      "type": "project",
+      "path": "../../vendor/LibOrbisPkg/LibOrbisPkg/LibOrbisPkg.csproj",
+      "msbuildProject": "../../vendor/LibOrbisPkg/LibOrbisPkg/LibOrbisPkg.csproj"
+    },
+    "OrbisExtract.Core/1.0.0": {
+      "type": "project",
+      "path": "../OrbisExtract.Core/OrbisExtract.Core.csproj",
+      "msbuildProject": "../OrbisExtract.Core/OrbisExtract.Core.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net8.0": [
+      "LibOrbisPkg >= 1.0.0",
+      "OrbisExtract.Core >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\Flugel\\.nuget\\packages\\": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj",
+      "projectName": "OrbisExtract.Infrastructure.OpenOrbis",
+      "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj",
+      "packagesPath": "C:\\Users\\Flugel\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\obj\\",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "C:\\Users\\Flugel\\AppData\\Roaming\\NuGet\\NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net8.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net8.0": {
+          "framework": "net8.0",
+          "targetAlias": "net8.0",
+          "projectReferences": {
+            "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj": {
+              "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj"
+            },
+            "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj": {
+              "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "10.0.400"
+    },
+    "frameworks": {
+      "net8.0": {
+        "framework": "net8.0",
+        "targetAlias": "net8.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.402/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

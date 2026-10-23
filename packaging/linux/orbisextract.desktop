@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=OrbisExtract
+Comment=Extrator de pacotes PlayStation 4
+Exec=OrbisExtract.App.Desktop
+Icon=orbisextract
+Terminal=false
+Categories=Utility;

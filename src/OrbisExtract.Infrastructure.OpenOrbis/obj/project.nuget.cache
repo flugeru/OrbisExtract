@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "iwiNynlEJLs=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Flugel\\.nuget\\packages\\system.data.datasetextensions\\4.5.0\\system.data.datasetextensions.4.5.0.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,214 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj",
+        "projectName": "OrbisExtract.Core",
+        "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj",
+        "packagesPath": "C:\\Users\\Flugel\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\Flugel\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "framework": "net8.0",
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.400"
+      },
+      "frameworks": {
+        "net8.0": {
+          "framework": "net8.0",
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.402/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj",
+        "projectName": "OrbisExtract.Infrastructure.OpenOrbis",
+        "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj",
+        "packagesPath": "C:\\Users\\Flugel\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\Flugel\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "framework": "net8.0",
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj": {
+                "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\src\\OrbisExtract.Core\\OrbisExtract.Core.csproj"
+              },
+              "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj": {
+                "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.400"
+      },
+      "frameworks": {
+        "net8.0": {
+          "framework": "net8.0",
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.402/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj",
+        "projectName": "LibOrbisPkg",
+        "projectPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\LibOrbisPkg.csproj",
+        "packagesPath": "C:\\Users\\Flugel\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Flugel\\Documents\\Kouki\\OrbisExtract\\vendor\\LibOrbisPkg\\LibOrbisPkg\\obj\\",
+        "projectStyle": "PackageReference",
+        "centralPackageVersionsManagementEnabled": true,
+        "configFilePaths": [
+          "C:\\Users\\Flugel\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "framework": "net8.0",
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.400"
+      },
+      "frameworks": {
+        "net8.0": {
+          "framework": "net8.0",
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "System.Data.DataSetExtensions": {
+              "target": "Package",
+              "version": "[4.5.0, )",
+              "versionCentrallyManaged": true
+            }
+          },
+          "centralPackageVersions": {
+            "coverlet.collector": "3.2.0",
+            "Microsoft.NET.Test.Sdk": "17.5.0",
+            "Microsoft.Windows.Compatibility": "8.0.8",
+            "MSTest.TestAdapter": "2.2.10",
+            "MSTest.TestFramework": "2.2.10",
+            "System.Data.DataSetExtensions": "4.5.0"
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.402/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\obj\Debug\net8.0\OrbisExtract.Infrastructure.OpenOrbis.csproj.AssemblyReference.cache
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\obj\Debug\net8.0\OrbisExtract.Infrastructure.OpenOrbis.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\obj\Debug\net8.0\OrbisExtract.Infrastructure.OpenOrbis.AssemblyInfoInputs.cache
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\obj\Debug\net8.0\OrbisExtract.Infrastructure.OpenOrbis.AssemblyInfo.cs
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\obj\Debug\net8.0\OrbisExtract.Infrastructure.OpenOrbis.csproj.CoreCompileInputs.cache
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\bin\Debug\net8.0\OrbisExtract.Infrastructure.OpenOrbis.deps.json
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\bin\Debug\net8.0\OrbisExtract.Infrastructure.OpenOrbis.dll
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\bin\Debug\net8.0\OrbisExtract.Infrastructure.OpenOrbis.pdb
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\bin\Debug\net8.0\LibOrbisPkg.dll
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\bin\Debug\net8.0\OrbisExtract.Core.dll
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\bin\Debug\net8.0\OrbisExtract.Core.pdb
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\bin\Debug\net8.0\LibOrbisPkg.pdb
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\obj\Debug\net8.0\OrbisExt.C75F9A79.Up2Date
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\obj\Debug\net8.0\OrbisExtract.Infrastructure.OpenOrbis.dll
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\obj\Debug\net8.0\refint\OrbisExtract.Infrastructure.OpenOrbis.dll
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\obj\Debug\net8.0\OrbisExtract.Infrastructure.OpenOrbis.pdb
+C:\Users\Flugel\Documents\Kouki\OrbisExtract\src\OrbisExtract.Infrastructure.OpenOrbis\obj\Debug\net8.0\ref\OrbisExtract.Infrastructure.OpenOrbis.dll

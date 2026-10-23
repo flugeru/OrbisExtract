@@ -1,0 +1,11 @@
+﻿<Solution>
+  <Project Path="OrbisExtract.App.Android/OrbisExtract.App.Android.csproj">
+    <Deploy />
+  </Project>
+  <Project Path="OrbisExtract.App.Browser/OrbisExtract.App.Browser.csproj" />
+  <Project Path="OrbisExtract.App.Desktop/OrbisExtract.App.Desktop.csproj" />
+  <Project Path="OrbisExtract.App.iOS/OrbisExtract.App.iOS.csproj">
+    <Deploy />
+  </Project>
+  <Project Path="OrbisExtract.App/OrbisExtract.App.csproj" />
+</Solution>

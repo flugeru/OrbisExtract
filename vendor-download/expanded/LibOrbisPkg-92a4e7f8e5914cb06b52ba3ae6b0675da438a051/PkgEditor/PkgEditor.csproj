@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TargetFramework)-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>pkgtool.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Update="Views\CryptoDebug.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Views\FileView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Views\PFSView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Views\SFOView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Views\GP4View.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Views\PkgView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Views\ObjectView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Views\View.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LibOrbisPkg\LibOrbisPkg.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="pkgtool.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Data.DataSetExtensions" />
+    <PackageReference Include="Microsoft.Windows.Compatibility" />
+  </ItemGroup>
+</Project>

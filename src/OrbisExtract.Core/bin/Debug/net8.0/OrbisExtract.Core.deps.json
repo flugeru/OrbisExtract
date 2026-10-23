@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "OrbisExtract.Core/1.0.0": {
+        "runtime": {
+          "OrbisExtract.Core.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "OrbisExtract.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
