@@ -107,8 +107,10 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore desktop project
-        run: dotnet restore src/OrbisExtract.App/OrbisExtract.App.Desktop/OrbisExtract.App.Desktop.csproj -r win-x64
+      - name: Restore solution and desktop project
+        run: |
+          dotnet restore OrbisExtract.sln
+          dotnet restore src/OrbisExtract.App/OrbisExtract.App.Desktop/OrbisExtract.App.Desktop.csproj -r win-x64
 
       - name: Run automated tests
         run: dotnet test OrbisExtract.sln --no-restore --configuration Release

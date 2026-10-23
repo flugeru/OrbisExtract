@@ -123,6 +123,10 @@
               "target": "Package",
               "version": "[2.5.3, )"
             },
+            "xunit.analyzers": {
+              "target": "Package",
+              "version": "[1.4.0, )"
+            },
             "xunit.runner.visualstudio": {
               "target": "Package",
               "version": "[2.5.3, )"

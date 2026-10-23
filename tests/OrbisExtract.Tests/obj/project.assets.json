@@ -5520,6 +5520,7 @@
       "OrbisExtract.Core >= 1.0.0",
       "coverlet.collector >= 6.0.0",
       "xunit >= 2.5.3",
+      "xunit.analyzers >= 1.4.0",
       "xunit.runner.visualstudio >= 2.5.3"
     ]
   },
@@ -5583,6 +5584,10 @@
           "xunit": {
             "target": "Package",
             "version": "[2.5.3, )"
+          },
+          "xunit.analyzers": {
+            "target": "Package",
+            "version": "[1.4.0, )"
           },
           "xunit.runner.visualstudio": {
             "target": "Package",
