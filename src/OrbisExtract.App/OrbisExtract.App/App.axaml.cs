@@ -5,7 +5,7 @@ using OrbisExtract.App.Views;
 
 namespace OrbisExtract.App;
 
-public sealed class App : Application
+public sealed class App : Avalonia.Application
 {
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
