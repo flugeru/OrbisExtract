@@ -37,15 +37,22 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             Stream? target = null;
             try
             {
-                target = await destination.CreateTemporaryFileAsync(file.FullName, cancellationToken).ConfigureAwait(false);
+                // LibOrbisPkg exposes PFS paths with a leading slash (for example
+                // "/sce_sys/param.sfo"). Extraction destinations are relative paths,
+                // so normalize that root marker before applying path-safety checks.
+                var relativePath = file.FullName.TrimStart('/', '\\');
+                if (string.IsNullOrWhiteSpace(relativePath))
+                    throw new PkgExtractionException("O pacote contém um caminho interno vazio.");
+
+                target = await destination.CreateTemporaryFileAsync(relativePath, cancellationToken).ConfigureAwait(false);
                 using var source = new PfsFileStream(file);
                 await source.CopyToAsync(target, 128 * 1024, cancellationToken).ConfigureAwait(false);
                 await target.FlushAsync(cancellationToken).ConfigureAwait(false);
-                await destination.CommitAsync(target, file.FullName, cancellationToken).ConfigureAwait(false);
+                await destination.CommitAsync(target, relativePath, cancellationToken).ConfigureAwait(false);
                 target = null;
                 count++;
                 bytes += file.size;
-                progress?.Report(new ExtractionProgress("Extraindo", file.FullName, count, files.Length, bytes, null));
+                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, null));
             }
             catch
             {
