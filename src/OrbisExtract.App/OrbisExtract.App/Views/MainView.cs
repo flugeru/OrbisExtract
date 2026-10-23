@@ -25,7 +25,7 @@ public sealed class MainView : UserControl
             TextWrapping = TextWrapping.Wrap
         };
 
-        var chooseFile = new Button
+        var chooseFile = new Avalonia.Controls.Button
         {
             Content = "Selecionar arquivo PKG",
             HorizontalAlignment = HorizontalAlignment.Stretch,
