@@ -40,12 +40,20 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses
 
       - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Verify Android SDK packages
+        run: |
+          sdkmanager --list_installed
+          test -d "$ANDROID_SDK_ROOT/platforms/android-35"
+          test -d "$ANDROID_SDK_ROOT/build-tools/35.0.0"
 
       - name: Restore
         run: dotnet restore src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
