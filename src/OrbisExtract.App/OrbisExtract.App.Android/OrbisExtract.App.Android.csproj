@@ -18,11 +18,28 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Android" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OrbisExtract.App\OrbisExtract.App.csproj" />
+    <Compile Include="..\OrbisExtract.App\App.axaml.cs" />
+    <Compile Include="..\OrbisExtract.App\StorageExtractionDestination.cs" />
+    <Compile Include="..\OrbisExtract.App\ViewLocator.cs" />
+    <Compile Include="..\OrbisExtract.App\ViewModels\**\*.cs" />
+    <Compile Include="..\OrbisExtract.App\Views\**\*.cs" />
+    <AvaloniaResource Include="..\OrbisExtract.App\App.axaml" />
+    <AvaloniaResource Include="..\OrbisExtract.App\Views\**\*.axaml" />
+    <AvaloniaResource Include="..\OrbisExtract.App\Assets\**" />
+    <ProjectReference Include="..\..\OrbisExtract.Core\OrbisExtract.Core.csproj" />
+    <ProjectReference Include="..\..\OrbisExtract.Infrastructure.OpenOrbis\OrbisExtract.Infrastructure.OpenOrbis.csproj" />
   </ItemGroup>
 </Project>

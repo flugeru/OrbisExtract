@@ -6,7 +6,7 @@ using Avalonia.Android;
 namespace OrbisExtract.App.Android
 {
     [Application]
-    public class Application : AvaloniaAndroidApplication<App>
+    public class Application : AvaloniaAndroidApplication<OrbisExtract.App.App>
     {
         protected Application(nint javaReference, JniHandleOwnership transfer) : base(javaReference, transfer)
         {

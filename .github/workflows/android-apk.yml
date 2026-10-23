@@ -69,6 +69,7 @@ jobs:
           src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj
           -f net10.0-android
           -c Release
+          --no-restore
           -p:AndroidPackageFormat=apk
           -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
           -o artifacts/android
