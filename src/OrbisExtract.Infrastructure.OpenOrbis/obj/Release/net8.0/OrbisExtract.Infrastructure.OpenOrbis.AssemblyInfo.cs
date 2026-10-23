@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("OrbisExtract.Infrastructure.OpenOrbis")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8eefb188a8fca4262f8811cfec1183ec3ab968ae")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+520d37e035153f5a873d5fbfebb2002b6682fb11")]
 [assembly: System.Reflection.AssemblyProductAttribute("OrbisExtract.Infrastructure.OpenOrbis")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OrbisExtract.Infrastructure.OpenOrbis")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
