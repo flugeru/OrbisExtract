@@ -4,19 +4,18 @@
     <TargetFramework>net10.0-android</TargetFramework>
     <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>com.CompanyName.OrbisExtract.App</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
   </PropertyGroup>
-
   <ItemGroup>
     <AndroidResource Include="Icon.png">
       <Link>Resources\drawable\Icon.png</Link>
     </AndroidResource>
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Android" />
@@ -29,17 +28,14 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
   </ItemGroup>
-
   <ItemGroup>
-    <Compile Include="..\OrbisExtract.App\OrbisExtract.App\App.axaml.cs" Link="App.axaml.cs" />
-    <Compile Include="..\OrbisExtract.App\OrbisExtract.App\StorageExtractionDestination.cs" Link="StorageExtractionDestination.cs" />
-    <Compile Include="..\OrbisExtract.App\OrbisExtract.App\ViewLocator.cs" Link="ViewLocator.cs" />
-    <Compile Include="..\OrbisExtract.App\OrbisExtract.App\ViewModels\**\*.cs" Link="ViewModels\%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Include="..\OrbisExtract.App\OrbisExtract.App\Views\**\*.cs" Link="Views\%(RecursiveDir)%(Filename)%(Extension)" />
-    <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/OrbisExtract.App/App.axaml" Link="App.axaml" />
-    <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/OrbisExtract.App/Views/**/*.axaml" Link="Views/%(RecursiveDir)%(Filename)%(Extension)" />
-    <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/OrbisExtract.App/Assets/**/*" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" />
-    <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/OrbisExtract.App/Assets/**/*" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\OrbisExtract.App\App.axaml.cs" Link="App.axaml.cs" />
+    <Compile Include="..\OrbisExtract.App\MainWindow.cs" Link="MainWindow.cs" />
+    <Compile Include="..\OrbisExtract.App\ViewLocator.cs" Link="ViewLocator.cs" />
+    <Compile Include="..\OrbisExtract.App\Views\**\*.cs" Link="Views\%(RecursiveDir)%(Filename)%(Extension)" />
+    <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/App.axaml" Link="App.axaml" />
+    <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/Views/**/*.axaml" Link="Views/%(RecursiveDir)%(Filename)%(Extension)" />
+    <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/Assets/**/*" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" />
     <ProjectReference Include="..\..\OrbisExtract.Core\OrbisExtract.Core.csproj" />
     <ProjectReference Include="..\..\OrbisExtract.Infrastructure.OpenOrbis\OrbisExtract.Infrastructure.OpenOrbis.csproj" />
   </ItemGroup>
