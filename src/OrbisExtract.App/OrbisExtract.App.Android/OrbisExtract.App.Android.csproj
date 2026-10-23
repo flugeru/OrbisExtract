@@ -41,5 +41,7 @@
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/Assets/**/*" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" />
     <ProjectReference Include="..\..\OrbisExtract.Core\OrbisExtract.Core.csproj" />
     <ProjectReference Include="..\..\OrbisExtract.Infrastructure.OpenOrbis\OrbisExtract.Infrastructure.OpenOrbis.csproj" />
+    <ProjectReference Include="..\..\OrbisExtract.Core\OrbisExtract.Core.csproj" />
+    <ProjectReference Include="..\..\OrbisExtract.Infrastructure.OpenOrbis\OrbisExtract.Infrastructure.OpenOrbis.csproj" />
   </ItemGroup>
 </Project>
