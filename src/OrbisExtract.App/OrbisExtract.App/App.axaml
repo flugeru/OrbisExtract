@@ -2,7 +2,5 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="OrbisExtract.App.App"
              RequestedThemeVariant="Default">
-  <Application.Styles>
-    <FluentTheme xmlns="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent" />
-  </Application.Styles>
+  <Application.Styles />
 </Application>
