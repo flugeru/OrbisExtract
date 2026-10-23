@@ -1,4 +1,7 @@
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace OrbisExtract.Core;
 
@@ -90,7 +93,8 @@ public static class SafeExtractionPath
     {
         if (string.IsNullOrWhiteSpace(packagePath)) throw new PkgExtractionException("O pacote contém um caminho vazio.");
         var normalized = packagePath.Replace('\\', '/');
-        if (normalized.StartsWith('/') || Path.IsPathRooted(packagePath) || normalized.Contains("../", StringComparison.Ordinal)) throw new PkgExtractionException($"Caminho interno inseguro: {packagePath}");
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (normalized.StartsWith('/') || Path.IsPathRooted(packagePath) || segments.Any(segment => segment == "..")) throw new PkgExtractionException($"Caminho interno inseguro: {packagePath}");
         var fullDestination = Path.GetFullPath(destinationDirectory);
         var fullPath = Path.GetFullPath(Path.Combine(fullDestination, normalized));
         var relative = Path.GetRelativePath(fullDestination, fullPath);

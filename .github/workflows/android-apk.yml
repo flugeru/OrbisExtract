@@ -63,6 +63,13 @@ jobs:
       - name: Run automated tests
         run: dotnet test OrbisExtract.sln --no-restore --configuration Release
 
+      - name: Clean Android build outputs
+        run: |
+          rm -rf src/OrbisExtract.App/OrbisExtract.App.Android/bin
+          rm -rf src/OrbisExtract.App/OrbisExtract.App.Android/obj
+          rm -rf artifacts/android
+          mkdir -p artifacts/android
+
       - name: Publish APK
         run: >-
           dotnet publish
