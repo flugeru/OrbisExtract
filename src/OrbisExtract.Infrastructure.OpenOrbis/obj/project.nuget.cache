@@ -1,13 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "kPh5Zxyui2c=",
+  "dgSpecHash": "T0fZerpMSVk=",
   "success": true,
   "projectFilePath": "C:\\Users\\Flugel\\Documents\\GitHub\\OrbisExtract\\src\\OrbisExtract.Infrastructure.OpenOrbis\\OrbisExtract.Infrastructure.OpenOrbis.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Flugel\\.nuget\\packages\\system.data.datasetextensions\\4.5.0\\system.data.datasetextensions.4.5.0.nupkg.sha512",
-    "C:\\Users\\Flugel\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\8.0.32\\microsoft.netcore.app.runtime.win-x64.8.0.32.nupkg.sha512",
-    "C:\\Users\\Flugel\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\8.0.32\\microsoft.windowsdesktop.app.runtime.win-x64.8.0.32.nupkg.sha512",
-    "C:\\Users\\Flugel\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\8.0.32\\microsoft.aspnetcore.app.runtime.win-x64.8.0.32.nupkg.sha512"
+    "C:\\Users\\Flugel\\.nuget\\packages\\microsoft.netcore.app.runtime.linux-bionic-arm64\\8.0.32\\microsoft.netcore.app.runtime.linux-bionic-arm64.8.0.32.nupkg.sha512"
   ],
   "logs": []
 }

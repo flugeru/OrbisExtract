@@ -35,7 +35,7 @@
         }
       }
     },
-    "net8.0/win-x64": {
+    "net8.0/android-arm64": {
       "System.Data.DataSetExtensions/4.5.0": {
         "type": "package",
         "compile": {
@@ -171,15 +171,7 @@
         "warn": true,
         "downloadDependencies": [
           {
-            "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
-            "version": "[8.0.32, 8.0.32]"
-          },
-          {
-            "name": "Microsoft.NETCore.App.Runtime.win-x64",
-            "version": "[8.0.32, 8.0.32]"
-          },
-          {
-            "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
+            "name": "Microsoft.NETCore.App.Runtime.linux-bionic-arm64",
             "version": "[8.0.32, 8.0.32]"
           }
         ],
@@ -192,7 +184,7 @@
       }
     },
     "runtimes": {
-      "win-x64": {
+      "android-arm64": {
         "#import": []
       }
     }
