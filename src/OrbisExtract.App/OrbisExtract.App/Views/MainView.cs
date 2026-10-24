@@ -6,6 +6,8 @@ using Avalonia.Platform.Storage;
 using OrbisExtract.Core;
 using OrbisExtract.Infrastructure.OpenOrbis;
 using System.Collections.Generic;
+using Button = Avalonia.Controls.Button;
+using ProgressBar = Avalonia.Controls.ProgressBar;
 
 namespace OrbisExtract.App.Views;
 
@@ -34,7 +36,7 @@ public sealed class MainView : UserControl
         _progress = new ProgressBar { Minimum = 0, Maximum = 100, Height = 7, IsVisible = false };
         _passcode = new TextBox
         {
-            Watermark = "Passcode (opcional)",
+            PlaceholderText = "Passcode (opcional)",
             PasswordChar = '•',
             Padding = new Thickness(12),
             Background = new SolidColorBrush(Color.Parse("#171B24")),
@@ -269,7 +271,7 @@ public sealed class MainView : UserControl
             }
 
             var temporaryName = $".{segments[^1]}.{Guid.NewGuid():N}.orbisextract.tmp";
-            var file = await folder.CreateFileAsync(temporaryName, CreationCollisionOption.FailIfExists);
+            var file = await folder.CreateFileAsync(temporaryName, Avalonia.Platform.Storage.NameCollisionOption.FailIfExists);
             var stream = await file.OpenWriteAsync();
             _files[stream] = file;
             return stream;
