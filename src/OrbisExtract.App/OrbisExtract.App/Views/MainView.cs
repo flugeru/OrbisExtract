@@ -303,17 +303,39 @@ public sealed class MainView : UserControl
             if (segments.Length == 0 || segments.Any(s => s is "." or ".."))
                 throw new PkgExtractionException($"Caminho interno inseguro: {relativePath}");
 
-            IStorageFolder folder = _root;
+            IStorageFolder? folder = _root;
+            if (folder is null)
+                throw new PkgExtractionException("O provedor de armazenamento não forneceu a pasta de destino.");
+
             foreach (var segment in segments[..^1])
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                try { folder = await folder.GetFolderAsync(segment); }
-                catch { folder = await folder.CreateFolderAsync(segment); }
+                var parent = folder ?? throw new PkgExtractionException($"Pasta pai inválida ao criar '{segment}'.");
+                IStorageFolder? child = null;
+                try { child = await parent.GetFolderAsync(segment); }
+                catch (Exception ex)
+                {
+                    Log($"Pasta '{segment}' ainda não existe ou não pôde ser aberta: {ex.Message}");
+                }
+
+                if (child is null)
+                {
+                    Log($"Criando diretório de saída: {segment}");
+                    child = await parent.CreateFolderAsync(segment);
+                }
+
+                folder = child ?? throw new PkgExtractionException($"O provedor de armazenamento não conseguiu abrir nem criar o diretório '{segment}'.");
             }
 
+            var targetFolder = folder ?? throw new PkgExtractionException($"Pasta de destino inválida para '{relativePath}'.");
             var temporaryName = $".{segments[^1]}.{Guid.NewGuid():N}.orbisextract.tmp";
-            var file = await folder.CreateFileAsync(temporaryName);
+            Log($"Criando arquivo temporário de saída: {relativePath}");
+            var file = await targetFolder.CreateFileAsync(temporaryName);
+            if (file is null)
+                throw new PkgExtractionException($"O provedor de armazenamento não criou o arquivo temporário para '{relativePath}'.");
             var stream = await file.OpenWriteAsync();
+            if (stream is null)
+                throw new PkgExtractionException($"Não foi possível abrir o arquivo temporário para escrita: '{relativePath}'.");
             _files[stream] = file;
             return stream;
         }
