@@ -24,6 +24,10 @@ public sealed class App : Application
                 Content = new MainView()
             };
         }
+        else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+        {
+            singleView.MainView = new MainView();
+        }
 
         base.OnFrameworkInitializationCompleted();
     }
