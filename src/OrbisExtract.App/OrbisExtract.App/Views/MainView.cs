@@ -141,13 +141,17 @@ public sealed class MainView : UserControl
         };
     }
 
-    private static string FormatBytes(long bytes)
+    private void Log(string message)
     {
-        string[] units = ["B", "KiB", "MiB", "GiB", "TiB"];
-        double value = Math.Max(0, bytes);
-        var unit = 0;
-        while (value >= 1024 && unit < units.Length - 1) { value /= 1024; unit++; }
-        return $"{value:0.##} {units[unit]}";
+        var line = $"{DateTime.Now:HH:mm:ss}  {message}";
+        Dispatcher.UIThread.Post(() =>
+        {
+            _logLines.Enqueue(line);
+            while (_logLines.Count > MaxLogLines)
+                _logLines.Dequeue();
+            _log.Text = string.Join(Environment.NewLine, _logLines);
+            _log.CaretIndex = _log.Text.Length;
+        });
     }
 
     private void Log(string message)
@@ -221,7 +225,7 @@ public sealed class MainView : UserControl
             {
                 Log("Lendo metadados do PKG…");
                 var info = await new OpenOrbisPkgMetadataReader().ReadAsync(stream, _lifetime.Token);
-                Log($"Metadados lidos: título={info.Title}; versão={info.Version}; content ID={info.ContentId}");
+                Log("Metadados do PKG lidos.");
                 _metadata.Text = $"{info.Title}\nVersão: {info.Version}\nContent ID: {info.ContentId}";
             }
         }
@@ -229,7 +233,7 @@ public sealed class MainView : UserControl
         {
             _metadata.Text = "Metadados indisponíveis; o pacote ainda pode ser tentado.";
             _status.Text = ex.Message;
-            Log($"Aviso ao ler metadados: {ex}");
+            Log($"Aviso ao ler metadados: {ex.Message}");
         }
         _extract.IsEnabled = _destination is not null;
     }
@@ -272,46 +276,20 @@ public sealed class MainView : UserControl
             await using (var source = await _package.OpenReadAsync())
             await using (var temp = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 128 * 1024, true))
                 await source.CopyToAsync(temp, _lifetime.Token);
-            Log($"Cópia temporária concluída. Tamanho: {new FileInfo(tempPath).Length:N0} bytes.");
+            Log("Cópia temporária concluída.");
 
             await using var packageStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, true);
             Log("Abrindo e validando a estrutura interna do PKG…");
             var destination = new StorageFolderExtractionDestination(_destination, Log);
-            var extractionClock = System.Diagnostics.Stopwatch.StartNew();
-            string? lastLoggedPath = null;
-            long lastLoggedCompleted = 0;
             var progress = new Progress<ExtractionProgress>(p =>
             {
-                var percent = p.BytesTotal is > 0
-                    ? Math.Clamp(p.BytesCompleted * 100d / p.BytesTotal.Value, 0, 100)
-                    : p.FilesTotal is > 0 ? Math.Clamp(p.FilesCompleted * 100d / p.FilesTotal.Value, 0, 100) : 0;
-                _progress.Value = percent;
-
-                var speed = extractionClock.Elapsed.TotalSeconds > 0
-                    ? p.BytesCompleted / extractionClock.Elapsed.TotalSeconds
+                var total = p.FilesTotal ?? 0;
+                _progress.Value = total > 0
+                    ? Math.Clamp(p.FilesCompleted * 100d / total, 0, 100)
                     : 0;
-                var totalText = p.BytesTotal is > 0 ? FormatBytes(p.BytesTotal.Value) : "calculando";
-                var remainingBytes = p.BytesTotal is > 0 ? Math.Max(0, p.BytesTotal.Value - p.BytesCompleted) : 0;
-                var etaSeconds = speed > 0 && p.BytesTotal is > 0 ? remainingBytes / speed : 0;
-                var eta = etaSeconds > 0 && etaSeconds < 86400
-                    ? TimeSpan.FromSeconds(etaSeconds).ToString(@"hh\\:mm\\:ss")
-                    : "calculando…";
                 _status.Text = p.State == "Concluído"
-                    ? $"Concluído · {p.FilesCompleted:N0} arquivos · {FormatBytes(p.BytesCompleted)}"
-                    : $"{percent:0.0}% · {p.FilesCompleted:N0}/{p.FilesTotal ?? 0:N0} arquivos · {FormatBytes(p.BytesCompleted)} / {totalText} · {FormatBytes((long)speed)}/s · ETA {eta}";
-
-                if (p.CurrentPath is not null && !string.Equals(lastLoggedPath, p.CurrentPath, StringComparison.Ordinal))
-                {
-                    lastLoggedPath = p.CurrentPath;
-                    Log($"EXTRAINDO  {p.CurrentPath}");
-                }
-                if (p.FilesCompleted > lastLoggedCompleted)
-                {
-                    lastLoggedCompleted = p.FilesCompleted;
-                    Log($"CONCLUÍDO  {p.FilesCompleted:N0}/{p.FilesTotal ?? 0:N0} arquivos · {FormatBytes(p.BytesCompleted)} / {totalText}");
-                }
-                if (p.State == "Concluído")
-                    Log($"RESUMO  {p.FilesCompleted:N0} arquivos · {FormatBytes(p.BytesCompleted)} processados em {extractionClock.Elapsed:hh\\:mm\\:ss}");
+                    ? $"Concluído · {p.FilesCompleted:N0} arquivos"
+                    : $"{p.State} · {p.FilesCompleted:N0}/{total:N0} arquivos";
             });
             var result = await new OpenOrbisPkgExtractor().ExtractAsync(
                 new ExtractionRequest(packageStream, string.Empty, string.IsNullOrWhiteSpace(_passcode.Text) ? null : _passcode.Text, Destination: destination),
@@ -324,12 +302,12 @@ public sealed class MainView : UserControl
         catch (OperationCanceledException ex)
         {
             _status.Text = "Extração cancelada.";
-            Log($"CANCELADA: {ex}");
+            Log("Extração cancelada.");
         }
         catch (Exception ex)
         {
             _status.Text = $"Falha na extração: {ex.Message}";
-            Log($"ERRO FATAL: {ex}");
+            Log($"Falha na extração: {ex.Message}");
         }
         finally
         {
