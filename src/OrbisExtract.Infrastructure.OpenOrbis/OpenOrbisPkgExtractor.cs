@@ -50,6 +50,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 using var source = new PfsFileStream(file);
                 long fileBytes = 0;
                 var lastReport = System.Diagnostics.Stopwatch.StartNew();
+                long lastReportedBytes = 0;
                 progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, totalBytes));
                 while (true)
                 {
@@ -58,9 +59,14 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                     if (read == 0) break;
                     await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                     fileBytes += read;
-                    if (lastReport.ElapsedMilliseconds >= 150 || fileBytes == file.size)
+                    if (lastReport.ElapsedMilliseconds >= 500 || fileBytes == file.size)
                     {
-                        progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes + fileBytes, totalBytes));
+                        // Throttle progress notifications: UI updates are expensive on mobile.
+                        if (fileBytes != lastReportedBytes || fileBytes == file.size)
+                        {
+                            progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes + fileBytes, totalBytes));
+                            lastReportedBytes = fileBytes;
+                        }
                         lastReport.Restart();
                     }
                 }
