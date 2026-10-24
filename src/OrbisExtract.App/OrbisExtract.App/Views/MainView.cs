@@ -154,22 +154,6 @@ public sealed class MainView : UserControl
         });
     }
 
-    private void Log(string message)
-    {
-        var line = $"{DateTime.Now:HH:mm:ss.fff}  {message}";
-        Dispatcher.UIThread.Post(() =>
-        {
-            _logLines.Enqueue(line);
-            while (_logLines.Count > MaxLogLines)
-                _logLines.Dequeue();
-
-            // Keep the visible log bounded. Rebuilding an ever-growing TextBox on
-            // every event caused excessive allocations and could freeze Android.
-            _log.Text = string.Join(Environment.NewLine, _logLines);
-            _log.CaretIndex = _log.Text.Length;
-        });
-    }
-
     private static TextBlock Label(string text, double size, string color) => new()
     {
         Text = text,
