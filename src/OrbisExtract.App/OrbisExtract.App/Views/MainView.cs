@@ -80,77 +80,149 @@ public sealed class MainView : UserControl
         _extract.IsEnabled = false;
         _extract.Click += async (_, _) => await ExtractAsync();
 
-        var card = new Border
+        var packageCard = SectionCard("ARQUIVO DO PACOTE",
+            "Selecione o PKG para consultar os metadados antes de extrair.",
+            _fileName, _metadata, _choosePackage);
+
+        var settingsCard = SectionCard("DESTINO E CHAVE",
+            "Defina onde salvar os arquivos e informe o passcode, se necessário.",
+            Label("PASTA DE DESTINO", 11, "#AAB4C3"),
+            _chooseDestination,
+            Label("PASSCODE (OPCIONAL)", 11, "#AAB4C3"),
+            _passcode);
+
+        var operationCard = new Border
         {
             Background = new SolidColorBrush(Color.Parse("#151B24")),
             BorderBrush = new SolidColorBrush(Color.Parse("#2B3542")),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(16),
+            CornerRadius = new CornerRadius(18),
             Padding = new Thickness(20),
             Child = new StackPanel
             {
                 Spacing = 14,
                 Children =
                 {
-                    Label("PACOTE SELECIONADO", 11, "#AAB4C3"),
-                    _fileName,
-                    _metadata,
-                    _choosePackage,
-                    new Border { Height = 1, Background = new SolidColorBrush(Color.Parse("#2B3542")) },
-                    Label("DESTINO DA EXTRAÇÃO", 11, "#AAB4C3"),
-                    _chooseDestination,
-                    Label("CHAVE / PASSCODE", 11, "#AAB4C3"),
-                    _passcode,
+                    Label("PROGRESSO DA EXTRAÇÃO", 11, "#AAB4C3"),
+                    new TextBlock
+                    {
+                        Text = "Acompanhe aqui o andamento do processo.",
+                        FontSize = 15,
+                        FontWeight = FontWeight.SemiBold,
+                        Foreground = new SolidColorBrush(Color.Parse("#F5F7FA")),
+                        TextWrapping = TextWrapping.Wrap
+                    },
                     _extract,
                     _progress,
+                    _status,
                     new Expander
                     {
                         Header = "Ver log detalhado",
                         IsExpanded = false,
                         Foreground = new SolidColorBrush(Color.Parse("#AAB4C3")),
                         Content = _log
-                    },
-                    _status
+                    }
+                }
+            }
+        };
+
+        var desktopColumns = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,*"),
+            RowDefinitions = new RowDefinitions("Auto,Auto"),
+            ColumnSpacing = 16,
+            RowSpacing = 16
+        };
+        Grid.SetColumn(packageCard, 0);
+        Grid.SetRow(packageCard, 0);
+        Grid.SetColumn(settingsCard, 1);
+        Grid.SetRow(settingsCard, 0);
+        Grid.SetColumn(operationCard, 0);
+        Grid.SetRow(operationCard, 1);
+        Grid.SetColumnSpan(operationCard, 2);
+        desktopColumns.Children.Add(packageCard);
+        desktopColumns.Children.Add(settingsCard);
+        desktopColumns.Children.Add(operationCard);
+
+        var mobileLayout = new StackPanel
+        {
+            Spacing = 14,
+            Children = { packageCard, settingsCard, operationCard }
+        };
+
+        var isAndroid = OperatingSystem.IsAndroid();
+        var mainContent = new StackPanel
+        {
+            Spacing = 22,
+            Margin = isAndroid ? new Thickness(16, 22, 16, 28) : new Thickness(28, 30),
+            MaxWidth = 980,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Children =
+            {
+                new StackPanel
+                {
+                    Spacing = 7,
+                    Children =
+                    {
+                        Label("WORKSPACE  /  EXTRAÇÃO", 11, "#B9A7FF"),
+                        new TextBlock
+                        {
+                            Text = "Extrair pacote",
+                            FontSize = isAndroid ? 27 : 32,
+                            FontWeight = FontWeight.Bold,
+                            Foreground = new SolidColorBrush(Color.Parse("#F5F7FA"))
+                        },
+                        new TextBlock
+                        {
+                            Text = "Gerencie o arquivo, o destino e o andamento em um só lugar.",
+                            FontSize = 14,
+                            Foreground = new SolidColorBrush(Color.Parse("#AAB4C3")),
+                            TextWrapping = TextWrapping.Wrap
+                        }
+                    }
+                },
+                isAndroid ? mobileLayout : desktopColumns,
+                new TextBlock
+                {
+                    Text = "Use apenas pacotes e chaves que você tem autorização para acessar.",
+                    TextWrapping = TextWrapping.Wrap,
+                    Foreground = new SolidColorBrush(Color.Parse("#667181")),
+                    FontSize = 12
                 }
             }
         };
 
         Content = new ScrollViewer
         {
-            Content = new StackPanel
-            {
-                Spacing = 22,
-                Margin = new Thickness(22, 28),
-                MaxWidth = 720,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Children =
-                {
-                    Label("ORBIS", 12, "#B9A7FF"),
-                    new TextBlock
-                    {
-                        Text = "OrbisExtract",
-                        FontSize = 34,
-                        FontWeight = FontWeight.Bold,
-                        Foreground = Brushes.White,
-                        HorizontalAlignment = HorizontalAlignment.Center
-                    },
-                    new TextBlock
-                    {
-                        Text = "PlayStation 4 · PKG Extractor",
-                        FontSize = 15,
-                        Foreground = new SolidColorBrush(Color.Parse("#AAB4C3")),
-                        HorizontalAlignment = HorizontalAlignment.Center
-                    },
-                    card,
-                    new TextBlock
-                    {
-                        Text = "Os resultados dependem do formato do pacote e das chaves/passcodes legítimos necessários.",
-                        TextWrapping = TextWrapping.Wrap,
-                        Foreground = new SolidColorBrush(Color.Parse("#667181")),
-                        FontSize = 12
-                    }
-                }
-            }
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+            Content = mainContent
+        };
+    }
+
+    private static Border SectionCard(string title, string description, params Control[] controls)
+    {
+        var panel = new StackPanel { Spacing = 13 };
+        panel.Children.Add(Label(title, 11, "#B9A7FF"));
+        panel.Children.Add(new TextBlock
+        {
+            Text = description,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.Parse("#AAB4C3")),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 4)
+        });
+        foreach (var control in controls)
+            panel.Children.Add(control);
+
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#151B24")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#2B3542")),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(18),
+            Child = panel
         };
     }
 
