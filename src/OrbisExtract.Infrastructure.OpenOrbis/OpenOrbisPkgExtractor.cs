@@ -30,6 +30,8 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         var inner = new PfsReader(new PFSCReader(outer.GetFile("pfs_image.dat").GetView()));
         var files = inner.GetAllFiles().ToArray();
         long count = 0, bytes = 0;
+        var totalBytes = files.Sum(file => (long)file.size);
+        var buffer = new byte[128 * 1024];
         foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -46,13 +48,29 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
 
                 target = await destination.CreateTemporaryFileAsync(relativePath, cancellationToken).ConfigureAwait(false);
                 using var source = new PfsFileStream(file);
-                await source.CopyToAsync(target, 128 * 1024, cancellationToken).ConfigureAwait(false);
+                long fileBytes = 0;
+                var lastReport = System.Diagnostics.Stopwatch.StartNew();
+                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, totalBytes));
+                while (true)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
+                    if (read == 0) break;
+                    await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                    fileBytes += read;
+                    if (lastReport.ElapsedMilliseconds >= 150 || fileBytes == file.size)
+                    {
+                        progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes + fileBytes, totalBytes));
+                        lastReport.Restart();
+                    }
+                }
+
                 await target.FlushAsync(cancellationToken).ConfigureAwait(false);
                 await destination.CommitAsync(target, relativePath, cancellationToken).ConfigureAwait(false);
                 target = null;
                 count++;
-                bytes += file.size;
-                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, null));
+                bytes += fileBytes;
+                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, totalBytes));
             }
             catch
             {
@@ -61,7 +79,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 throw;
             }
         }
-        progress?.Report(new ExtractionProgress("Concluído", null, count, files.Length, bytes, null));
+        progress?.Report(new ExtractionProgress("Concluído", null, count, files.Length, bytes, totalBytes));
         return new ExtractionResult(count, bytes);
     }
 
