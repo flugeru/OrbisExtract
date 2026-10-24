@@ -31,7 +31,6 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         var files = inner.GetAllFiles().ToArray();
         long count = 0, bytes = 0;
         var totalBytes = files.Sum(file => (long)file.size);
-        var buffer = new byte[128 * 1024];
         foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -39,43 +38,19 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             Stream? target = null;
             try
             {
-                // LibOrbisPkg exposes PFS paths with a leading slash (for example
-                // "/sce_sys/param.sfo"). Extraction destinations are relative paths,
-                // so normalize that root marker before applying path-safety checks.
                 var relativePath = file.FullName.TrimStart('/', '\\');
                 if (string.IsNullOrWhiteSpace(relativePath))
                     throw new PkgExtractionException("O pacote contém um caminho interno vazio.");
 
+                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, totalBytes));
                 target = await destination.CreateTemporaryFileAsync(relativePath, cancellationToken).ConfigureAwait(false);
                 using var source = new PfsFileStream(file);
-                long fileBytes = 0;
-                var lastReport = System.Diagnostics.Stopwatch.StartNew();
-                long lastReportedBytes = 0;
-                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, totalBytes));
-                while (true)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
-                    if (read == 0) break;
-                    await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                    fileBytes += read;
-                    if (lastReport.ElapsedMilliseconds >= 500 || fileBytes == file.size)
-                    {
-                        // Throttle progress notifications: UI updates are expensive on mobile.
-                        if (fileBytes != lastReportedBytes || fileBytes == file.size)
-                        {
-                            progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes + fileBytes, totalBytes));
-                            lastReportedBytes = fileBytes;
-                        }
-                        lastReport.Restart();
-                    }
-                }
-
+                await source.CopyToAsync(target, 128 * 1024, cancellationToken).ConfigureAwait(false);
                 await target.FlushAsync(cancellationToken).ConfigureAwait(false);
                 await destination.CommitAsync(target, relativePath, cancellationToken).ConfigureAwait(false);
                 target = null;
                 count++;
-                bytes += fileBytes;
+                bytes += file.size;
                 progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, totalBytes));
             }
             catch
