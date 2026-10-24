@@ -47,7 +47,6 @@ public sealed class MainView : UserControl
             Background = new SolidColorBrush(Color.Parse("#0D1017")),
             Foreground = new SolidColorBrush(Color.Parse("#C9D1DF")),
             BorderBrush = new SolidColorBrush(Color.Parse("#272E3B")),
-            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
             Text = $"{DateTime.Now:HH:mm:ss}  [INFO]  OrbisExtract iniciado."
         };
         _passcode = new TextBox
