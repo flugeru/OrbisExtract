@@ -271,7 +271,7 @@ public sealed class MainView : UserControl
             }
 
             var temporaryName = $".{segments[^1]}.{Guid.NewGuid():N}.orbisextract.tmp";
-            var file = await folder.CreateFileAsync(temporaryName, Avalonia.Platform.Storage.NameCollisionOption.FailIfExists);
+            var file = await folder.CreateFileAsync(temporaryName);
             var stream = await file.OpenWriteAsync();
             _files[stream] = file;
             return stream;
@@ -290,7 +290,7 @@ public sealed class MainView : UserControl
             foreach (var segment in segments[..^1])
                 folder = await folder.GetFolderAsync(segment);
 
-            var finalFile = await folder.CreateFileAsync(segments[^1], CreationCollisionOption.FailIfExists);
+            var finalFile = await folder.CreateFileAsync(segments[^1]);
             await using var input = await file.OpenReadAsync();
             await using var output = await finalFile.OpenWriteAsync();
             await input.CopyToAsync(output, cancellationToken);
