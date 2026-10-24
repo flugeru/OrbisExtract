@@ -32,13 +32,21 @@ public sealed class MainView : UserControl
 
     public MainView()
     {
-        Background = new SolidColorBrush(Color.Parse("#0B0D12"));
+        Background = new SolidColorBrush(Color.Parse("#0B0F14"));
         Foreground = Brushes.White;
 
-        _fileName = Label("Nenhum pacote selecionado", 14, "#A8B0C0");
-        _metadata = Label("Selecione um PKG para consultar os metadados.", 13, "#A8B0C0");
-        _status = Label("Pronto para começar.", 13, "#C9D1DF");
-        _progress = new ProgressBar { Minimum = 0, Maximum = 100, Height = 7, IsVisible = false };
+        _fileName = Label("Nenhum pacote selecionado", 14, "#AAB4C3");
+        _metadata = Label("Selecione um PKG para consultar os metadados.", 13, "#AAB4C3");
+        _status = Label("Pronto para começar.", 13, "#F5F7FA");
+        _progress = new ProgressBar
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Height = 8,
+            IsVisible = false,
+            Foreground = new SolidColorBrush(Color.Parse("#FF8A65")),
+            Background = new SolidColorBrush(Color.Parse("#2B3542"))
+        };
         _log = new TextBox
         {
             IsReadOnly = true,
@@ -49,8 +57,8 @@ public sealed class MainView : UserControl
             FontSize = 11,
             Padding = new Thickness(10),
             Background = new SolidColorBrush(Color.Parse("#0D1017")),
-            Foreground = new SolidColorBrush(Color.Parse("#C9D1DF")),
-            BorderBrush = new SolidColorBrush(Color.Parse("#272E3B")),
+            Foreground = new SolidColorBrush(Color.Parse("#F5F7FA")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#2B3542")),
             Text = $"{DateTime.Now:HH:mm:ss}  [INFO]  OrbisExtract iniciado."
         };
         _logLines.Enqueue(_log.Text);
@@ -59,23 +67,23 @@ public sealed class MainView : UserControl
             PlaceholderText = "Passcode (opcional)",
             PasswordChar = '•',
             Padding = new Thickness(12),
-            Background = new SolidColorBrush(Color.Parse("#171B24")),
+            Background = new SolidColorBrush(Color.Parse("#1D2530")),
             Foreground = Brushes.White,
-            BorderBrush = new SolidColorBrush(Color.Parse("#343B49"))
+            BorderBrush = new SolidColorBrush(Color.Parse("#2B3542"))
         };
 
-        _choosePackage = ActionButton("Abrir arquivo PKG", "#6759E8");
+        _choosePackage = ActionButton("Abrir arquivo PKG", "#B9A7FF");
         _choosePackage.Click += async (_, _) => await ChoosePackageAsync();
         _chooseDestination = ActionButton("Pasta de destino", "#222834");
         _chooseDestination.Click += async (_, _) => await ChooseDestinationAsync();
-        _extract = ActionButton("Extrair arquivos", "#6759E8");
+        _extract = ActionButton("Extrair arquivos", "#B9A7FF");
         _extract.IsEnabled = false;
         _extract.Click += async (_, _) => await ExtractAsync();
 
         var card = new Border
         {
-            Background = new SolidColorBrush(Color.Parse("#121620")),
-            BorderBrush = new SolidColorBrush(Color.Parse("#272E3B")),
+            Background = new SolidColorBrush(Color.Parse("#151B24")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#2B3542")),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(16),
             Padding = new Thickness(20),
@@ -84,19 +92,24 @@ public sealed class MainView : UserControl
                 Spacing = 14,
                 Children =
                 {
-                    Label("PACOTE SELECIONADO", 11, "#8791A4"),
+                    Label("PACOTE SELECIONADO", 11, "#AAB4C3"),
                     _fileName,
                     _metadata,
                     _choosePackage,
-                    new Border { Height = 1, Background = new SolidColorBrush(Color.Parse("#272E3B")) },
-                    Label("DESTINO DA EXTRAÇÃO", 11, "#8791A4"),
+                    new Border { Height = 1, Background = new SolidColorBrush(Color.Parse("#2B3542")) },
+                    Label("DESTINO DA EXTRAÇÃO", 11, "#AAB4C3"),
                     _chooseDestination,
-                    Label("CHAVE / PASSCODE", 11, "#8791A4"),
+                    Label("CHAVE / PASSCODE", 11, "#AAB4C3"),
                     _passcode,
                     _extract,
                     _progress,
-                    Label("LOG DA EXTRAÇÃO", 11, "#8791A4"),
-                    _log,
+                    new Expander
+                    {
+                        Header = "Ver log detalhado",
+                        IsExpanded = false,
+                        Foreground = new SolidColorBrush(Color.Parse("#AAB4C3")),
+                        Content = _log
+                    },
                     _status
                 }
             }
@@ -112,7 +125,7 @@ public sealed class MainView : UserControl
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Children =
                 {
-                    Label("ORBIS", 12, "#958AFF"),
+                    Label("ORBIS", 12, "#B9A7FF"),
                     new TextBlock
                     {
                         Text = "OrbisExtract",
@@ -125,7 +138,7 @@ public sealed class MainView : UserControl
                     {
                         Text = "PlayStation 4 · PKG Extractor",
                         FontSize = 15,
-                        Foreground = new SolidColorBrush(Color.Parse("#A8B0C0")),
+                        Foreground = new SolidColorBrush(Color.Parse("#AAB4C3")),
                         HorizontalAlignment = HorizontalAlignment.Center
                     },
                     card,
@@ -133,7 +146,7 @@ public sealed class MainView : UserControl
                     {
                         Text = "Os resultados dependem do formato do pacote e das chaves/passcodes legítimos necessários.",
                         TextWrapping = TextWrapping.Wrap,
-                        Foreground = new SolidColorBrush(Color.Parse("#788294")),
+                        Foreground = new SolidColorBrush(Color.Parse("#667181")),
                         FontSize = 12
                     }
                 }
