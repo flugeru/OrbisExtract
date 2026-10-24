@@ -117,7 +117,7 @@ public sealed class MainWindow : Window
             Padding = new Thickness(12, 13),
             Content = new StackPanel
             {
-                Orientation = Orientation.Horizontal,
+                Orientation = Avalonia.Layout.Orientation.Horizontal,
                 Spacing = 12,
                 Children =
                 {
