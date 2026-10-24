@@ -137,6 +137,15 @@ public sealed class MainView : UserControl
         };
     }
 
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KiB", "MiB", "GiB", "TiB"];
+        double value = Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1) { value /= 1024; unit++; }
+        return $"{value:0.##} {units[unit]}";
+    }
+
     private void Log(string message)
     {
         var line = $"{DateTime.Now:HH:mm:ss.fff}  {message}";
@@ -258,14 +267,41 @@ public sealed class MainView : UserControl
             await using var packageStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, true);
             Log("Abrindo e validando a estrutura interna do PKG…");
             var destination = new StorageFolderExtractionDestination(_destination, Log);
+            var extractionClock = System.Diagnostics.Stopwatch.StartNew();
+            string? lastLoggedPath = null;
+            long lastLoggedCompleted = 0;
             var progress = new Progress<ExtractionProgress>(p =>
             {
-                if (p.FilesTotal is > 0) _progress.Value = Math.Min(100, p.FilesCompleted * 100d / p.FilesTotal.Value);
-                _status.Text = p.CurrentPath is null
-                    ? $"{p.State}: {p.FilesCompleted:N0} arquivos"
-                    : $"{p.FilesCompleted:N0} arquivo(s) · {p.CurrentPath}";
-                if (p.CurrentPath is not null) Log($"[{p.FilesCompleted:N0}/{(p.FilesTotal?.ToString("N0") ?? "?")}] {p.CurrentPath} ({p.BytesCompleted:N0} bytes processados)");
-                else Log($"Estado: {p.State}; arquivos={p.FilesCompleted:N0}; bytes={p.BytesCompleted:N0}");
+                var percent = p.BytesTotal is > 0
+                    ? Math.Clamp(p.BytesCompleted * 100d / p.BytesTotal.Value, 0, 100)
+                    : p.FilesTotal is > 0 ? Math.Clamp(p.FilesCompleted * 100d / p.FilesTotal.Value, 0, 100) : 0;
+                _progress.Value = percent;
+
+                var speed = extractionClock.Elapsed.TotalSeconds > 0
+                    ? p.BytesCompleted / extractionClock.Elapsed.TotalSeconds
+                    : 0;
+                var totalText = p.BytesTotal is > 0 ? FormatBytes(p.BytesTotal.Value) : "calculando";
+                var remainingBytes = p.BytesTotal is > 0 ? Math.Max(0, p.BytesTotal.Value - p.BytesCompleted) : 0;
+                var etaSeconds = speed > 0 && p.BytesTotal is > 0 ? remainingBytes / speed : 0;
+                var eta = etaSeconds > 0 && etaSeconds < 86400
+                    ? TimeSpan.FromSeconds(etaSeconds).ToString(@"hh\\:mm\\:ss")
+                    : "calculando…";
+                _status.Text = p.State == "Concluído"
+                    ? $"Concluído · {p.FilesCompleted:N0} arquivos · {FormatBytes(p.BytesCompleted)}"
+                    : $"{percent:0.0}% · {p.FilesCompleted:N0}/{p.FilesTotal ?? 0:N0} arquivos · {FormatBytes(p.BytesCompleted)} / {totalText} · {FormatBytes((long)speed)}/s · ETA {eta}";
+
+                if (p.CurrentPath is not null && !string.Equals(lastLoggedPath, p.CurrentPath, StringComparison.Ordinal))
+                {
+                    lastLoggedPath = p.CurrentPath;
+                    Log($"EXTRAINDO  {p.CurrentPath}");
+                }
+                if (p.FilesCompleted > lastLoggedCompleted)
+                {
+                    lastLoggedCompleted = p.FilesCompleted;
+                    Log($"CONCLUÍDO  {p.FilesCompleted:N0}/{p.FilesTotal ?? 0:N0} arquivos · {FormatBytes(p.BytesCompleted)} / {totalText}");
+                }
+                if (p.State == "Concluído")
+                    Log($"RESUMO  {p.FilesCompleted:N0} arquivos · {FormatBytes(p.BytesCompleted)} processados em {extractionClock.Elapsed:hh\\:mm\\:ss}");
             });
             var result = await new OpenOrbisPkgExtractor().ExtractAsync(
                 new ExtractionRequest(packageStream, string.Empty, string.IsNullOrWhiteSpace(_passcode.Text) ? null : _passcode.Text, Destination: destination),
