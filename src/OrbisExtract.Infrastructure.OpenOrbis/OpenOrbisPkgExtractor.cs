@@ -30,7 +30,6 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         var inner = new PfsReader(new PFSCReader(outer.GetFile("pfs_image.dat").GetView()));
         var files = inner.GetAllFiles().ToArray();
         long count = 0, bytes = 0;
-        var totalBytes = files.Sum(file => (long)file.size);
         foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -38,11 +37,13 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             Stream? target = null;
             try
             {
+                // LibOrbisPkg exposes PFS paths with a leading slash (for example
+                // "/sce_sys/param.sfo"). Extraction destinations are relative paths,
+                // so normalize that root marker before applying path-safety checks.
                 var relativePath = file.FullName.TrimStart('/', '\\');
                 if (string.IsNullOrWhiteSpace(relativePath))
                     throw new PkgExtractionException("O pacote contém um caminho interno vazio.");
 
-                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, totalBytes));
                 target = await destination.CreateTemporaryFileAsync(relativePath, cancellationToken).ConfigureAwait(false);
                 using var source = new PfsFileStream(file);
                 await source.CopyToAsync(target, 128 * 1024, cancellationToken).ConfigureAwait(false);
@@ -51,7 +52,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 target = null;
                 count++;
                 bytes += file.size;
-                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, totalBytes));
+                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, null));
             }
             catch
             {
@@ -60,7 +61,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 throw;
             }
         }
-        progress?.Report(new ExtractionProgress("Concluído", null, count, files.Length, bytes, totalBytes));
+        progress?.Report(new ExtractionProgress("Concluído", null, count, files.Length, bytes, null));
         return new ExtractionResult(count, bytes);
     }
 
