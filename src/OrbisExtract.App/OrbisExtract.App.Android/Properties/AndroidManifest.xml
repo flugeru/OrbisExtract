@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="auto">
 	<uses-permission android:name="android.permission.INTERNET" />
-	<application android:label="OrbisExtract" android:icon="@drawable/Icon" />
+	<application android:label="OrbisExtract" android:icon="@drawable/Icon" android:versionCode="1030000" android:versionName="1.3.0" />
 </manifest>
