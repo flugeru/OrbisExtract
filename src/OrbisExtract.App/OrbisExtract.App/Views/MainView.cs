@@ -16,6 +16,7 @@ public sealed class MainView : UserControl
     private readonly TextBlock _fileName;
     private readonly TextBlock _metadata;
     private readonly TextBlock _status;
+    private readonly TextBox _log;
     private readonly ProgressBar _progress;
     private readonly TextBox _passcode;
     private readonly Button _choosePackage;
@@ -34,6 +35,21 @@ public sealed class MainView : UserControl
         _metadata = Label("Selecione um PKG para consultar os metadados.", 13, "#A8B0C0");
         _status = Label("Pronto para começar.", 13, "#C9D1DF");
         _progress = new ProgressBar { Minimum = 0, Maximum = 100, Height = 7, IsVisible = false };
+        _log = new TextBox
+        {
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            MinHeight = 150,
+            MaxHeight = 280,
+            FontSize = 11,
+            Padding = new Thickness(10),
+            Background = new SolidColorBrush(Color.Parse("#0D1017")),
+            Foreground = new SolidColorBrush(Color.Parse("#C9D1DF")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#272E3B")),
+            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+            Text = $"{DateTime.Now:HH:mm:ss}  [INFO]  OrbisExtract iniciado."
+        };
         _passcode = new TextBox
         {
             PlaceholderText = "Passcode (opcional)",
@@ -75,6 +91,8 @@ public sealed class MainView : UserControl
                     _passcode,
                     _extract,
                     _progress,
+                    Label("LOG DA EXTRAÇÃO", 11, "#8791A4"),
+                    _log,
                     _status
                 }
             }
@@ -119,6 +137,12 @@ public sealed class MainView : UserControl
         };
     }
 
+    private void Log(string message)
+    {
+        _log.Text += Environment.NewLine + $"{DateTime.Now:HH:mm:ss.fff}  {message}";
+        _log.CaretIndex = _log.Text.Length;
+    }
+
     private static TextBlock Label(string text, double size, string color) => new()
     {
         Text = text,
@@ -160,6 +184,7 @@ public sealed class MainView : UserControl
         _fileName.Text = _package.Name;
         _metadata.Text = "Lendo metadados do pacote…";
         _status.Text = "Arquivo selecionado.";
+        Log($"Pacote selecionado: {_package.Name}");
         _extract.IsEnabled = false;
 
         try
@@ -171,7 +196,9 @@ public sealed class MainView : UserControl
             }
             else
             {
+                Log("Lendo metadados do PKG…");
                 var info = await new OpenOrbisPkgMetadataReader().ReadAsync(stream, _lifetime.Token);
+                Log($"Metadados lidos: título={info.Title}; versão={info.Version}; content ID={info.ContentId}");
                 _metadata.Text = $"{info.Title}\nVersão: {info.Version}\nContent ID: {info.ContentId}";
             }
         }
@@ -179,6 +206,7 @@ public sealed class MainView : UserControl
         {
             _metadata.Text = "Metadados indisponíveis; o pacote ainda pode ser tentado.";
             _status.Text = ex.Message;
+            Log($"Aviso ao ler metadados: {ex}");
         }
         _extract.IsEnabled = _destination is not null;
     }
@@ -197,6 +225,7 @@ public sealed class MainView : UserControl
         _chooseDestination.Content = $"Destino: {_destination.Name}";
         _extract.IsEnabled = _package is not null;
         _status.Text = "Destino selecionado.";
+        Log($"Destino selecionado: {_destination.Name}");
     }
 
     private async Task ExtractAsync()
@@ -206,17 +235,24 @@ public sealed class MainView : UserControl
         _progress.IsVisible = true;
         _progress.Value = 0;
         _status.Text = "Preparando a extração…";
+        Log("--------------------------------------------------");
+        Log($"Iniciando extração. Pacote: {_package.Name}");
+        Log($"Destino: {_destination.Name}");
+        Log($"Passcode informado: {!string.IsNullOrWhiteSpace(_passcode.Text)}");
         string? tempPath = null;
         try
         {
             // Android content:// streams are not guaranteed to support seeking. Copy to
             // an app-private temporary file so LibOrbisPkg can read the PKG safely.
             tempPath = Path.Combine(Path.GetTempPath(), $"orbisextract-{Guid.NewGuid():N}.pkg");
+            Log("Copiando o PKG para um arquivo temporário pesquisável…");
             await using (var source = await _package.OpenReadAsync())
             await using (var temp = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 128 * 1024, true))
                 await source.CopyToAsync(temp, _lifetime.Token);
+            Log($"Cópia temporária concluída. Tamanho: {new FileInfo(tempPath).Length:N0} bytes.");
 
             await using var packageStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, true);
+            Log("Abrindo e validando a estrutura interna do PKG…");
             var destination = new StorageFolderExtractionDestination(_destination);
             var progress = new Progress<ExtractionProgress>(p =>
             {
@@ -224,25 +260,31 @@ public sealed class MainView : UserControl
                 _status.Text = p.CurrentPath is null
                     ? $"{p.State}: {p.FilesCompleted:N0} arquivos"
                     : $"{p.FilesCompleted:N0} arquivo(s) · {p.CurrentPath}";
+                if (p.CurrentPath is not null) Log($"[{p.FilesCompleted:N0}/{(p.FilesTotal?.ToString("N0") ?? "?")}] {p.CurrentPath} ({p.BytesCompleted:N0} bytes processados)");
+                else Log($"Estado: {p.State}; arquivos={p.FilesCompleted:N0}; bytes={p.BytesCompleted:N0}");
             });
             var result = await new OpenOrbisPkgExtractor().ExtractAsync(
                 new ExtractionRequest(packageStream, string.Empty, string.IsNullOrWhiteSpace(_passcode.Text) ? null : _passcode.Text, Destination: destination),
                 progress,
                 _lifetime.Token);
             _progress.Value = 100;
+            Log($"Extração concluída. Arquivos: {result.FilesExtracted:N0}; bytes: {result.BytesExtracted:N0}.");
             _status.Text = $"Concluído: {result.FilesExtracted:N0} arquivos · {result.BytesExtracted / 1024d / 1024d:N1} MiB.";
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             _status.Text = "Extração cancelada.";
+            Log($"CANCELADA: {ex}");
         }
         catch (Exception ex)
         {
             _status.Text = $"Falha na extração: {ex.Message}";
+            Log($"ERRO FATAL: {ex}");
         }
         finally
         {
             if (tempPath is not null) try { File.Delete(tempPath); } catch { }
+            Log("Processo de extração finalizado.");
             _choosePackage.IsEnabled = _chooseDestination.IsEnabled = true;
             _extract.IsEnabled = _package is not null && _destination is not null;
         }
