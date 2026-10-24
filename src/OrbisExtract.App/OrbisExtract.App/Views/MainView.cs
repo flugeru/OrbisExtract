@@ -252,7 +252,7 @@ public sealed class MainView : UserControl
 
             await using var packageStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, true);
             Log("Abrindo e validando a estrutura interna do PKG…");
-            var destination = new StorageFolderExtractionDestination(_destination);
+            var destination = new StorageFolderExtractionDestination(_destination, Log);
             var progress = new Progress<ExtractionProgress>(p =>
             {
                 if (p.FilesTotal is > 0) _progress.Value = Math.Min(100, p.FilesCompleted * 100d / p.FilesTotal.Value);
@@ -292,9 +292,14 @@ public sealed class MainView : UserControl
     private sealed class StorageFolderExtractionDestination : IExtractionDestination
     {
         private readonly IStorageFolder _root;
+        private readonly Action<string> _log;
         private readonly Dictionary<Stream, IStorageFile> _files = new();
 
-        public StorageFolderExtractionDestination(IStorageFolder root) => _root = root;
+        public StorageFolderExtractionDestination(IStorageFolder root, Action<string> log)
+        {
+            _root = root ?? throw new ArgumentNullException(nameof(root));
+            _log = log ?? (_ => { });
+        }
 
         public async Task<Stream> CreateTemporaryFileAsync(string relativePath, CancellationToken cancellationToken = default)
         {
@@ -315,12 +320,12 @@ public sealed class MainView : UserControl
                 try { child = await parent.GetFolderAsync(segment); }
                 catch (Exception ex)
                 {
-                    Log($"Pasta '{segment}' ainda não existe ou não pôde ser aberta: {ex.Message}");
+                    _log($"Pasta '{segment}' ainda não existe ou não pôde ser aberta: {ex.Message}");
                 }
 
                 if (child is null)
                 {
-                    Log($"Criando diretório de saída: {segment}");
+                    _log($"Criando diretório de saída: {segment}");
                     child = await parent.CreateFolderAsync(segment);
                 }
 
@@ -329,7 +334,7 @@ public sealed class MainView : UserControl
 
             var targetFolder = folder ?? throw new PkgExtractionException($"Pasta de destino inválida para '{relativePath}'.");
             var temporaryName = $".{segments[^1]}.{Guid.NewGuid():N}.orbisextract.tmp";
-            Log($"Criando arquivo temporário de saída: {relativePath}");
+            _log($"Criando arquivo temporário de saída: {relativePath}");
             var file = await targetFolder.CreateFileAsync(temporaryName);
             if (file is null)
                 throw new PkgExtractionException($"O provedor de armazenamento não criou o arquivo temporário para '{relativePath}'.");
