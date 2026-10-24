@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Button = Avalonia.Controls.Button;
 using OrbisExtract.App.Views;
 
 namespace OrbisExtract.App;
@@ -13,7 +14,7 @@ public sealed class MainWindow : Window
     private static readonly IBrush PrimaryBrush = new SolidColorBrush(Color.Parse("#B9A7FF"));
     private static readonly IBrush TextBrush = new SolidColorBrush(Color.Parse("#F5F7FA"));
     private static readonly IBrush SecondaryBrush = new SolidColorBrush(Color.Parse("#AAB4C3"));
-    private static readonly IBrush BorderBrush = new SolidColorBrush(Color.Parse("#2B3542"));
+    private static readonly IBrush UiBorderBrush = new SolidColorBrush(Color.Parse("#2B3542"));
 
     public MainWindow()
     {
@@ -34,7 +35,7 @@ public sealed class MainWindow : Window
         var sidebar = new Border
         {
             Background = SurfaceBrush,
-            BorderBrush = BorderBrush,
+            BorderBrush = UiBorderBrush,
             BorderThickness = new Thickness(0, 0, 1, 0),
             Padding = new Thickness(18, 26),
             Child = new DockPanel
@@ -52,7 +53,6 @@ public sealed class MainWindow : Window
                                 Text = "ORBIS",
                                 FontSize = 12,
                                 FontWeight = FontWeight.Bold,
-                                CharacterSpacing = 3,
                                 Foreground = PrimaryBrush,
                                 Margin = new Thickness(12, 0, 0, 0)
                             },
@@ -75,7 +75,7 @@ public sealed class MainWindow : Window
                         VerticalAlignment = VerticalAlignment.Bottom,
                         Children =
                         {
-                            new Border { Height = 1, Background = BorderBrush, Margin = new Thickness(0, 0, 0, 12) },
+                            new Border { Height = 1, Background = UiBorderBrush, Margin = new Thickness(0, 0, 0, 12) },
                             new TextBlock
                             {
                                 Text = "●  Aplicativo pronto",
