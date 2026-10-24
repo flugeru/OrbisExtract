@@ -26,6 +26,7 @@ dotnet test OrbisExtract.sln --no-restore
 ## Publish
 
 - Windows: `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1`
+  - **Note**: First, create `Icon.ico` from `src/OrbisExtract.App/OrbisExtract.App/Assets/Icon.png` using ImageMagick or an online converter. Run `scripts/create-windows-icon.ps1` to automate this.
 - Linux: `bash scripts/publish-linux.sh`
 - AppImage: `bash scripts/build-appimage.sh` after publishing Linux; `appimagetool` must be installed.
 - Android: `bash scripts/publish-android.sh` in an environment configured with the .NET 10 Android workload, Java, and Android SDK.
