@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Avalonia.Platform.Storage;
 using OrbisExtract.Core;
 using OrbisExtract.Infrastructure.OpenOrbis;
@@ -138,8 +139,12 @@ public sealed class MainView : UserControl
 
     private void Log(string message)
     {
-        _log.Text += Environment.NewLine + $"{DateTime.Now:HH:mm:ss.fff}  {message}";
-        _log.CaretIndex = _log.Text.Length;
+        var line = $"{DateTime.Now:HH:mm:ss.fff}  {message}";
+        Dispatcher.UIThread.Post(() =>
+        {
+            _log.Text += Environment.NewLine + line;
+            _log.CaretIndex = _log.Text.Length;
+        });
     }
 
     private static TextBlock Label(string text, double size, string color) => new()
