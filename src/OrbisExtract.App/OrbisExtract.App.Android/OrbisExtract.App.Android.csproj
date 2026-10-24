@@ -37,7 +37,6 @@
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/App.axaml" Link="App.axaml" />
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/Views/**/*.axaml" Link="Views/%(RecursiveDir)%(Filename)%(Extension)" />
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/Assets/**/*" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" />
-    <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/Assets/**/*" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" />
     <ProjectReference Include="..\..\OrbisExtract.Core\OrbisExtract.Core.csproj" />
     <ProjectReference Include="..\..\OrbisExtract.Infrastructure.OpenOrbis\OrbisExtract.Infrastructure.OpenOrbis.csproj" />
   </ItemGroup>
