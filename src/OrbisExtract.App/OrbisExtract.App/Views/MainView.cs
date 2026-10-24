@@ -7,6 +7,7 @@ using Avalonia.Platform.Storage;
 using OrbisExtract.Core;
 using OrbisExtract.Infrastructure.OpenOrbis;
 using System.Collections.Generic;
+using System.Linq;
 using Button = Avalonia.Controls.Button;
 using ProgressBar = Avalonia.Controls.ProgressBar;
 
@@ -26,6 +27,8 @@ public sealed class MainView : UserControl
     private IStorageFile? _package;
     private IStorageFolder? _destination;
     private readonly CancellationTokenSource _lifetime = new();
+    private readonly Queue<string> _logLines = new();
+    private const int MaxLogLines = 250;
 
     public MainView()
     {
@@ -50,6 +53,7 @@ public sealed class MainView : UserControl
             BorderBrush = new SolidColorBrush(Color.Parse("#272E3B")),
             Text = $"{DateTime.Now:HH:mm:ss}  [INFO]  OrbisExtract iniciado."
         };
+        _logLines.Enqueue(_log.Text);
         _passcode = new TextBox
         {
             PlaceholderText = "Passcode (opcional)",
@@ -151,7 +155,13 @@ public sealed class MainView : UserControl
         var line = $"{DateTime.Now:HH:mm:ss.fff}  {message}";
         Dispatcher.UIThread.Post(() =>
         {
-            _log.Text += Environment.NewLine + line;
+            _logLines.Enqueue(line);
+            while (_logLines.Count > MaxLogLines)
+                _logLines.Dequeue();
+
+            // Keep the visible log bounded. Rebuilding an ever-growing TextBox on
+            // every event caused excessive allocations and could freeze Android.
+            _log.Text = string.Join(Environment.NewLine, _logLines);
             _log.CaretIndex = _log.Text.Length;
         });
     }
