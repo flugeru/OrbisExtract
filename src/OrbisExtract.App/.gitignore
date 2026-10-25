@@ -386,6 +386,14 @@ test-results/
 *.dmg
 *.app
 
+# Exceptions: OrbisExtract source files must not be ignored
+!OrbisExtract.App/
+!OrbisExtract.App/*.cs
+
+# Build output
+OrbisExtract.App/bin/
+OrbisExtract.App/obj/
+
 # content below from: https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 # General
 .DS_Store
