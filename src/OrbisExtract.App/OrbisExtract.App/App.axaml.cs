@@ -25,8 +25,8 @@ public sealed class App : Application
                 desktop.MainWindow = new Window
                 {
                     Title = "OrbisExtract",
-                    Width = 1100,
-                    Height = 760,
+                    Width = 1000,
+                    Height = 700,
                     MinWidth = 360,
                     MinHeight = 520,
                     Content = mainView

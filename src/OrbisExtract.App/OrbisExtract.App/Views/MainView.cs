@@ -22,8 +22,6 @@ namespace OrbisExtract.App.Views;
 public sealed class MainView : UserControl
 {
     private const int MaxLogLines = 250;
-    private const double WideBreakpoint = 720;   // largura da janela: sidebar x navegação inferior
-    private const double TwoColumnBreakpoint = 640; // largura do conteúdo: 2 colunas x 1 coluna
 
     // Pacote
     private readonly TextBlock _fileName;
@@ -35,7 +33,6 @@ public sealed class MainView : UserControl
     // Configuração
     private readonly TextBlock _destinationName;
     private readonly Button _chooseDestination;
-    private readonly TextBox _passcode;
     private readonly Button _extract;
 
     // Monitor
@@ -47,12 +44,11 @@ public sealed class MainView : UserControl
     private readonly Border _banner;
     private readonly TextBlock _bannerText;
     private readonly Stopwatch _clock = new();
-    private readonly DispatcherTimer _timer;
 
     // Layout
-    private readonly Grid _shell, _pageGrid;
-    private readonly Control _sidebar, _bottomNav, _packageCard, _settingsCard, _monitorCard;
-    private bool? _isWideShell, _isTwoColumn;
+    private readonly Grid _mainGrid, _contentGrid;
+    private readonly Control _packageCard, _settingsCard, _monitorCard;
+    private bool? _isWideContent;
 
     // Estado
     private IStorageFile? _package;
@@ -88,29 +84,19 @@ public sealed class MainView : UserControl
             "Selecione o PKG para consultar os metadados antes de extrair.",
             _fileName, _chips, _infoRows, _choosePackage);
 
-        // ---------- Cartão de configuração ----------
+        // ---------- Cartão de configuração (passcode removido da UI) ----------
         _destinationName = UiTheme.Text("Nenhuma pasta escolhida", 14, UiTheme.TextSecondary);
         _chooseDestination = UiTheme.OutlinedButton("Escolher pasta");
         _chooseDestination.Click += async (_, _) => await ChooseDestinationAsync();
-        _passcode = new TextBox
-        {
-            PlaceholderText = "Passcode (opcional)",
-            PasswordChar = '•',
-            Padding = new Thickness(14, 12),
-            CornerRadius = new CornerRadius(12),
-            Background = UiTheme.Brush(UiTheme.SurfaceElevated),
-            Foreground = UiTheme.Brush(UiTheme.TextPrimary),
-            BorderBrush = UiTheme.Brush(UiTheme.Outline)
-        };
         _extract = UiTheme.PrimaryButton("Extrair arquivos");
         _extract.IsEnabled = false;
         _extract.Margin = new Thickness(0, 6, 0, 0);
         _extract.Click += async (_, _) => await ExtractAsync();
 
-        _settingsCard = Section("Destino da extração",
-            "Defina onde salvar os arquivos e informe o passcode, se necessário.",
+        _settingsCard = Section("Configuração",
+            "Defina onde salvar os arquivos extraídos.",
             Field("Pasta de destino", _destinationName), _chooseDestination,
-            Field("Passcode", _passcode), _extract);
+            _extract);
 
         // ---------- Monitor de extração ----------
         _stateTitle = UiTheme.Text("Pronto para extrair", 18, UiTheme.TextPrimary, FontWeight.SemiBold);
@@ -188,12 +174,13 @@ public sealed class MainView : UserControl
             Children = { header, _progress, metaRow, _status, _banner, _cancel, expander }
         });
 
-        // ---------- Grid responsivo da página ----------
-        _pageGrid = new Grid { ColumnSpacing = 16, RowSpacing = 16 };
-        _pageGrid.Children.Add(_packageCard);
-        _pageGrid.Children.Add(_settingsCard);
-        _pageGrid.Children.Add(_monitorCard);
+        // ---------- Grid responsivo do conteúdo ----------
+        _contentGrid = new Grid { ColumnSpacing = 16, RowSpacing = 16 };
+        _contentGrid.Children.Add(_packageCard);
+        _contentGrid.Children.Add(_settingsCard);
+        _contentGrid.Children.Add(_monitorCard);
 
+        var mainGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*") };
         var isAndroid = OperatingSystem.IsAndroid();
         var page = new StackPanel
         {
@@ -206,76 +193,48 @@ public sealed class MainView : UserControl
                     Spacing = 6,
                     Children =
                     {
-                        UiTheme.Text("Extrair pacote", isAndroid ? 28 : 32, UiTheme.TextPrimary, FontWeight.SemiBold),
-                        UiTheme.Text("Gerencie o arquivo, o destino e o andamento em um só lugar.", 14, UiTheme.TextSecondary)
+                        UiTheme.Text("Extrair PKG", isAndroid ? 28 : 32, UiTheme.TextPrimary, FontWeight.SemiBold),
+                        UiTheme.Text("Ferramenta de extração para pacotes PlayStation 4.", 14, UiTheme.TextSecondary)
                     }
                 },
-                _pageGrid,
+                _contentGrid,
                 UiTheme.Text("Use apenas pacotes e chaves que você tem autorização para acessar.", 12, UiTheme.TextDisabled)
             }
         };
-        var centered = new Border { MaxWidth = 1000, HorizontalAlignment = HorizontalAlignment.Stretch, Child = page };
+        var centered = new Border { MaxWidth = 900, HorizontalAlignment = HorizontalAlignment.Stretch, Child = page };
         var scroll = new ScrollViewer
         {
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             Content = centered
         };
-        scroll.SizeChanged += (_, e) => ApplyPageLayout(e.NewSize.Width);
+        scroll.SizeChanged += (_, e) => ApplyContentLayout(e.NewSize.Width);
 
-        // ---------- Shell: sidebar (desktop) / barra inferior (estreito) ----------
-        _sidebar = BuildSidebar();
-        _bottomNav = BuildBottomNav();
-        _shell = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("224,*"),
-            RowDefinitions = new RowDefinitions("*,Auto"),
-            Background = UiTheme.Brush(UiTheme.Background)
-        };
-        Grid.SetRowSpan(_sidebar, 2);
-        Grid.SetColumn(scroll, 1);
-        Grid.SetRow(_bottomNav, 1);
-        _shell.Children.Add(_sidebar);
-        _shell.Children.Add(scroll);
-        _shell.Children.Add(_bottomNav);
-        SizeChanged += (_, e) => ApplyShellLayout(e.NewSize.Width);
-        Content = _shell;
+        // ---------- Layout principal (coluna única simplificada) ----------
+        _mainGrid = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
+        Grid.SetRow(scroll, 0);
+        Grid.SetRow(_mainGrid.Children[1], 1);
+        mainGrid.Children.Add(scroll);
+        Content = mainGrid;
 
-        ApplyShellLayout(isAndroid ? 400 : 1120);
-        ApplyPageLayout(isAndroid ? 400 : 900);
-
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _timer.Tick += (_, _) => _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
+        ApplyContentLayout(isAndroid ? 400 : 900);
         SetProgressIdle();
         Log("[INFO]  OrbisExtract iniciado.");
     }
 
     // ===================== Layout =====================
 
-    private void ApplyShellLayout(double width)
+    private void ApplyContentLayout(double width)
     {
-        var wide = width >= WideBreakpoint;
-        if (_isWideShell == wide) return;
-        _isWideShell = wide;
-        _sidebar.IsVisible = wide;
-        _bottomNav.IsVisible = !wide;
-        var scroll = (Control)_shell.Children[1];
-        Grid.SetColumn(scroll, wide ? 1 : 0);
-        Grid.SetColumnSpan(scroll, wide ? 1 : 2);
-        Grid.SetColumnSpan(_bottomNav, 2);
-    }
+        var isWide = width >= 600;
+        if (_isWideContent == isWide) return;
+        _isWideContent = isWide;
 
-    private void ApplyPageLayout(double width)
-    {
-        var twoColumns = width >= TwoColumnBreakpoint;
-        if (_isTwoColumn == twoColumns) return;
-        _isTwoColumn = twoColumns;
-
-        _pageGrid.ColumnDefinitions = new ColumnDefinitions(twoColumns ? "*,*" : "*");
-        _pageGrid.RowDefinitions = new RowDefinitions("Auto,Auto,Auto");
+        _contentGrid.ColumnDefinitions = new ColumnDefinitions(isWide ? "*,*" : "*");
+        _contentGrid.RowDefinitions = new RowDefinitions("Auto,Auto,Auto");
         Place(_packageCard, 0, 0, 1);
-        Place(_settingsCard, twoColumns ? 0 : 1, twoColumns ? 1 : 0, 1);
-        Place(_monitorCard, twoColumns ? 1 : 2, 0, twoColumns ? 2 : 1);
+        Place(_settingsCard, isWide ? 0 : 1, isWide ? 1 : 0, 1);
+        Place(_monitorCard, isWide ? 1 : 2, 0, isWide ? 2 : 1);
     }
 
     private static void Place(Control c, int row, int col, int colSpan)
@@ -283,122 +242,6 @@ public sealed class MainView : UserControl
         Grid.SetRow(c, row);
         Grid.SetColumn(c, col);
         Grid.SetColumnSpan(c, colSpan);
-    }
-
-    private static Control BuildSidebar()
-    {
-        var top = new StackPanel
-        {
-            Spacing = 6,
-            Children =
-            {
-                UiTheme.Text("ORBIS", 12, UiTheme.Primary, FontWeight.Bold),
-                UiTheme.Text("OrbisExtract", 20, UiTheme.TextPrimary, FontWeight.SemiBold),
-                new Border { Height = 18 },
-                NavItem("◈", "Extrair", selected: true),
-                NavItem("◷", "Histórico", enabled: false),
-                NavItem("⚙", "Configurações", enabled: false)
-            }
-        };
-        ((TextBlock)top.Children[0]).Margin = new Thickness(12, 0, 0, 0);
-        ((TextBlock)top.Children[1]).Margin = new Thickness(12, 0, 0, 0);
-
-        var bottom = new StackPanel
-        {
-            Spacing = 6,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Children =
-            {
-                new Border { Height = 1, Background = UiTheme.Brush(UiTheme.Outline), Margin = new Thickness(0, 0, 0, 12) },
-                UiTheme.Text("●  Aplicativo pronto", 12, UiTheme.Success),
-                UiTheme.Text("PKG · PlayStation 4", 11, UiTheme.TextSecondary)
-            }
-        };
-        foreach (var c in bottom.Children.OfType<TextBlock>()) c.Margin = new Thickness(12, 0);
-
-        var dock = new DockPanel { LastChildFill = true };
-        DockPanel.SetDock(bottom, Dock.Bottom);
-        dock.Children.Add(bottom);
-        dock.Children.Add(top);
-
-        return new Border
-        {
-            Background = UiTheme.Brush(UiTheme.Surface),
-            BorderBrush = UiTheme.Brush(UiTheme.Outline),
-            BorderThickness = new Thickness(0, 0, 1, 0),
-            Padding = new Thickness(16, 26),
-            Child = dock
-        };
-    }
-
-    private static Button NavItem(string glyph, string label, bool selected = false, bool enabled = true) => new()
-    {
-        IsEnabled = enabled,
-        HorizontalAlignment = HorizontalAlignment.Stretch,
-        HorizontalContentAlignment = HorizontalAlignment.Left,
-        Background = selected ? UiTheme.Brush(UiTheme.PrimaryContainer) : Brushes.Transparent,
-        Foreground = UiTheme.Brush(selected ? UiTheme.Primary : enabled ? UiTheme.TextSecondary : UiTheme.TextDisabled),
-        BorderThickness = new Thickness(0),
-        CornerRadius = new CornerRadius(14),
-        Padding = new Thickness(14, 13),
-        Content = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 12,
-            Children =
-            {
-                new TextBlock { Text = glyph, FontSize = 16, VerticalAlignment = VerticalAlignment.Center },
-                new TextBlock { Text = label, FontSize = 14, VerticalAlignment = VerticalAlignment.Center }
-            }
-        }
-    };
-
-    private static Control BuildBottomNav()
-    {
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*") };
-        (string glyph, string label, bool selected)[] items =
-            [("◈", "Extrair", true), ("◷", "Histórico", false), ("⚙", "Configurações", false)];
-        for (var i = 0; i < items.Length; i++)
-        {
-            var (glyph, label, selected) = items[i];
-            var color = selected ? UiTheme.Primary : UiTheme.TextDisabled;
-            var item = new Button
-            {
-                IsEnabled = selected,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Center,
-                Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(4, 8),
-                Content = new StackPanel
-                {
-                    Spacing = 4,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Children =
-                    {
-                        new Border
-                        {
-                            CornerRadius = new CornerRadius(16),
-                            Padding = new Thickness(20, 4),
-                            HorizontalAlignment = HorizontalAlignment.Center,
-                            Background = selected ? UiTheme.Brush(UiTheme.PrimaryContainer) : Brushes.Transparent,
-                            Child = new TextBlock { Text = glyph, FontSize = 18, Foreground = UiTheme.Brush(color), HorizontalAlignment = HorizontalAlignment.Center }
-                        },
-                        new TextBlock { Text = label, FontSize = 12, Foreground = UiTheme.Brush(color), HorizontalAlignment = HorizontalAlignment.Center }
-                    }
-                }
-            };
-            Grid.SetColumn(item, i);
-            grid.Children.Add(item);
-        }
-        return new Border
-        {
-            Background = UiTheme.Brush(UiTheme.Surface),
-            BorderBrush = UiTheme.Brush(UiTheme.Outline),
-            BorderThickness = new Thickness(0, 1, 0, 0),
-            Padding = new Thickness(8, 4),
-            Child = grid
-        };
     }
 
     // ===================== Helpers de UI =====================
@@ -549,7 +392,7 @@ public sealed class MainView : UserControl
     {
         if (_package is null || _destination is null) return;
 
-        _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _extract.IsEnabled = _passcode.IsEnabled = false;
+        _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _extract.IsEnabled = false;
         _run = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
         var token = _run.Token;
 
@@ -562,12 +405,11 @@ public sealed class MainView : UserControl
         _percent.Text = "";
         _elapsed.Text = "00:00";
         _clock.Restart();
-        _timer.Start();
 
         Log("--------------------------------------------------");
         Log($"Iniciando extração. Pacote: {_package.Name}");
         Log($"Destino: {_destination.Name}");
-        Log($"Passcode informado: {!string.IsNullOrWhiteSpace(_passcode.Text)}");
+        Log("Passcode: não utilizado nesta versão.");
 
         string? tempPath = null;
         try
@@ -599,7 +441,7 @@ public sealed class MainView : UserControl
             });
             var result = await new OpenOrbisPkgExtractor().ExtractAsync(
                 new ExtractionRequest(packageStream, string.Empty,
-                    string.IsNullOrWhiteSpace(_passcode.Text) ? null : _passcode.Text,
+                    null, // Passcode removido da interface
                     Destination: destination),
                 progress,
                 token);
@@ -631,14 +473,13 @@ public sealed class MainView : UserControl
         finally
         {
             _clock.Stop();
-            _timer.Stop();
             _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
             _cancel.IsVisible = false;
             _run?.Dispose();
             _run = null;
             if (tempPath is not null) try { File.Delete(tempPath); } catch { }
             Log("Processo de extração finalizado.");
-            _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _passcode.IsEnabled = true;
+            _choosePackage.IsEnabled = _chooseDestination.IsEnabled = true;
             _extract.IsEnabled = _package is not null && _destination is not null;
         }
     }

@@ -6,8 +6,21 @@ Cross-platform PlayStation 4 PKG extractor built with C#, .NET, Avalonia UI, and
 
 - Read PKG metadata.
 - Extract package contents to a selected destination.
-- Optional passcode input for packages that require it.
 - Windows, Linux, and Android project targets.
+
+## Recent Changes (v1.1.0)
+
+### UI Redesign
+- **Simplified Interface**: Removed sidebar navigation and bottom navigation bar for a cleaner, focused extraction experience
+- **Columnar Layout**: Streamlined single-column layout that adapts to available screen width
+- **Removed Passcode Field from UI**: Passcode functionality preserved in backend; field removed from main interface
+- **Improved Visual Hierarchy**: Clearer separation between package selection, configuration, and extraction monitoring sections
+- **Responsive Design**: Adapts seamlessly between desktop (1000px+) and mobile screens
+
+### Technical Improvements
+- Removed unused `_timer` field to eliminate compiler warnings
+- Cleaned up nullable reference type annotations
+- Reduced default window dimensions for better initial display
 
 ## Requirements
 
