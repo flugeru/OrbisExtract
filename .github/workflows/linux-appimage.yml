@@ -57,6 +57,14 @@ jobs:
           test -f artifacts/OrbisExtract-x86_64.AppImage
           ls -lh artifacts/OrbisExtract-x86_64.AppImage
           file artifacts/OrbisExtract-x86_64.AppImage
+          # Extrai (não precisa de FUSE) e confirma o entrypoint e os arquivos de desktop
+          ./artifacts/OrbisExtract-x86_64.AppImage --appimage-extract
+          test -x squashfs-root/AppRun
+          test -f squashfs-root/orbisextract.desktop
+          test -f squashfs-root/orbisextract.png
+          test -x squashfs-root/usr/bin/OrbisExtract.App.Desktop
+          head -n 3 squashfs-root/AppRun
+          rm -rf squashfs-root
 
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
