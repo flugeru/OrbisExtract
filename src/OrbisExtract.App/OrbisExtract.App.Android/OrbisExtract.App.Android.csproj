@@ -5,7 +5,10 @@
     <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ApplicationId>orbisextract.app</ApplicationId>
-    <AndroidPackageVersion>1030000</AndroidPackageVersion>
+    <ApplicationTitle>OrbisExtract</ApplicationTitle>
+    <ApplicationDisplayVersion>1.0.1</ApplicationDisplayVersion>
+    <Version>1.0.1</Version>
+    <AndroidPackageVersion>1030001</AndroidPackageVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
   </PropertyGroup>
