@@ -130,8 +130,6 @@ jobs:
         run: |
           $magick = Get-Command magick -ErrorAction SilentlyContinue
           if (-not $magick) { throw "ImageMagick não foi encontrado após a instalação." }
-          & magick -background none packaging/orbisextract-icon.svg -resize 512x512 src/OrbisExtract.App/OrbisExtract.App/Assets/Icon.png
-          if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar PNG do ícone." }
           & magick -background none packaging/orbisextract-icon.svg -resize 512x512 packaging/linux/orbisextract.png
           if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar PNG para o instalador." }
           & scripts/create-windows-icon.ps1
