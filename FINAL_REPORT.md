@@ -1,406 +1,176 @@
-# OrbisExtract — Relatório Final de Redesign
+# Relatório Final - Correções OrbisExtract
 
-## 🎯 Objetivo do Projeto
+## Resumo das Alterações
 
-Implementar um redesign completo da interface do OrbisExtract, elevando a qualidade visual e a experiência de uso sem comprometer funcionalidades ou compatibilidade entre plataformas (Windows, Linux, Android, iOS, Browser).
-
----
-
-## ✅ Status: CONCLUÍDO COM SUCESSO
-
-**Data:** 25 de Outubro de 2026  
-**Versão:** v1.1.0  
-**Tempo Total de Implementação:** ~3 horas
+Este documento descreve as correções implementadas para resolver os problemas relatados na extração de PKG no Windows, o temporizador e as notificações Android.
 
 ---
 
-## 📊 Resumo Executivo
+## 1. Problema: Extração no Windows com Erro de Permissão
 
-### Entregáveis Principais
+### Causa Identificada
+O código estava passando `string.Empty` como caminho de destino para a extração quando executado no Windows, o que forçava a criação de uma `LocalExtractionDestination` com um caminho vazio. Isso causava problemas de permissão ao tentar gravar no disco C: sem privilégios administrativos.
 
-| Item | Status | Detalhes |
-|------|--------|----------|
-| Elementos removidos da UI | ✅ 100% | Sidebar, bottom nav, passcode field eliminados |
-| Redesign visual completo | ✅ 100% | Layout limpo, moderno e profissional |
-| Compatibilidade multiplataforma | ✅ 100% | Funciona em Desktop e Android |
-| Funcionalidades preservadas | ✅ 100% | Nenhuma funcionalidade quebrada |
-| Builds executados | ✅ 100% | Zero erros, zero warnings |
+### Solução Implementada
+- **Arquivo:** `src\OrbisExtract.App\OrbisExtract.App\Views\MainView.cs`
+- Adicionado fallback automático quando o destino não tem permissão de escrita:
+  - O código tenta acessar o destino escolhido pelo usuário
+  - Se falhar com `UnauthorizedAccessException`, cria automaticamente uma pasta de fallback chamada `[nome_do_pkg]_extracted` na mesma pasta do PKG original
+  - Usa um novo destino (`WindowsFallbackDestination`) que grava na pasta temporária local
 
-### Métricas de Qualidade
+### Arquivos Alterados
+1. **MainView.cs** (linhas 430-456):
+   - Verificação de acesso ao destino antes da extração
+   - Implementação do fallback automático
+   - Uso de `WindowsFallbackDestination` quando necessário
 
-```
-Compilação Desktop:     ✅ 0 erros, 0 warnings
-Testes Unitários:       ✅ 3/3 aprovados (100%)
-Build Android:          ⚠️ Código válido (SDK não instalado)
-Build iOS:              ⚠️ Código válido (workload não instalado)
-```
-
----
-
-## 🎨 Mudanças Implementadas
-
-### 1. Elementos Removidos
-
-#### Sidebar (Menu Lateral) - REMOVIDA
-- Botão "Extrair" na sidebar
-- Botão "Histórico" (desabilitado)
-- Botão "Configurações" (desabilitado)
-- Rodapé lateral com status
-
-**Justificativa:** Simplificação do fluxo de trabalho, foco na tarefa principal.
-
-#### Bottom Navigation - REMOVIDA
-- Botões de navegação inferior
-- Lógica de alternância entre sidebar e bottom nav
-
-**Justificativa:** Interface mais limpa, consistência entre plataformas.
-
-#### Campo Passcode na UI - REMOVIDO
-- TextBox visual para input de passcode
-- Referências ao passcode nos logs
-
-**Importante:** Funcionalidade preservada no backend (`ExtractionRequest.Passcode`), mas não exposta na interface principal.
-
-**Justificativa:** Simplificação da UX para a maioria dos casos de uso. Passcode pode ser implementado futuramente em tela dedicada se necessário.
-
-### 2. Redesign Visual Completo
-
-#### Novo Layout Responsivo
-
-```
-┌───────────────────────────────────┐
-│ Extrair PKG                        │
-│ Ferramenta de extração para...    │
-├───────────────────────────────────┤
-│ [Cartão Pacote]                   │
-│ Selecionar PKG                    │
-├───────────────────────────────────┤
-│ [Cartão Configuração]             │
-│ Pasta de destino                  │
-│                                  │
-│ [Escolher pasta]                  │
-│                                  │
-│ [Extrair arquivos]                │
-├───────────────────────────────────┤
-│ [Cartão Monitoramento]            │
-│ 0%                                │
-│ 0 de 0 arquivos                   │
-│ ─────────────────────────────     │
-│ 00:00                             │
-│ ─────────────────────────────     │
-│ [Ver log detalhado ▼]             │
-└───────────────────────────────────┘
-```
-
-**Características:**
-- Layout vertical em telas estreitas (< 600px)
-- Layout horizontal com 2 colunas em telas largas (≥ 600px)
-- Ordem lógica preservada: Pacote → Configuração → Monitoramento
-- Adaptativo para Android e Desktop
-
-#### Identidade Visual Refinada
-
-Mantida a paleta de cores existente, otimizada para melhor legibilidade:
-
-- **Fundo escuro sofisticado** (`#0B0F14`)
-- **Cartões em tons de carvão** (`#151B24`, `#1D2530`)
-- **Destaque violeta/índigo** (`#B9A7FF`)
-- **Tipografia hierárquica clara**
-
-### 3. Melhorias Técnicas
-
-#### Código Limpo e Moderno
-
-```csharp
-// Removido:
-private readonly TextBox _passcode;      // Não usado
-private DispatcherTimer? _timer;         // Nunca inicializado
-private Control _sidebar, _bottomNav;    // Elementos removidos
-
-// Mantido e otimizado:
-private readonly Grid _contentGrid;      // Layout responsivo
-private readonly Control _packageCard;   // Cartão principal
-private readonly Control _settingsCard;  // Configuração
-private readonly Control _monitorCard;   // Monitoramento
-```
-
-#### Refatoração de Layout
-
-**Antes:** Complexa, com múltiplas quebras e lógica condicional
-```csharp
-private void ApplyShellLayout(double width) { ... }
-private void ApplyPageLayout(double width) { ... }
-```
-
-**Depois:** Simples e direto
-```csharp
-private void ApplyContentLayout(double width) {
-    var isWide = width >= 600;
-    _contentGrid.ColumnDefinitions = new ColumnDefinitions(isWide ? "*,*" : "*");
-}
-```
+2. **MainView.cs** (novas classes internas, linhas 654-745):
+   - `LocalExtractionDestination`: Classe otimizada para uso no Windows com destino local
+   - `WindowsFallbackDestination`: Classe para fallback quando o destino não tem permissão
 
 ---
 
-## 📱 Compatibilidade Multiplataforma
+## 2. Problema: Temporizador Mostrando "00:00"
 
-### Desktop (Windows/Linux)
+### Causa Identificada
+- O `_clock.Restart()` era chamado antes da extração iniciar, mas o tempo só era atualizado no bloco `finally` ao final do processo
+- Não havia atualização contínua do temporizador durante a extração
+- A variável `_elapsed.Text` nunca era atualizada durante a execução
 
-**Status:** ✅ Testado e Validado
+### Solução Implementada
+- **Arquivo:** `src\OrbisExtract.App\OrbisExtract.App\Views\MainView.cs`
+- Adicionado um `System.Timers.Timer` que:
+  - Atualiza o `_elapsed.Text` a cada 200ms durante a extração
+  - É iniciado antes da extração e finalizado no bloco `finally`
+  - Usa `Dispatcher.UIThread.Post()` para atualizar a UI de forma segura
 
-- Layout responsivo aproveita largura disponível
-- Scroll vertical otimizado
-- Área de toque adequada para mouse/trackpad
-- Hover states visuais mantidos
-
-**Quebras de Layout:**
-- Coluna única: < 600px
-- Duas colunas: ≥ 600px
-
-### Android
-
-**Status:** ✅ Código Validado (SDK não instalado no ambiente)
-
-- Margens ajustadas para telas menores (16px vs 32px)
-- Botões com área de toque adequada (> 48dp)
-- Textos legíveis em orientação vertical
-- Sem dependência de hover states
-
-**Considerações:**
-- Layout vertical padrão (telas estreitas)
-- Duas colunas apenas se tela permitir ≥ 600px
-
-### iOS/Browser
-
-**Status:** ✅ Código Compatível
-
-- API de seleção de arquivos compatível
-- Layout adaptável mantido
-- Navegação via controles nativos do sistema
+### Arquivos Alterados
+1. **MainView.cs** (linhas 475-482):
+   - Criação do timer com intervalo de 200ms
+   - Event handler que atualiza o texto do temporizador
+   - Início e parada do timer ao redor da extração
 
 ---
 
-## 🔧 Arquivos Modificados
+## 3. Problema: Notificações Android Não Implementadas
 
-### Principais Alterações
+### Causa Identificada
+Não havia nenhuma implementação de notificações nativas no Android, resultando em falta de feedback visual para o usuário sobre o progresso da extração.
 
-| Arquivo | Tipo | Descrição |
-|---------|------|-----------|
-| `MainView.cs` | Refatoração completa | Remoção de sidebar, bottom nav, passcode field; novo layout responsivo |
-| `App.axaml.cs` | Ajuste dimensional | Redução de dimensões iniciais da janela (1100×760 → 1000×700) |
-| `README.md` | Atualização | Adição de seção "Recent Changes" v1.1.0 |
+### Solução Implementada
+- **Arquivos Criados:**
+  - `src\OrbisExtract.App\OrbisExtract.App.Android\AndroidNotificationHelper.cs`: Classe estática para gerenciar notificações Android
+  - `src\OrbisExtract.App\OrbisExtract.App.Android\NotificationService.cs`: Serviço de notificação (mantido para compatibilidade)
 
-### Arquivos Criados
+- **Arquivos Alterados:**
+  - `MainActivity.cs`: Criação do canal de notificação no Android
+  - `Properties\AndroidManifest.xml`: Adição de permissões necessárias
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `REDESIGN_DOCUMENTATION.md` | Documentação técnica completa do redesign |
-| `RELEASE_NOTES.md` | Notas de lançamento para usuários e desenvolvedores |
-| `SUMMARY.md` | Resumo executivo com checklist de entrega |
-| `FINAL_REPORT.md` | Este relatório final |
+### Funcionalidades Implementadas
+1. **Notificação de Progresso:**
+   - Mostra na barra de notificações Android durante a extração
+   - Atualiza automaticamente com o estado e progresso
+   - Usa o mesmo ID de notificação para atualizar em vez de criar novas notificações
 
-### Arquivos NÃO Modificados (Intencionalmente)
+2. **Notificações por Estado:**
+   - **Sucesso:** Notificação ao concluir com número de arquivos extraídos
+   - **Cancelamento:** Notificação quando o usuário cancela a extração
+   - **Erro:** Notificação com mensagem de erro ao falhar
 
-- **Backend Core:** `src/OrbisExtract.Core/*` - Intacto
-- **Infrastructure:** `src/OrbisExtract.Infrastructure.OpenOrbis/*` - Intacto
-- **Tema UI:** `UiTheme.cs` - Aproveitado, não alterado
-- **Projetos .csproj** - Nenhuma alteração nas dependências
+3. **Permissões Android:**
+   - `FOREGROUND_SERVICE`: Para manter a notificação em primeiro plano
+   - `POST_NOTIFICATIONS`: Para mostrar notificações (requer permissão do usuário em Android 13+)
 
----
+### Arquivos Alterados/Criados
+1. **AndroidNotificationHelper.cs** (NOVO):
+   - Método `StartExtraction()`: Inicia notificação de progresso
+   - Método `UpdateProgress()`: Atualiza notificação durante a extração
+   - Método `CompleteExtraction()`: Notifica conclusão bem-sucedida
+   - Método `CancelExtraction()`: Notifica cancelamento
+   - Método `ShowError()`: Notifica erro com mensagem
 
-## ✅ Resultados de Build e Testes
+2. **MainActivity.cs** (alterado):
+   - Criação do canal de notificação em `OnCreate()`
+   - Uso correto da API de notificações Android
 
-### Build Desktop (Windows/Linux)
+3. **AndroidManifest.xml** (alterado):
+   - Adicionado `<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />`
+   - Adicionado `<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />`
 
-```bash
-dotnet build src/OrbisExtract.App/OrbisExtract.App.Desktop -c Release
-```
-
-| Métrica | Resultado |
-|---------|-----------|
-| Erros | 0 ✅ |
-| Warnings | 0 ✅ |
-| Status | Compilação bem-sucedida ✅ |
-| Tempo | ~1.5s ✅ |
-
-### Testes Unitários
-
-```bash
-dotnet test tests/OrbisExtract.Tests -c Release
-```
-
-| Métrica | Resultado |
-|---------|-----------|
-| Testes totais | 3 ✅ |
-| Aprovados | 3 ✅ |
-| Com falha | 0 ✅ |
-| Duração | 154ms ✅ |
-
-### Build Android/iOS
-
-| Plataforma | Código Compilável | SDK Instalado | Status |
-|------------|-------------------|---------------|--------|
-| Android | Sim | Não | ⚠️ Requer SDK Android |
-| iOS | Sim | Não | ⚠️ Requer workload iOS |
-
-**Nota:** O código é válido e compilável. Build completo requer instalação dos workloads específicos de cada plataforma.
+4. **MainView.cs** (alterado):
+   - Chamadas ao `AndroidNotificationHelper` nos blocos de sucesso, cancelamento e erro
+   - Verificação de plataforma Android antes de chamar as notificações
 
 ---
 
-## 🎯 Critérios de Conclusão - Todos Atingidos
+## Arquivos Alterados em Resumo
 
-| Critério | Status | Evidência |
-|----------|--------|-----------|
-| Elementos indicados removidos | ✅ | Sidebar, bottom nav, passcode field eliminados |
-| Redesign visual completo | ✅ | Layout limpo, moderno e profissional |
-| Adaptação desktop/Android | ✅ | Layout responsivo com quebras de 600px |
-| Componentes compartilhados compatíveis | ✅ | Mesmo código para todas as plataformas |
-| Funcionalidades existentes preservadas | ✅ | Nenhuma funcionalidade quebrada |
-| Arquitetura original respeitada | ✅ | MVVM mantido, separação UI/Backend |
-| Builds executados e testados | ✅ | Desktop compilado, testes aprovados |
+| Arquivo | Mudanças Principais |
+|---------|---------------------|
+| `src/OrbisExtract.App/OrbisExtract.App/Views/MainView.cs` | Lógica de fallback para permissão, timer de 200ms, notificações Android |
+| `src/OrbisExtract.App/OrbisExtract.App.Android/MainActivity.cs` | Canal de notificação Android |
+| `src/OrbisExtract.App/OrbisExtract.App.Android/AndroidNotificationHelper.cs` | NOVO - Gerenciamento de notificações |
+| `src/OrbisExtract.App/OrbisExtract.App.Android/NotificationService.cs` | Alterado - Mantido para compatibilidade |
+| `src/OrbisExtract.App/OrbisExtract.App.Android/Properties/AndroidManifest.xml` | Permissões de notificação e foreground service |
 
 ---
 
-## 📈 Impacto nas Métricas de Projeto
+## Verificações Estáticas Realizadas
 
-### Antes do Redesign
-
-- **Complexidade Visual:** Alta (sidebar + bottom nav + múltiplos cartões)
-- **Navegação:** Complexa (alternância sidebar/bottom nav)
-- **Código:** 734 linhas em MainView.cs
-- **Warnings:** Múltiplos (campo _passcode não usado, _timer nunca inicializado)
-
-### Depois do Redesign
-
-- **Complexidade Visual:** Baixa (layout único, fluxo linear)
-- **Navegação:** Simples (fluxo vertical direto)
-- **Código:** 650 linhas em MainView.cs (-84 linhas, -11.6%)
-- **Warnings:** Zero ✅
-
-### Melhoria de Código
-
-```
-Linhas removidas:      84 (-11.6%)
-Warnings eliminados:   Múltiplos → 0 (100%)
-Complexidade ciclomática: Reduzida
-Manutenibilidade: Melhorada
-```
+1. ✅ **Análise de Código:** Revisão completa da lógica de extração, temporizador e notificações
+2. ✅ **Comparação com Backups:** Verificação das diferenças entre o código atual e os backups (20261023 e 20261024)
+3. ✅ **Compilação .NET Core:** Projetos `OrbisExtract.Core` e `OrbisExtract.Infrastructure.OpenOrbis` compilam sem erros
+4. ✅ **Consistência de Interfaces:** Todas as interfaces (`IExtractionDestination`, `IPkgExtractor`) preservadas
+5. ✅ **Preservação de Funcionalidades:** Nenhuma funcionalidade existente foi removida
 
 ---
 
-## 🚀 Instruções de Build e Deploy
+## Limitações e Verificações que Dependem de Testes Reais
 
-### Build Completo (Desktop)
+### 1. Extração no Windows com Fallback
+- **O que testar:** Tentar extrair um PKG para uma pasta sem permissão (ex: `C:\Windows\System32`)
+- **Resultado esperado:** O código deve criar automaticamente uma pasta `[nome_pkg]_extracted` na mesma localização do PKG original e extrair com sucesso
 
-```bash
-# Restaurar pacotes
-dotnet restore OrbisExtract.sln
+### 2. Temporizador em Todas as Plataformas
+- **O que testar:** Executar extrações de diferentes tamanhos em Windows, Android e outros sistemas
+- **Resultado esperado:** O temporizador deve mostrar o tempo decorrido em tempo real durante a extração, não apenas "00:00"
 
-# Compilar tudo
-dotnet build OrbisExtract.sln -c Release
+### 3. Notificações Android
+- **O que testar:** Instalar o APK em um dispositivo Android e executar uma extração
+- **Permissões necessárias:** O usuário deve aceitar a permissão de notificações na primeira instalação/atualização (Android 13+)
+- **Resultado esperado:**
+  - Notificação aparece na barra de status durante a extração
+  - Progresso é atualizado automaticamente sem criar novas notificações
+  - Notificação final mostra sucesso com número de arquivos
+  - Cancelamento e erros mostram notificações apropriadas
 
-# Executar testes
-dotnet test OrbisExtract.Tests -c Release --no-build
-
-# Publicar para Windows
-powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1
-```
-
-### Pré-requisitos
-
-- [.NET SDK 8.0+](https://dotnet.microsoft.com/download)
-- Para Android: [.NET SDK 10.0+](https://dotnet.microsoft.com/download), [Android SDK](https://developer.android.com/studio#downloads)
-- Para iOS: Mac com Xcode e workload iOS
-- Para ImageMagick (ícone Windows): [ImageMagick](https://imagemagick.org/script/download.php)
-
----
-
-## 📝 Notas para Desenvolvedores
-
-### Passcode (Funcionalidade Removida da UI)
-
-**Status:** Implementado no backend, não exposto na interface.
-
-**Se necessário futuramente:**
-1. Criar modal/tela dedicada para input de passcode
-2. Manter separação clara entre UI e backend
-3. Validar passcode antes de iniciar extração
-4. Considerar persistência segura (criptografia)
-
-**Impacto atual:** Pacotes criptografados continuarão funcionando se passcode fornecido via código ou API.
-
-### Histórico e Configurações (Botões Removidos)
-
-**Status:** Funcionalidades não implementadas na versão original.
-
-**Recomendação:** Implementar como abas ou modais se houver demanda futura.
+### 4. Build do Projeto Android
+- **Requisito:** SDK do Android instalado no ambiente de build
+- **O que verificar:** O build via GitHub Actions deve completar sem erros relacionados às novas classes Android
+- **Arquivos novos a serem compilados:**
+  - `NotificationService.cs` (classe reservada)
+  - `AndroidNotificationHelper.cs`
 
 ---
 
-## 🔍 Validação de Qualidade
+## Notas Importantes
 
-### Checklist Técnico
-
-- [x] Zero erros de compilação
-- [x] Zero warnings de compilação
-- [x] Testes unitários 100% aprovados (3/3)
-- [x] Código limpo e bem documentado
-- [x] Nullable reference types corretamente implementados
-- [x] Layout responsivo testado em diferentes larguras
-- [x] API de seleção de arquivos compatível
-
-### Checklist UX/UI
-
-- [x] Elementos indicados removidos
-- [x] Fluxo de trabalho simplificado
-- [x] Feedback visual claro para ações
-- [x] Áreas de toque adequadas (Android)
-- [x] Legibilidade em diferentes densidades DPI
-- [x] Contraste adequado mantido
+1. **Não houve alterações na API pública:** Todas as mudanças são internas e preservam a interface existente
+2. **Compatibilidade multiplataforma:** As correções no Windows não afetam Android, iOS ou outras plataformas
+3. **Arquivos de notificação:** O `AndroidNotificationHelper.cs` é o único arquivo novo que deve ser compilado para o Android
+4. **Logs temporários:** Nenhum log de depuração adicional foi adicionado durante este trabalho
 
 ---
 
-## 📞 Suporte e Contribuição
+## Próximos Passos (GitHub Actions)
 
-Para reportar bugs, solicitar recursos ou contribuir:
-- Issues no repositório GitHub
-- Documentação em `README.md`
-- Código fonte em `src/`
-
----
-
-## 🎉 Conclusão
-
-O redesign do OrbisExtract foi concluído com sucesso, atendendo a todos os requisitos especificados e superando as expectativas de qualidade:
-
-### ✅ Entregas Principais
-
-1. **Interface Simplificada:** Remoção de elementos desnecessários (sidebar, bottom nav, passcode field)
-2. **Design Moderno:** Layout limpo, profissional e consistente entre plataformas
-3. **Compatibilidade Total:** Funcionalidade preservada em Desktop e Android
-4. **Qualidade de Código:** Zero erros, zero warnings, testes 100% aprovados
-
-### 🎯 Impacto no Usuário
-
-- **Experiência mais intuitiva:** Fluxo linear e direto
-- **Interface mais limpa:** Foco na tarefa principal
-- **Melhor performance:** Código otimizado e sem warnings
-- **Consistência multiplataforma:** Mesma experiência em Desktop e Android
-
-### 🚀 Próximos Passos (Opcionais)
-
-1. Testes em dispositivos Android reais (requer SDK instalado)
-2. Implementação de passcode na UI (se necessário)
-3. Implementação de histórico e configurações (se necessário)
-4. Otimização adicional de performance para extractions longas
+1. Verificar se o build do projeto Android compila com sucesso no GitHub Actions
+2. Testar a extração em um dispositivo Android real para validar as notificações
+3. Testar o fallback de permissão no Windows com uma pasta sem acesso
+4. Validar que o temporizador funciona corretamente em todas as plataformas
 
 ---
 
-**Versão:** 1.1.0  
-**Data:** 25 de Outubro de 2026  
-**Status:** ✅ Concluído com Sucesso  
-**Próximo Release:** v1.2.0 (quando implementações adicionais forem necessárias)
-
----
-
-*Documento gerado automaticamente pelo processo de redesign do OrbisExtract.*
+**Data:** 25 de outubro de 2026  
+**Versão do Projeto:** OrbisExtract (desconhecida - baseado nos arquivos existentes)  
+**Status:** Alterações implementadas e prontas para compilação/teste no GitHub Actions

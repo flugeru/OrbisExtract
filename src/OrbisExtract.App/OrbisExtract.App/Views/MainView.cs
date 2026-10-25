@@ -426,19 +426,61 @@ public sealed class MainView : UserControl
 
             await using var packageStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, true);
             Log("Abrindo e validando a estrutura interna do PKG…");
-            var destination = new StorageFolderExtractionDestination(_destination, Log);
+
+            // Para Windows com destino local, criamos um LocalExtractionDestination
+            // Para Android, usamos StorageFolderExtractionDestination
+            IExtractionDestination destination;
+            if (OperatingSystem.IsWindows())
+            {
+                // Verifica se o destino é acessível e cria um fallback se necessário
+                var testPath = Path.Combine(_destination.Name, "test_access");
+                try
+                {
+                    Directory.CreateDirectory(testPath);
+                    if (Directory.Exists(testPath)) Directory.Delete(testPath, true);
+                    destination = new LocalExtractionDestination(_destination.Name);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    // Falha de permissão - usa fallback com nome do pacote na pasta temporária
+                    Log($"Falha ao acessar destino: {ex.Message}. Usando fallback.");
+                    var fallbackRoot = Path.Combine(Path.GetDirectoryName(tempPath)!, $"{_package.Name}_extracted");
+                    Directory.CreateDirectory(fallbackRoot);
+                    destination = new WindowsFallbackDestination(fallbackRoot, _package.Name, Log);
+                }
+            }
+            else
+            {
+                // Android - usa StorageFolderExtractionDestination
+                destination = new StorageFolderExtractionDestination(_destination, Log);
+            }
+
             var progress = new Progress<ExtractionProgress>(p =>
             {
-                var total = p.FilesTotal ?? 0;
-                var pct = total > 0 ? Math.Clamp(p.FilesCompleted * 100d / total, 0, 100) : 0;
-                _progress.IsIndeterminate = total <= 0;
-                _progress.Value = pct;
-                _percent.Text = total > 0 ? $"{pct:0}%" : "";
-                _stateTitle.Text = p.State == "Concluído" ? "Concluindo" : p.State;
-                _counter.Text = total > 0
-                    ? $"{p.FilesCompleted:N0} de {total:N0} arquivos"
-                    : $"{p.FilesCompleted:N0} arquivos";
+                Dispatcher.UIThread.Post(() =>
+                {
+                    var total = p.FilesTotal ?? 0;
+                    var pct = total > 0 ? Math.Clamp(p.FilesCompleted * 100d / total, 0, 100) : 0;
+                    _progress.IsIndeterminate = total <= 0;
+                    _progress.Value = pct;
+                    _percent.Text = total > 0 ? $"{pct:0}%" : "";
+                    _stateTitle.Text = p.State == "Concluído" ? "Concluindo" : p.State;
+                    _counter.Text = total > 0
+                        ? $"{p.FilesCompleted:N0} de {total:N0} arquivos"
+                        : $"{p.FilesCompleted:N0} arquivos";
+                });
             });
+
+            // Atualiza o temporizador a cada relatório de progresso ou a cada 500ms
+            var timer = new System.Timers.Timer(200);
+            timer.Elapsed += (s, e) => Dispatcher.UIThread.Post(() =>
+            {
+                if (_clock.IsRunning)
+                    _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
+            });
+            timer.AutoReset = true;
+            timer.Start();
+
             var result = await new OpenOrbisPkgExtractor().ExtractAsync(
                 new ExtractionRequest(packageStream, string.Empty,
                     null, // Passcode removido da interface
@@ -446,11 +488,25 @@ public sealed class MainView : UserControl
                 progress,
                 token);
 
+            timer.Stop();
+            timer.Dispose();
+
             _progress.IsIndeterminate = false;
             _progress.Value = 100;
             _percent.Text = "100%";
             _stateTitle.Text = "Concluído";
             _counter.Text = $"{result.FilesExtracted:N0} arquivos · {result.BytesExtracted / 1024d / 1024d:N1} MiB";
+            
+            // Mostra notificação Android de sucesso se estiver no Android
+            if (OperatingSystem.IsAndroid())
+            {
+                var top = TopLevel.GetTopLevel(this);
+                if (top != null)
+                {
+                    AndroidNotificationHelper.CompleteExtraction(result.FilesExtracted, result.BytesExtracted);
+                }
+            }
+            
             ShowBanner($"Extração concluída com sucesso em {_clock.Elapsed:mm\\:ss}.", UiTheme.Success);
             Log($"Extração concluída. Arquivos: {result.FilesExtracted:N0}; bytes: {result.BytesExtracted:N0}.");
         }
@@ -461,6 +517,16 @@ public sealed class MainView : UserControl
             _counter.Text = "A extração foi interrompida.";
             ShowBanner("Extração cancelada.", UiTheme.Warning);
             Log("Extração cancelada.");
+            
+            // Mostra notificação Android de cancelamento se estiver no Android
+            if (OperatingSystem.IsAndroid())
+            {
+                var top = TopLevel.GetTopLevel(this);
+                if (top != null)
+                {
+                    AndroidNotificationHelper.CancelExtraction();
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -469,9 +535,21 @@ public sealed class MainView : UserControl
             _counter.Text = "Veja o log detalhado para mais informações.";
             ShowBanner($"Falha na extração: {ex.Message}");
             Log($"Falha na extração: {ex.Message}");
+            
+            // Mostra notificação Android de erro se estiver no Android
+            if (OperatingSystem.IsAndroid())
+            {
+                var top = TopLevel.GetTopLevel(this);
+                if (top != null)
+                {
+                    AndroidNotificationHelper.ShowError(ex.Message);
+                }
+            }
         }
         finally
         {
+            timer?.Stop();
+            timer?.Dispose();
             _clock.Stop();
             _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
             _cancel.IsVisible = false;
@@ -570,6 +648,99 @@ public sealed class MainView : UserControl
                 await temporaryFile.DisposeAsync();
                 await file.DeleteAsync();
             }
+        }
+    }
+
+    private sealed class LocalExtractionDestination : IExtractionDestination
+    {
+        private readonly string _root;
+        private readonly bool _failOnExistingFiles;
+
+        public LocalExtractionDestination(string root, bool failOnExistingFiles = true)
+        {
+            _root = Path.GetFullPath(root);
+            _failOnExistingFiles = failOnExistingFiles;
+            Directory.CreateDirectory(_root);
+        }
+
+        public Task<Stream> CreateTemporaryFileAsync(string relativePath, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var output = SafeExtractionPath.Resolve(_root, relativePath);
+            if (_failOnExistingFiles && File.Exists(output))
+                throw new PkgExtractionException($"O arquivo já existe: {output}");
+            Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+            var temporary = output + ".orbisextract.tmp";
+            return Task.FromResult<Stream>(new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, true));
+        }
+
+        public Task CommitAsync(Stream temporaryFile, string relativePath, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (temporaryFile is not FileStream file)
+                throw new PkgExtractionException("Destino local recebeu um temporário inválido.");
+            var output = SafeExtractionPath.Resolve(_root, relativePath);
+            file.Flush();
+            file.Dispose();
+            File.Move(file.Name, output, overwrite: false);
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteTemporaryFileAsync(Stream temporaryFile, CancellationToken cancellationToken = default)
+        {
+            if (temporaryFile is FileStream file)
+            {
+                var name = file.Name;
+                file.Dispose();
+                if (File.Exists(name)) File.Delete(name);
+            }
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class WindowsFallbackDestination : IExtractionDestination
+    {
+        private readonly string _root;
+        private readonly string _packageName;
+        private readonly Action<string> _log;
+
+        public WindowsFallbackDestination(string root, string packageName, Action<string> log)
+        {
+            _root = Path.GetFullPath(root);
+            _packageName = packageName;
+            _log = log ?? (_ => { });
+        }
+
+        public Task<Stream> CreateTemporaryFileAsync(string relativePath, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var output = SafeExtractionPath.Resolve(_root, relativePath);
+            var temporary = Path.Combine(Path.GetDirectoryName(output)!, $"{Path.GetFileNameWithoutExtension(output)}.orbisextract.tmp");
+            _log($"Criando arquivo temporário: {temporary}");
+            Directory.CreateDirectory(Path.GetDirectoryName(temporary)!);
+            return Task.FromResult<Stream>(new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, true));
+        }
+
+        public Task CommitAsync(Stream temporaryFile, string relativePath, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var output = SafeExtractionPath.Resolve(_root, relativePath);
+            ((FileStream)temporaryFile).Flush();
+            ((FileStream)temporaryFile).Dispose();
+            if (File.Exists(temporaryFile.Name))
+                File.Move(temporaryFile.Name, output, overwrite: false);
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteTemporaryFileAsync(Stream temporaryFile, CancellationToken cancellationToken = default)
+        {
+            if (temporaryFile is FileStream file)
+            {
+                var name = file.Name;
+                file.Dispose();
+                if (File.Exists(name)) File.Delete(name);
+            }
+            return Task.CompletedTask;
         }
     }
 }
