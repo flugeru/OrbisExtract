@@ -45,8 +45,9 @@ O código estava passando `string.Empty` como caminho de destino para a extraç�
   - Usa `Dispatcher.UIThread.Post()` para atualizar a UI de forma segura
 
 ### Arquivos Alterados
-1. **MainView.cs** (linhas 475-482):
-   - Criação do timer com intervalo de 200ms
+1. **MainView.cs** (linhas 432-440):
+   - Declaração da variável `timer` antes do bloco `try`
+   - Inicialização do timer com intervalo de 200ms após a cópia temporária do PKG
    - Event handler que atualiza o texto do temporizador
    - Início e parada do timer ao redor da extração
 
@@ -58,13 +59,45 @@ O código estava passando `string.Empty` como caminho de destino para a extraç�
 Não havia nenhuma implementação de notificações nativas no Android, resultando em falta de feedback visual para o usuário sobre o progresso da extração.
 
 ### Solução Implementada
-- **Arquivos Criados:**
-  - `src\OrbisExtract.App\OrbisExtract.App.Android\AndroidNotificationHelper.cs`: Classe estática para gerenciar notificações Android
-  - `src\OrbisExtract.App\OrbisExtract.App.Android\NotificationService.cs`: Serviço de notificação (mantido para compatibilidade)
 
-- **Arquivos Alterados:**
-  - `MainActivity.cs`: Criação do canal de notificação no Android
-  - `Properties\AndroidManifest.xml`: Adição de permissões necessárias
+#### Abordagem Utilizada
+Para evitar problemas de referência entre projetos com diferentes alvos (`.NET 8.0` vs `net10.0-android`), foi criada uma classe compartilhada `AppNotificationHelper` no projeto principal que:
+- Contém placeholders para todas as plataformas
+- No Android, delega a implementação real para a classe `AndroidNotificationHelper` existente no projeto Android
+
+#### Arquivos Criados/Alterados
+
+1. **src\OrbisExtract.App\OrbisExtract.App\AppNotificationHelper.cs** (NOVO):
+   - Classe estática que funciona como wrapper para as notificações Android
+   - Contém placeholders para outras plataformas (Windows, iOS, etc.)
+   - No build Android, delega os chamados para `AndroidNotificationHelper` real
+   - Método `Initialize()`: Inicializa o helper de notificações Android
+
+2. **src\OrbisExtract.App\OrbisExtract.App.Android\MainActivity.cs** (alterado):
+   - Adicionada a chamada `AppNotificationHelper.Initialize()` em `OnCreate()`
+   - Garante que o canal de notificação e o contexto estejam prontos antes da extração
+
+3. **src\OrbisExtract.App\OrbisExtract.App.Android\AndroidNotificationHelper.cs** (mantido):
+   - Classe existente para gerenciar notificações Android nativas
+   - Métodos: `StartExtraction()`, `UpdateProgress()`, `CompleteExtraction()`, `CancelExtraction()`, `ShowError()`
+   - Usa `NotificationCompat.Builder` e `NotificationManagerCompat` para criar notificações
+   - Mantém a mesma notificação atualizando o ID em vez de criar novas notificações
+
+4. **src\OrbisExtract.App\OrbisExtract.App.Android\NotificationService.cs** (mantido):
+   - Serviço de notificação reservado para uso futuro se necessário
+   - Atualizado para ser compatível com a nova abordagem de notificações
+
+5. **MainActivity.cs** (alterado):
+   - Criação do canal de notificação em `OnCreate()`
+   - Uso correto da API de notificações Android
+
+6. **AndroidManifest.xml** (alterado):
+   - Adicionado `<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />`
+   - Adicionado `<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />`
+
+7. **MainView.cs** (alterado):
+   - Chamadas ao `AppNotificationHelper` nos blocos de sucesso, cancelamento e erro
+   - Verificação de plataforma Android antes de chamar as notificações
 
 ### Funcionalidades Implementadas
 1. **Notificação de Progresso:**
@@ -81,37 +114,19 @@ Não havia nenhuma implementação de notificações nativas no Android, resulta
    - `FOREGROUND_SERVICE`: Para manter a notificação em primeiro plano
    - `POST_NOTIFICATIONS`: Para mostrar notificações (requer permissão do usuário em Android 13+)
 
-### Arquivos Alterados/Criados
-1. **AndroidNotificationHelper.cs** (NOVO):
-   - Método `StartExtraction()`: Inicia notificação de progresso
-   - Método `UpdateProgress()`: Atualiza notificação durante a extração
-   - Método `CompleteExtraction()`: Notifica conclusão bem-sucedida
-   - Método `CancelExtraction()`: Notifica cancelamento
-   - Método `ShowError()`: Notifica erro com mensagem
-
-2. **MainActivity.cs** (alterado):
-   - Criação do canal de notificação em `OnCreate()`
-   - Uso correto da API de notificações Android
-
-3. **AndroidManifest.xml** (alterado):
-   - Adicionado `<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />`
-   - Adicionado `<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />`
-
-4. **MainView.cs** (alterado):
-   - Chamadas ao `AndroidNotificationHelper` nos blocos de sucesso, cancelamento e erro
-   - Verificação de plataforma Android antes de chamar as notificações
-
 ---
 
 ## Arquivos Alterados em Resumo
 
 | Arquivo | Mudanças Principais |
 |---------|---------------------|
-| `src/OrbisExtract.App/OrbisExtract.App/Views/MainView.cs` | Lógica de fallback para permissão, timer de 200ms, notificações Android |
-| `src/OrbisExtract.App/OrbisExtract.App.Android/MainActivity.cs` | Canal de notificação Android |
-| `src/OrbisExtract.App/OrbisExtract.App.Android/AndroidNotificationHelper.cs` | NOVO - Gerenciamento de notificações |
-| `src/OrbisExtract.App/OrbisExtract.App.Android/NotificationService.cs` | Alterado - Mantido para compatibilidade |
+| `src/OrbisExtract.App/OrbisExtract.App/Views/MainView.cs` | Lógica de fallback para permissão, timer de 200ms, chamadas a AppNotificationHelper |
+| `src/OrbisExtract.App/OrbisExtract.App/AppNotificationHelper.cs` | NOVO - Wrapper para notificações Android com placeholders multiplataforma |
+| `src/OrbisExtract.App/OrbisExtract.App.Android/MainActivity.cs` | Inicialização do AppNotificationHelper em OnCreate() |
+| `src/OrbisExtract.App/OrbisExtract.App.Android/AndroidNotificationHelper.cs` | Mantido - Implementação real de notificações Android |
+| `src/OrbisExtract.App/OrbisExtract.App.Android/NotificationService.cs` | Mantido - Serviço de notificação para compatibilidade |
 | `src/OrbisExtract.App/OrbisExtract.App.Android/Properties/AndroidManifest.xml` | Permissões de notificação e foreground service |
+| `src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj` | Remoção de referência ao projeto compartilhado removido |
 
 ---
 
@@ -120,8 +135,10 @@ Não havia nenhuma implementação de notificações nativas no Android, resulta
 1. ✅ **Análise de Código:** Revisão completa da lógica de extração, temporizador e notificações
 2. ✅ **Comparação com Backups:** Verificação das diferenças entre o código atual e os backups (20261023 e 20261024)
 3. ✅ **Compilação .NET Core:** Projetos `OrbisExtract.Core` e `OrbisExtract.Infrastructure.OpenOrbis` compilam sem erros
-4. ✅ **Consistência de Interfaces:** Todas as interfaces (`IExtractionDestination`, `IPkgExtractor`) preservadas
-5. ✅ **Preservação de Funcionalidades:** Nenhuma funcionalidade existente foi removida
+4. ✅ **Compilação OrbisExtract.App:** Projeto `OrbisExtract.App` compila sem erros (0 erros, 0 avisos)
+5. ✅ **Consistência de Interfaces:** Todas as interfaces (`IExtractionDestination`, `IPkgExtractor`) preservadas
+6. ✅ **Preservação de Funcionalidades:** Nenhuma funcionalidade existente foi removida
+7. ✅ **Abordagem Multiplataforma:** Uso de condicionais `#if ANDROID` para garantir que o código Android não afete outras plataformas
 
 ---
 
@@ -129,7 +146,7 @@ Não havia nenhuma implementação de notificações nativas no Android, resulta
 
 ### 1. Extração no Windows com Fallback
 - **O que testar:** Tentar extrair um PKG para uma pasta sem permissão (ex: `C:\Windows\System32`)
-- **Resultado esperado:** O código deve criar automaticamente uma pasta `[nome_pkg]_extracted` na mesma localização do PKG original e extrair com sucesso
+- **Resultado esperado:** O código deve criar automaticamente uma pasta `[nome_pkg]_extracted` na mesma pasta do PKG original e extrair com sucesso
 
 ### 2. Temporizador em Todas as Plataformas
 - **O que testar:** Executar extrações de diferentes tamanhos em Windows, Android e outros sistemas
@@ -148,8 +165,8 @@ Não havia nenhuma implementação de notificações nativas no Android, resulta
 - **Requisito:** SDK do Android instalado no ambiente de build
 - **O que verificar:** O build via GitHub Actions deve completar sem erros relacionados às novas classes Android
 - **Arquivos novos a serem compilados:**
-  - `NotificationService.cs` (classe reservada)
-  - `AndroidNotificationHelper.cs`
+  - `AppNotificationHelper.cs` (classe wrapper multiplataforma)
+  - `AndroidNotificationHelper.cs` (implementação real de notificações Android)
 
 ---
 
@@ -157,8 +174,9 @@ Não havia nenhuma implementação de notificações nativas no Android, resulta
 
 1. **Não houve alterações na API pública:** Todas as mudanças são internas e preservam a interface existente
 2. **Compatibilidade multiplataforma:** As correções no Windows não afetam Android, iOS ou outras plataformas
-3. **Arquivos de notificação:** O `AndroidNotificationHelper.cs` é o único arquivo novo que deve ser compilado para o Android
+3. **Arquivos de notificação:** A classe `AppNotificationHelper` é o único arquivo novo que deve ser compilado para o build principal; a implementação real está no projeto Android
 4. **Logs temporários:** Nenhum log de depuração adicional foi adicionado durante este trabalho
+5. **Abordagem de referência entre projetos:** Para evitar problemas de build entre projetos com diferentes alvos, foi criada uma classe wrapper `AppNotificationHelper` que delega para a implementação real no projeto Android
 
 ---
 

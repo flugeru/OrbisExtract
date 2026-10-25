@@ -412,6 +412,8 @@ public sealed class MainView : UserControl
         Log("Passcode: não utilizado nesta versão.");
 
         string? tempPath = null;
+        System.Timers.Timer? timer = null;
+
         try
         {
             // Streams content:// do Android nem sempre permitem seek. Copiamos o PKG
@@ -426,6 +428,16 @@ public sealed class MainView : UserControl
 
             await using var packageStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, true);
             Log("Abrindo e validando a estrutura interna do PKG…");
+
+            // Inicializa o timer para atualização contínua do temporizador
+            timer = new System.Timers.Timer(200);
+            timer.Elapsed += (s, e) => Dispatcher.UIThread.Post(() =>
+            {
+                if (_clock.IsRunning)
+                    _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
+            });
+            timer.AutoReset = true;
+            timer.Start();
 
             // Para Windows com destino local, criamos um LocalExtractionDestination
             // Para Android, usamos StorageFolderExtractionDestination
@@ -471,16 +483,6 @@ public sealed class MainView : UserControl
                 });
             });
 
-            // Atualiza o temporizador a cada relatório de progresso ou a cada 500ms
-            var timer = new System.Timers.Timer(200);
-            timer.Elapsed += (s, e) => Dispatcher.UIThread.Post(() =>
-            {
-                if (_clock.IsRunning)
-                    _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
-            });
-            timer.AutoReset = true;
-            timer.Start();
-
             var result = await new OpenOrbisPkgExtractor().ExtractAsync(
                 new ExtractionRequest(packageStream, string.Empty,
                     null, // Passcode removido da interface
@@ -488,8 +490,8 @@ public sealed class MainView : UserControl
                 progress,
                 token);
 
-            timer.Stop();
-            timer.Dispose();
+            timer?.Stop();
+            timer?.Dispose();
 
             _progress.IsIndeterminate = false;
             _progress.Value = 100;
@@ -503,7 +505,7 @@ public sealed class MainView : UserControl
                 var top = TopLevel.GetTopLevel(this);
                 if (top != null)
                 {
-                    AndroidNotificationHelper.CompleteExtraction(result.FilesExtracted, result.BytesExtracted);
+                    OrbisExtract.App.Shared.AppNotificationHelper.CompleteExtraction(result.FilesExtracted, result.BytesExtracted);
                 }
             }
             
@@ -524,7 +526,7 @@ public sealed class MainView : UserControl
                 var top = TopLevel.GetTopLevel(this);
                 if (top != null)
                 {
-                    AndroidNotificationHelper.CancelExtraction();
+                    OrbisExtract.App.Shared.AppNotificationHelper.CancelExtraction();
                 }
             }
         }
@@ -542,7 +544,7 @@ public sealed class MainView : UserControl
                 var top = TopLevel.GetTopLevel(this);
                 if (top != null)
                 {
-                    AndroidNotificationHelper.ShowError(ex.Message);
+                    OrbisExtract.App.Shared.AppNotificationHelper.ShowError(ex.Message);
                 }
             }
         }
@@ -727,8 +729,8 @@ public sealed class MainView : UserControl
             var output = SafeExtractionPath.Resolve(_root, relativePath);
             ((FileStream)temporaryFile).Flush();
             ((FileStream)temporaryFile).Dispose();
-            if (File.Exists(temporaryFile.Name))
-                File.Move(temporaryFile.Name, output, overwrite: false);
+            if (File.Exists(((FileStream)temporaryFile).Name))
+                File.Move(((FileStream)temporaryFile).Name, output, overwrite: false);
             return Task.CompletedTask;
         }
 

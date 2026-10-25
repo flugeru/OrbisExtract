@@ -4,6 +4,7 @@ using Android.OS;
 using AndroidX.Core.App;
 using Avalonia;
 using Avalonia.Android;
+using OrbisExtract.App.Shared;
 
 namespace OrbisExtract.App.Android;
 
@@ -23,6 +24,9 @@ public class MainActivity : AvaloniaMainActivity
 
         // Cria o canal de notificação imediatamente para evitar erros em versões recentes do Android
         CreateNotificationChannel();
+        
+        // Inicializa o helper de notificações
+        AppNotificationHelper.Initialize();
     }
 
     protected override void OnDestroy()
