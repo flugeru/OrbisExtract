@@ -213,7 +213,7 @@ public sealed class MainView : UserControl
         // ---------- Layout principal (coluna única simplificada) ----------
         _mainGrid = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
         Grid.SetRow(scroll, 0);
-        Grid.SetRow(_mainGrid.Children[1], 1);
+        Grid.SetRow(mainGrid.Children[1], 1);
         mainGrid.Children.Add(scroll);
         Content = mainGrid;
 
