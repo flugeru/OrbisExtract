@@ -10,6 +10,7 @@
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>..\..\..\packaging\windows\orbisextract.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
