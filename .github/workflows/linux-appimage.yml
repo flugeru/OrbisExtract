@@ -10,6 +10,7 @@ on:
       - 'scripts/build-appimage.sh'
       - 'packaging/**'
       - '.github/workflows/linux-appimage.yml'
+      - '.github/workflows/android-apk.yml'
       - '*.sln'
       - 'Directory.*'
 
