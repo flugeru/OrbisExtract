@@ -1,34 +1,26 @@
 # OrbisExtract
 
-Cross-platform PlayStation 4 PKG extractor built with C#, .NET, Avalonia UI, and [OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg).
+Aplicativo multiplataforma para **extrair o conteúdo de arquivos `.pkg` de PlayStation 4** a partir de dumps feitos pelo próprio usuário.
 
-## Features
+Ele lê o pacote, mostra os metadados e extrai os arquivos internos para uma pasta escolhida — nada além disso. Não baixa, não instala, não cria nem converte pacotes, e não contém chaves, passcodes ou qualquer mecanismo de burlar proteção. É uma ferramenta de extração para uso com os seus próprios dumps.
 
-- Read PKG metadata.
-- Extract package contents to a selected destination.
-- Windows, Linux, and Android project targets.
+Feito em C#/.NET com interface [Avalonia](https://avaloniaui.net), usando a biblioteca [OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg) para a leitura dos pacotes.
 
-## Recent Changes (v1.1.0)
+## O que ele faz
 
-### UI Redesign
-- **Simplified Interface**: Removed sidebar navigation and bottom navigation bar for a cleaner, focused extraction experience
-- **Columnar Layout**: Streamlined single-column layout that adapts to available screen width
-- **Removed Passcode Field from UI**: Passcode functionality preserved in backend; field removed from main interface
-- **Improved Visual Hierarchy**: Clearer separation between package selection, configuration, and extraction monitoring sections
-- **Responsive Design**: Adapts seamlessly between desktop (1000px+) and mobile screens
+- Abre um arquivo `.pkg` de PS4 do seu dispositivo/armazenamento
+- Exibe as informações do pacote (título, conteúdo, estrutura)
+- Extrai os arquivos do pacote para uma pasta de destino, com progresso
+- Disponível para **Windows/Linux** (desktop) e **Android** (APK)
 
-### Technical Improvements
-- Removed unused `_timer` field to eliminate compiler warnings
-- Cleaned up nullable reference type annotations
-- Reduced default window dimensions for better initial display
+## Como compilar
 
-## Requirements
+### Requisitos
 
-- .NET SDK 8 for the shared backend and desktop project.
-- .NET SDK 10 and the Android workload for Android builds.
-- Java and Android SDK for Android builds.
+- [.NET SDK 8](https://dotnet.microsoft.com/download) (núcleo, desktop e testes)
+- Para Android: .NET 10 SDK + workload `android`, Java e Android SDK
 
-## Build
+### Desktop (Windows/Linux)
 
 ```bash
 dotnet restore OrbisExtract.sln
@@ -36,22 +28,26 @@ dotnet build OrbisExtract.sln
 dotnet test OrbisExtract.sln --no-restore
 ```
 
-## Publish
+Para gerar a versão publicável:
 
 - Windows: `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1`
-  - **Note**: First, create `Icon.ico` from `src/OrbisExtract.App/OrbisExtract.App/Assets/Icon.png` using ImageMagick or an online converter. Run `scripts/create-windows-icon.ps1` to automate this.
 - Linux: `bash scripts/publish-linux.sh`
-- AppImage: `bash scripts/build-appimage.sh` after publishing Linux; `appimagetool` must be installed.
-- Android: `bash scripts/publish-android.sh` in an environment configured with the .NET 10 Android workload, Java, and Android SDK.
 
-The GitHub Actions workflow builds the Android APK and Windows application. Download build artifacts from the repository's [Actions](https://github.com/flugeru/OrbisExtract/actions) page.
+### Android
 
-## Notes
+```bash
+bash scripts/publish-android.sh
+```
 
-- Extraction is limited to packages the underlying library can read and decrypt. Required passcodes or keys must be supplied; the application does not bypass them.
-- No PKG sample is included. End-to-end extraction on real packages and Android device validation are not currently claimed as tested.
-- The project does not create, convert, install, download, or manage PKG files.
+Ou baixe o APK pronto na página de [Actions](https://github.com/flugeru/OrbisExtract/actions) do repositório (workflow `Android APK`, que compila no push).
 
-## License
+## Créditos
 
-See [LICENSE](LICENSE) and [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+- **[OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg)** — biblioteca que faz a leitura/extração dos pacotes PKG. A fonte está incluída em `vendor/LibOrbisPkg/` sob licença **LGPL-3.0**. Obrigado ao projeto OpenOrbis e aos contribuintes do LibOrbisPkg.
+- **[Avalonia UI](https://avaloniaui.net)** — interface gráfica multiplataforma (MIT).
+
+Avisos completos de licenças de terceiros em [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+## Licença
+
+Este projeto está sob a licença **MIT** — veja [LICENSE](LICENSE).
