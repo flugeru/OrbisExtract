@@ -33,6 +33,13 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Generate Linux icon from OrbisExtract artwork
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick librsvg2-bin
+          rsvg-convert -w 512 -h 512 packaging/orbisextract-icon.svg -o packaging/linux/orbisextract.png
+          file packaging/linux/orbisextract.png
+
       - name: Restore solution
         run: dotnet restore OrbisExtract.sln
 
