@@ -116,6 +116,47 @@ Para evitar problemas de referência entre projetos com diferentes alvos (`.NET 
 
 ---
 
+## 4. Segunda Rodada: Erros de CI e Crash do Desktop (25/10/2026)
+
+### 4.1 Erros de CI Identificados e Corrigidos
+
+| Erro no CI | Causa Raiz | Correção |
+|------------|-----------|----------|
+| `Unexpected end tag. Line 9, position 3` (AndroidManifest) | Tag `</manifest>` duplicada, resultado de edição anterior | Tag removida; XML validado |
+| `CS0234: The type or namespace 'Shared' does not exist` | `src/OrbisExtract.App/.gitignore` tinha padrão `*.app`, que no Windows (case-insensitive) ignorava o diretório `OrbisExtract.App/` inteiro → `AppNotificationHelper.cs` nunca foi commitado | Adicionadas negações `!OrbisExtract.App/`, `!OrbisExtract.App/*.cs`, `OrbisExtract.App/bin/`, `OrbisExtract.App/obj/` no .gitignore |
+| Itens `Compile` duplicados no csproj Android | Includes explícitos conflitando com os globs | Includes duplicados removidos |
+| `CS0234 'App'/'Manifest' não existe no namespace OrbisExtract.App.Android` | Dentro dos namespaces do projeto, o identificador `Android` resolve para `OrbisExtract.App.Android` (shadowing) em vez de `global::Android` | Nomes qualificados com `global::Android.App.Application.Context` e `global::Android.Manifest.Permission.PostNotifications` |
+| `CS0103: 'Build' não existe` em `AndroidNotificationHelper.cs` | Falta `using Android.OS;` (arquivo nunca tinha compilado no CI) | Using adicionado |
+
+### 4.2 Crash/Congelamento do Desktop ao Escolher Pasta
+
+- **Causa (Event Log, eventos 1026/1000):** `System.ArgumentException: Directory must exist` lançada dentro de `Avalonia.Win32.Win32StorageProvider.OpenFolderPickerAsync`, que escapava para o handler `async void` e encerrava o processo.
+- **Correção:** `try/catch` em `ChooseDestinationAsync()` e `ChoosePackageAsync()` convertem a exceção em aviso na banner da UI, sem derrubar o app.
+
+### 4.3 Destino Windows
+
+- Uso do caminho **completo** da pasta escolhida via `_destination.TryGetLocalPath()` (antes usava `_destination.Name`, apenas o nome base, causando escrita em caminho relativo).
+- Criação do destino movida para dentro de `Task.Run` para não bloquear a UI em pastas de rede/lentas.
+- Novo método `CreateFallbackRoot()`: cria `[nome_do_pkg]_extracted` ao lado do PKG original; sem permissão, usa a pasta temporária do sistema.
+
+### 4.4 Notificações Android — Conexão ao Progresso
+
+- `AppNotificationHelper` ganhou os métodos `StartExtraction()` e `UpdateProgress()` (branch `#if ANDROID` delegando; placeholders nas demais plataformas).
+- `MainView.cs` chama `StartExtraction` no início da extração e `UpdateProgress` no callback de `Progress<ExtractionProgress>`.
+- `MainActivity` solicita `POST_NOTIFICATIONS` em tempo de execução no Android 13+ (`BuildVersionCodes.Tiramisu`), sem o qual as notificações são silenciosamente descartadas.
+
+### 4.5 APIs Android Verificadas Estaticamente
+
+Como o código Android nunca tinha compilado no CI, todas as APIs foram verificadas por reflexão de metadados contra os assemblies reais (`Mono.Android` ref pack 36.1.118, `Xamarin.AndroidX.Core` 1.17.0.2):
+
+- `NotificationChannel.EnableVibration(bool)` é **método** (não propriedade)
+- `NotificationCompat.Builder(Context, string)`, `SetSmallIcon(int)`, `SetProgress(int,int,bool)`, `SetOngoing(bool)`, `SetAutoCancel(bool)`, `SetSubText(string)` — todos existem
+- `NotificationManagerCompat.From/Notify/Cancel/CreateNotificationChannel` — existem
+- **Ícone:** o recurso no APK publicado é `res/drawable/icon.png` (minúsculo); para não depender do nome do campo gerado em `Resource.Drawable`, o ID é resolvido em runtime via `Resources.GetIdentifier("icon", "drawable", packageName)` com cache
+- Compilação de verificação dos arquivos Android reais contra as refs reais: **0 erros**
+
+---
+
 ## Arquivos Alterados em Resumo
 
 | Arquivo | Mudanças Principais |
@@ -180,15 +221,22 @@ Para evitar problemas de referência entre projetos com diferentes alvos (`.NET 
 
 ---
 
-## Próximos Passos (GitHub Actions)
+## Resultado no GitHub Actions
 
-1. Verificar se o build do projeto Android compila com sucesso no GitHub Actions
-2. Testar a extração em um dispositivo Android real para validar as notificações
-3. Testar o fallback de permissão no Windows com uma pasta sem acesso
+- **Run `40193654407` (commit `d8d79c5`): ✅ SUCESSO — ambos os jobs**
+  - Job **Build Windows EXE**: sucesso (restore, testes, publish, upload)
+  - Job **Build Android APK**: sucesso (publish APK e upload)
+- Este é o primeiro build Android completo desde a adição das notificações; os erros anteriores de manifest, .gitignore e compilação C# foram eliminados.
+
+## Próximos Passos
+
+1. Testar a extração em um dispositivo Android real para validar as notificações e o pedido de permissão Android 13+
+2. Testar o fallback de permissão no Windows com uma pasta sem acesso
+3. Validar que a escolha de pasta no desktop não congela mais o aplicativo
 4. Validar que o temporizador funciona corretamente em todas as plataformas
 
 ---
 
 **Data:** 25 de outubro de 2026  
 **Versão do Projeto:** OrbisExtract (desconhecida - baseado nos arquivos existentes)  
-**Status:** Alterações implementadas e prontas para compilação/teste no GitHub Actions
+**Status:** ✅ CI verde (Windows EXE + Android APK) no commit `d8d79c5`; pendente apenas teste em dispositivo real
