@@ -212,10 +212,9 @@ public sealed class MainView : UserControl
 
         // ---------- Layout principal (coluna única simplificada) ----------
         _mainGrid = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
-        Grid.SetRow(scroll, 0);
-        Grid.SetRow(mainGrid.Children[1], 1);
         mainGrid.Children.Add(scroll);
-        Content = mainGrid;
+        Grid.SetRow(scroll, 0);
+        Content = _mainGrid;
 
         ApplyContentLayout(isAndroid ? 400 : 900);
         SetProgressIdle();
