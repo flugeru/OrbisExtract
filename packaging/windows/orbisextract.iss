@@ -43,7 +43,6 @@ LicenseFile=..\..\LICENSE
 ; configurações da versão anterior do registro e instala por cima.
 UsePreviousAppDir=yes
 UsePreviousGroup=yes
-UsePreviousAppType=yes
 ; Fecha o programa se estiver rodando durante a instalação
 CloseApplications=yes
 
