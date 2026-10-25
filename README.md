@@ -19,6 +19,17 @@ Built in C#/.NET with an [Avalonia](https://avaloniaui.net) UI, using the [OpenO
 - Extracts the package contents to a chosen folder, with progress
 - Available for **Windows/Linux** (desktop) and **Android** (APK)
 
+### Platform support
+
+| Platform | Status | Build artefact (GitHub Actions) |
+|---|---|---|
+| **Windows** (x64) | ✅ Supported and tested | `orbisextract-windows-exe` |
+| **Linux** (x64) | ✅ Supported — AppImage | `orbisextract-linux-appimage` |
+| **Android** (APK) | ✅ Supported and tested | `orbisextract-android-apk` |
+| macOS, iOS, Web (Browser) | ❌ Not available | project files exist, but they are not built or validated |
+
+All binaries are produced by the CI workflows on every push and can be downloaded from the [Actions](https://github.com/flugeru/OrbisExtract/actions) page (artefacts are kept for 14 days).
+
 ### How to build
 
 **Requirements**
@@ -38,6 +49,7 @@ To produce a releasable build:
 
 - Windows: `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1`
 - Linux: `bash scripts/publish-linux.sh`
+- Linux AppImage: `bash scripts/publish-linux.sh && bash scripts/build-appimage.sh` (requires [`appimagetool`](https://github.com/AppImage/AppImageKit))
 
 **Android**
 
@@ -75,6 +87,17 @@ Feito em C#/.NET com interface [Avalonia](https://avaloniaui.net), usando a bibl
 - Extrai os arquivos do pacote para uma pasta de destino, com progresso
 - Disponível para **Windows/Linux** (desktop) e **Android** (APK)
 
+### Suporte a plataformas
+
+| Plataforma | Status | Artefato (GitHub Actions) |
+|---|---|---|
+| **Windows** (x64) | ✅ Suportado e testado | `orbisextract-windows-exe` |
+| **Linux** (x64) | ✅ Suportado — AppImage | `orbisextract-linux-appimage` |
+| **Android** (APK) | ✅ Suportado e testado | `orbisextract-android-apk` |
+| macOS, iOS, Web (Browser) | ❌ Não disponível | os arquivos de projeto existem, mas não são compilados nem validados |
+
+Todos os binários são gerados pelos workflows de CI a cada push e podem ser baixados na página de [Actions](https://github.com/flugeru/OrbisExtract/actions) (os artefatos ficam disponíveis por 14 dias).
+
 ### Como compilar
 
 **Requisitos**
@@ -94,6 +117,7 @@ Para gerar a versão publicável:
 
 - Windows: `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1`
 - Linux: `bash scripts/publish-linux.sh`
+- Linux AppImage: `bash scripts/publish-linux.sh && bash scripts/build-appimage.sh` (requer o [`appimagetool`](https://github.com/AppImage/AppImageKit))
 
 **Android**
 
