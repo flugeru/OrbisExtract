@@ -2,7 +2,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APPDIR="$ROOT/artifacts/OrbisExtract.AppDir"
-ICON="$ROOT/src/OrbisExtract.App/OrbisExtract.App/Assets/Icon.png"
+ICON="$ROOT/packaging/linux/orbisextract.png"
+# Fallback local caso o ícone de packaging ainda não exista
+if [ ! -f "$ICON" ] && [ -f "$ROOT/src/OrbisExtract.App/OrbisExtract.App/Assets/Icon.png" ]; then
+  ICON="$ROOT/src/OrbisExtract.App/OrbisExtract.App/Assets/Icon.png"
+fi
 APPIMAGETOOL="${APPIMAGETOOL:-appimagetool}"
 BIN="OrbisExtract.App.Desktop"
 
