@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("OrbisExtract.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b5de9b712cec7b89751c5d65da6f9ff8723548c2")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8c89d660520711afe59762e9165b1c4b0a085753")]
 [assembly: System.Reflection.AssemblyProductAttribute("OrbisExtract.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OrbisExtract.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

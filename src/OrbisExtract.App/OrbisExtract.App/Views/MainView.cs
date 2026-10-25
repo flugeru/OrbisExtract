@@ -46,7 +46,7 @@ public sealed class MainView : UserControl
     private readonly Stopwatch _clock = new();
 
     // Layout
-    private readonly Grid _mainGrid, _contentGrid;
+    private readonly Grid _contentGrid;
     private readonly Control _packageCard, _settingsCard, _monitorCard;
     private bool? _isWideContent;
 
@@ -211,10 +211,11 @@ public sealed class MainView : UserControl
         scroll.SizeChanged += (_, e) => ApplyContentLayout(e.NewSize.Width);
 
         // ---------- Layout principal (coluna única simplificada) ----------
-        _mainGrid = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
+        var wrapper = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
         mainGrid.Children.Add(scroll);
         Grid.SetRow(scroll, 0);
-        Content = _mainGrid;
+        wrapper.Children.Add(mainGrid);
+        Content = wrapper;
 
         ApplyContentLayout(isAndroid ? 400 : 900);
         SetProgressIdle();
