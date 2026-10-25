@@ -1,0 +1,35 @@
+# ===================== Build results =====================
+[Bb]in/
+[Oo]bj/
+artifacts/
+TestResults/
+*.trx
+
+# ===================== Local-only (nunca commitar) =====================
+# Backup de arquivos removidos do repositório (mantido só localmente)
+.local-backup/
+
+# Área de download/expansão de terceiros (o código usado é vendor/)
+vendor-download/
+
+# Ferramentas locais (worktrees de agentes etc.)
+.claude/
+
+# ===================== IDE / Editor =====================
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.swp
+*~
+
+# ===================== NuGet =====================
+packages/
+*.nupkg
+project.lock.json
+
+# ===================== SO =====================
+Thumbs.db
+Desktop.ini
+.DS_Store

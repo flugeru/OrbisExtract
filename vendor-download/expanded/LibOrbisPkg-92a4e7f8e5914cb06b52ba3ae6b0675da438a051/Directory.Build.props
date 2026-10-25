@@ -1,7 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <TargetFramework>net8.0</TargetFramework>
-  </PropertyGroup>
-</Project>
