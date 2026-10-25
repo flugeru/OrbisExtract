@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <Compile Include="..\OrbisExtract.App\App.axaml.cs" Link="App.axaml.cs" />
+    <Compile Include="..\OrbisExtract.App\AppNotificationHelper.cs" Link="AppNotificationHelper.cs" />
     <Compile Include="..\OrbisExtract.App\ViewModels\**\*.cs" Link="ViewModels\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\OrbisExtract.App\Views\**\*.cs" Link="Views\%(RecursiveDir)%(Filename)%(Extension)" />
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/App.axaml" Link="App.axaml" />

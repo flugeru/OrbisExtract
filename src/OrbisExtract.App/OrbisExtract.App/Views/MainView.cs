@@ -314,16 +314,29 @@ public sealed class MainView : UserControl
     {
         var top = TopLevel.GetTopLevel(this);
         if (top is null) return;
-        var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+
+        IReadOnlyList<IStorageFile> files;
+        try
         {
-            Title = "Selecionar pacote PlayStation PKG",
-            AllowMultiple = false,
-            FileTypeFilter =
-            [
-                new FilePickerFileType("Pacotes PKG") { Patterns = ["*.pkg", "*.PKG"] },
-                FilePickerFileTypes.All
-            ]
-        });
+            files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Selecionar pacote PlayStation PKG",
+                AllowMultiple = false,
+                FileTypeFilter =
+                [
+                    new FilePickerFileType("Pacotes PKG") { Patterns = ["*.pkg", "*.PKG"] },
+                    FilePickerFileTypes.All
+                ]
+            });
+        }
+        catch (Exception ex)
+        {
+            // O seletor nativo pode falhar se o caminho retornado não existir mais no disco.
+            ShowBanner($"Não foi possível abrir o seletor de arquivos: {ex.Message}", UiTheme.Warning);
+            Log($"Aviso ao abrir o seletor de pacotes: {ex.Message}");
+            return;
+        }
+
         if (files.Count == 0) return;
 
         _package = files[0];
@@ -375,11 +388,27 @@ public sealed class MainView : UserControl
     {
         var top = TopLevel.GetTopLevel(this);
         if (top is null) return;
-        var folders = await top.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+
+        IReadOnlyList<IStorageFolder> folders;
+        try
         {
-            Title = "Escolher pasta para os arquivos extraídos",
-            AllowMultiple = false
-        });
+            folders = await top.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Escolher pasta para os arquivos extraídos",
+                AllowMultiple = false
+            });
+        }
+        catch (Exception ex)
+        {
+            // O Win32StorageProvider lança ArgumentException ("Directory must exist") quando o
+            // caminho retornado pelo diálogo não existe mais no disco (ex.: pasta removida ou
+            // item virtual). Sem este tratamento a exceção escapava para o handler async void
+            // e encerrava o processo (aplicativo congelava e fechava).
+            ShowBanner($"Não foi possível selecionar a pasta: {ex.Message}", UiTheme.Warning);
+            Log($"Aviso ao abrir o seletor de pastas: {ex.Message}");
+            return;
+        }
+
         if (folders.Count == 0) return;
         _destination = folders[0];
         _destinationName.Text = _destination.Name;
@@ -441,34 +470,45 @@ public sealed class MainView : UserControl
 
             // Para Windows com destino local, criamos um LocalExtractionDestination
             // Para Android, usamos StorageFolderExtractionDestination
-            IExtractionDestination destination;
-            if (OperatingSystem.IsWindows())
+            // A criação roda em Task.Run para não bloquear a UI em caminhos de rede/lentos.
+            IExtractionDestination destination = await Task.Run<IExtractionDestination>(() =>
             {
+                if (!OperatingSystem.IsWindows())
+                {
+                    // Android - usa StorageFolderExtractionDestination
+                    return new StorageFolderExtractionDestination(_destination, Log);
+                }
+
+                // Usa o caminho completo da pasta escolhida (não apenas o nome base)
+                var destinationPath = _destination.TryGetLocalPath();
+                if (destinationPath is null)
+                    return new StorageFolderExtractionDestination(_destination, Log);
+
                 // Verifica se o destino é acessível e cria um fallback se necessário
-                var testPath = Path.Combine(_destination.Name, "test_access");
+                var testPath = Path.Combine(destinationPath, "test_access");
                 try
                 {
                     Directory.CreateDirectory(testPath);
                     if (Directory.Exists(testPath)) Directory.Delete(testPath, true);
-                    destination = new LocalExtractionDestination(_destination.Name);
+                    return new LocalExtractionDestination(destinationPath);
                 }
-                catch (UnauthorizedAccessException ex)
+                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
                 {
-                    // Falha de permissão - usa fallback com nome do pacote na pasta temporária
+                    // Falha de permissão - usa fallback com nome do pacote
                     Log($"Falha ao acessar destino: {ex.Message}. Usando fallback.");
-                    var fallbackRoot = Path.Combine(Path.GetDirectoryName(tempPath)!, $"{_package.Name}_extracted");
-                    Directory.CreateDirectory(fallbackRoot);
-                    destination = new WindowsFallbackDestination(fallbackRoot, _package.Name, Log);
+                    var fallbackRoot = CreateFallbackRoot();
+                    return new WindowsFallbackDestination(fallbackRoot, _package.Name, Log);
                 }
-            }
-            else
-            {
-                // Android - usa StorageFolderExtractionDestination
-                destination = new StorageFolderExtractionDestination(_destination, Log);
-            }
+            });
+
+            // Notificação nativa de progresso (apenas Android; placeholder nas demais plataformas)
+            OrbisExtract.App.Shared.AppNotificationHelper.StartExtraction(
+                _package.Name, _destination.Name, 0, 0);
 
             var progress = new Progress<ExtractionProgress>(p =>
             {
+                OrbisExtract.App.Shared.AppNotificationHelper.UpdateProgress(
+                    p.FilesCompleted, p.FilesTotal ?? 0, p.State);
                 Dispatcher.UIThread.Post(() =>
                 {
                     var total = p.FilesTotal ?? 0;
@@ -562,6 +602,32 @@ public sealed class MainView : UserControl
             _choosePackage.IsEnabled = _chooseDestination.IsEnabled = true;
             _extract.IsEnabled = _package is not null && _destination is not null;
         }
+    }
+
+    // Cria [nome_do_pkg]_extracted na mesma localização do PKG original.
+    // Se não houver permissão ao lado do PKG, usa a pasta temporária do sistema.
+    private string CreateFallbackRoot()
+    {
+        var fallbackName = $"{_package!.Name}_extracted";
+        try
+        {
+            var packagePath = _package.TryGetLocalPath();
+            var packageDirectory = packagePath is null ? null : Path.GetDirectoryName(packagePath);
+            if (!string.IsNullOrEmpty(packageDirectory) && Directory.Exists(packageDirectory))
+            {
+                var root = Path.Combine(packageDirectory, fallbackName);
+                Directory.CreateDirectory(root);
+                return root;
+            }
+        }
+        catch
+        {
+            // Sem permissão ao lado do PKG: usa a pasta temporária do sistema.
+        }
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), fallbackName);
+        Directory.CreateDirectory(tempRoot);
+        return tempRoot;
     }
 
     // ===================== Destino de extração (inalterado) =====================

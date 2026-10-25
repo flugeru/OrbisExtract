@@ -13,9 +13,19 @@ public static class AppNotificationHelper
     {
         if (!_initialized)
         {
-            OrbisExtract.App.Android.AndroidNotificationHelper.Initialize(Android.App.Application.Context);
+            OrbisExtract.App.Android.AndroidNotificationHelper.Initialize(global::Android.App.Application.Context);
             _initialized = true;
         }
+    }
+
+    public static void StartExtraction(string packageName, string destinationName, long totalFiles, long totalBytes)
+    {
+        OrbisExtract.App.Android.AndroidNotificationHelper.StartExtraction(packageName, destinationName, totalFiles, totalBytes);
+    }
+
+    public static void UpdateProgress(long currentFiles, long totalFiles, string state, string? currentFile = null)
+    {
+        OrbisExtract.App.Android.AndroidNotificationHelper.UpdateProgress(currentFiles, totalFiles, state, currentFile);
     }
 
     public static void CompleteExtraction(long filesExtracted, long bytesExtracted)
@@ -34,6 +44,16 @@ public static class AppNotificationHelper
     }
 #else
     // Placeholder para outras plataformas
+    public static void StartExtraction(string packageName, string destinationName, long totalFiles, long totalBytes)
+    {
+        System.Diagnostics.Debug.WriteLine($"Extração iniciada (placeholder): {packageName} -> {destinationName}");
+    }
+
+    public static void UpdateProgress(long currentFiles, long totalFiles, string state, string? currentFile = null)
+    {
+        System.Diagnostics.Debug.WriteLine($"Progresso (placeholder): {state} ({currentFiles}/{totalFiles})");
+    }
+
     public static void CompleteExtraction(long filesExtracted, long bytesExtracted)
     {
         System.Diagnostics.Debug.WriteLine($"Notificação (placeholder): {filesExtracted} arquivos, {bytesExtracted} bytes");

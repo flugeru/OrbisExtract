@@ -24,9 +24,13 @@ public class MainActivity : AvaloniaMainActivity
 
         // Cria o canal de notificação imediatamente para evitar erros em versões recentes do Android
         CreateNotificationChannel();
-        
+
         // Inicializa o helper de notificações
         AppNotificationHelper.Initialize();
+
+        // Android 13+ exige consentimento em tempo de execução para exibir notificações
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
+            RequestPermissions(new[] { global::Android.Manifest.Permission.PostNotifications }, 1001);
     }
 
     protected override void OnDestroy()
