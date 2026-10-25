@@ -60,6 +60,14 @@ jobs:
           test -d "$ANDROID_SDK_ROOT/build-tools/36.0.0"
           test -d "$ANDROID_SDK_ROOT/build-tools/35.0.0"
 
+      - name: Generate Android icon from OrbisExtract artwork
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick librsvg2-bin
+          mkdir -p src/OrbisExtract.App/OrbisExtract.App.Android
+          rsvg-convert -w 512 -h 512 packaging/orbisextract-icon.svg -o src/OrbisExtract.App/OrbisExtract.App.Android/Icon.png
+          file src/OrbisExtract.App/OrbisExtract.App.Android/Icon.png
+
       - name: Clean Android build outputs
         run: |
           rm -rf src/OrbisExtract.App/OrbisExtract.App.Android/bin
@@ -112,6 +120,20 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+
+      - name: Install ImageMagick for Windows icon generation
+        shell: pwsh
+        run: choco install imagemagick.app -y --no-progress
+
+      - name: Generate Windows icon from OrbisExtract artwork
+        shell: pwsh
+        run: |
+          $magick = Get-Command magick -ErrorAction SilentlyContinue
+          if (-not $magick) { throw "ImageMagick não foi encontrado após a instalação." }
+          & magick -background none packaging/orbisextract-icon.svg -resize 512x512 src/OrbisExtract.App/OrbisExtract.App/Assets/Icon.png
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar PNG do ícone." }
+          & scripts/create-windows-icon.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar ICO." }
 
       - name: Restore solution and desktop project
         run: |
