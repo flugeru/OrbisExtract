@@ -37,7 +37,7 @@ Get the latest release from the **[Releases](https://github.com/flugeru/OrbisExt
 | Platform | Status | Release asset (1.0.0) |
 |---|---|---|
 | **Windows** (x64) | ✅ Supported and tested | `OrbisExtract-1.0.0-windows-x64-setup.exe` (installer) · `OrbisExtract-1.0.0-windows-x64-portable.zip` (portable) |
-| **Linux** (x64) | ✅ Supported — AppImage | `OrbisExtract-1.0.0-x86_64.appimage` |
+| **Linux** (x64) | ✅ Supported and tested | `OrbisExtract-1.0.0-x86_64.appimage` |
 | **Android** (APK) | ✅ Supported and tested | `OrbisExtract-1.0.0-signed.apk` |
 | macOS, iOS, Web (Browser) | ❌ Not available | project files exist, but they are not built or validated |
 
@@ -125,7 +125,7 @@ Baixe a última versão na página de **[Releases](https://github.com/flugeru/Or
 | Plataforma | Status | Arquivo do release (1.0.0) |
 |---|---|---|
 | **Windows** (x64) | ✅ Suportado e testado | `OrbisExtract-1.0.0-windows-x64-setup.exe` (instalador) · `OrbisExtract-1.0.0-windows-x64-portable.zip` (portátil) |
-| **Linux** (x64) | ✅ Suportado — AppImage | `OrbisExtract-1.0.0-x86_64.appimage` |
+| **Linux** (x64) | ✅ Suportado e testado | `OrbisExtract-1.0.0-x86_64.appimage` |
 | **Android** (APK) | ✅ Suportado e testado | `OrbisExtract-1.0.0-signed.apk` |
 | macOS, iOS, Web (Browser) | ❌ Não disponível | os arquivos de projeto existem, mas não são compilados nem validados |
 
