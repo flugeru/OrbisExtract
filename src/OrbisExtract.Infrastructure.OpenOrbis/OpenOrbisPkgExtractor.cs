@@ -35,6 +35,10 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         foreach (var file in inner.GetAllFiles())
         {
             var path = NormalizePfsPath(file.FullName);
+            // LibOrbisPkg can expose the inner image as either Image0/... or
+            // uroot/Image0/... (and some packages use only uroot/...). PS4 PKG
+            // Tool does not preserve either container directory in a full dump.
+            path = StripRoot(path, "uroot");
             path = StripRoot(path, "Image0");
             if (path.Length == 0) continue;
             path = CanonicalizeSystemDirectory(path);
@@ -48,6 +52,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             if (!path.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase)) continue;
 
             var suffix = StripRoot(path, "Sc0");
+            suffix = StripRoot(suffix, "uroot");
             // Some packages expose the system directory itself in Sc0; avoid creating
             // sce_sys/sce_sys when combining it with Image0.
             suffix = StripRoot(suffix, "sce_sys");
