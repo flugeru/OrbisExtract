@@ -28,11 +28,40 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         using var accessor = new PkgMemoryReader(request.Package, (long)package.Header.pfs_image_offset, (long)package.Header.pfs_image_size);
         var outer = new PfsReader(accessor, package.Header.pfs_flags, ekpfs);
         var inner = new PfsReader(new PFSCReader(outer.GetFile("pfs_image.dat").GetView()));
-        // This is the same extraction flow used by PkgTool's pkg_extract:
-        // enumerate every file in the inner image and use its original PFS path.
-        // Do not merge, prioritize, deduplicate, or synthesize paths here.
-        var files = inner.GetAllFiles()
-            .Select(file => (File: file, RelativePath: NormalizePkgToolPath(file.FullName)))
+        // Reproduce the complete dump: the game payload is in the inner PFS,
+        // while Sc0/system metadata is stored beside pfs_image.dat in the outer
+        // PFS. Both trees are required; reading only inner loses param.sfo,
+        // icons, PlayGo files, licenses and trophies.
+        var files = new List<(PfsReader.File File, string RelativePath)>();
+        foreach (var file in inner.GetAllFiles())
+        {
+            var path = NormalizePkgToolPath(file.FullName);
+            path = RemoveContainerRoot(path, "Image0");
+            path = RemoveContainerRoot(path, "uroot");
+            files.Add((file, path));
+        }
+
+        foreach (var file in outer.GetAllFiles())
+        {
+            var path = NormalizePkgToolPath(file.FullName);
+            if (path.Equals("pfs_image.dat", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            // Sc0 is the outer-PFS system tree. Normalize all layouts emitted by
+            // LibOrbisPkg without filtering any file below it.
+            path = RemoveContainerRoot(path, "uroot");
+            if (path.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase))
+                path = "sce_sys/" + path["Sc0/".Length..];
+            else if (path.StartsWith("sce_sys/", StringComparison.OrdinalIgnoreCase))
+                path = path;
+            else
+                path = "sce_sys/" + path;
+
+            path = NormalizePkgToolPath(path);
+            files.Add((file, path));
+        }
+
+        files = files
             .OrderBy(item => item.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToList();
         long count = 0, bytes = 0;
@@ -112,8 +141,17 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         var normalized = NormalizePfsPath(path);
         if (normalized.Length == 0)
             throw new PkgExtractionException("O PKG contém uma entrada sem nome.");
-        // PkgTool removes only the leading separator returned by FullName.
         return normalized.TrimStart('/');
+    }
+
+    private static string RemoveContainerRoot(string path, string root)
+    {
+        if (path.Equals(root, StringComparison.OrdinalIgnoreCase))
+            return string.Empty;
+        var prefix = root + "/";
+        return path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? path[prefix.Length..]
+            : path;
     }
 
     private static Pkg ReadPackage(Stream stream)
