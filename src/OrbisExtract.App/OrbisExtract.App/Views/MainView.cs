@@ -721,7 +721,7 @@ public sealed class MainView : UserControl
 
             var targetFolder = folder ?? throw new PkgExtractionException($"Pasta de destino inválida para '{relativePath}'.");
             var temporaryName = $".{segments[^1]}.{Guid.NewGuid():N}.orbisextract.tmp";
-            _log($"Criando arquivo temporário de saída: {relativePath}");
+            // Avoid one UI log entry per file: on large PKGs this can flood the UI thread and slow extraction.
             var file = await targetFolder.CreateFileAsync(temporaryName);
             if (file is null)
                 throw new PkgExtractionException($"O provedor de armazenamento não criou o arquivo temporário para '{relativePath}'.");
