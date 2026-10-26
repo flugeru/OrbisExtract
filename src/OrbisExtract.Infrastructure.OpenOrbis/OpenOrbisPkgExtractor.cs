@@ -53,7 +53,9 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             if (path.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase))
                 path = "sce_sys/" + path["Sc0/".Length..];
             else if (path.StartsWith("sce_sys/", StringComparison.OrdinalIgnoreCase))
-                path = path;
+            {
+                // Already in the final system-tree layout.
+            }
             else
                 path = "sce_sys/" + path;
 
