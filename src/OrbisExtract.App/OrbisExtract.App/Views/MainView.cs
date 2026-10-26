@@ -324,12 +324,7 @@ public sealed class MainView : UserControl
                 Padding = new Thickness(4, 8),
                 BorderBrush = UiTheme.Brush(UiTheme.Outline),
                 BorderThickness = new Thickness(0, 0, 0, 1),
-                Child = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Children = { marker, details }
-                }
+                Child = CreateLogRow(marker, details)
             };
             _logPanel.Children.Add(line);
             _logLines.Enqueue(line);
@@ -337,6 +332,15 @@ public sealed class MainView : UserControl
                 _logPanel.Children.Remove(_logLines.Dequeue());
             _logScroll.ScrollToEnd();
         });
+    }
+
+    private static Grid CreateLogRow(Control marker, Control details)
+    {
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), VerticalAlignment = VerticalAlignment.Center };
+        row.Children.Add(marker);
+        row.Children.Add(details);
+        Grid.SetColumn(details, 1);
+        return row;
     }
 
     private static string FormatSize(ulong bytes)
@@ -481,21 +485,30 @@ public sealed class MainView : UserControl
         Log("Passcode: não utilizado nesta versão.");
 
         string? tempPath = null;
+        Stream? packageStream = null;
         System.Timers.Timer? timer = null;
 
         try
         {
-            // Streams content:// do Android nem sempre permitem seek. Copiamos o PKG
-            // para um arquivo temporário privado para que o LibOrbisPkg possa lê-lo.
-            tempPath = Path.Combine(Path.GetTempPath(), $"orbisextract-{Guid.NewGuid():N}.pkg");
-            _stateTitle.Text = "Copiando pacote";
-            Log("Copiando o PKG para um arquivo temporário pesquisável…");
-            await using (var source = await _package.OpenReadAsync())
-            await using (var temp = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 128 * 1024, true))
-                await source.CopyToAsync(temp, token);
-            Log("Cópia temporária concluída.");
-
-            await using var packageStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, true);
+            // Use o fluxo original diretamente quando ele permite seek. Alguns provedores
+            // Android retornam content:// sem seek; só nesses casos o parser exige um arquivo temporário.
+            var source = await _package.OpenReadAsync();
+            if (source.CanSeek)
+            {
+                packageStream = source;
+                Log("Lendo o PKG selecionado diretamente, sem copiá-lo.");
+            }
+            else
+            {
+                await source.DisposeAsync();
+                tempPath = Path.Combine(Path.GetTempPath(), $"orbisextract-{Guid.NewGuid():N}.pkg");
+                _stateTitle.Text = "Preparando pacote";
+                Log("O provedor não permite acesso aleatório; preparando uma cópia temporária necessária para leitura.");
+                await using var input = await _package.OpenReadAsync();
+                await using (var temp = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 1024 * 1024, true))
+                    await input.CopyToAsync(temp, token);
+                packageStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
+            }
             Log("Abrindo e validando a estrutura interna do PKG…");
 
             // Inicializa o timer para atualização contínua do temporizador
@@ -646,6 +659,7 @@ public sealed class MainView : UserControl
             _cancel.IsVisible = false;
             _run?.Dispose();
             _run = null;
+            if (packageStream is not null) try { await packageStream.DisposeAsync(); } catch { }
             if (tempPath is not null) try { File.Delete(tempPath); } catch { }
             Log("Processo de extração finalizado.");
             _choosePackage.IsEnabled = _chooseDestination.IsEnabled = true;
