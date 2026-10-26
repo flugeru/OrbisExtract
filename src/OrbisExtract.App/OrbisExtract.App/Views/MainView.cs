@@ -542,10 +542,16 @@ public sealed class MainView : UserControl
 
             var progress = new Progress<ExtractionProgress>(p =>
             {
+                if (token.IsCancellationRequested)
+                    return;
+
                 OrbisExtract.App.Shared.AppNotificationHelper.UpdateProgress(
                     p.FilesCompleted, p.FilesTotal ?? 0, p.State);
                 Dispatcher.UIThread.Post(() =>
                 {
+                    if (token.IsCancellationRequested)
+                        return;
+
                     var total = p.FilesTotal ?? 0;
                     var pct = total > 0 ? Math.Clamp(p.FilesCompleted * 100d / total, 0, 100) : 0;
                     _progress.IsIndeterminate = total <= 0;
@@ -625,6 +631,9 @@ public sealed class MainView : UserControl
         }
         finally
         {
+            if (token.IsCancellationRequested && OperatingSystem.IsAndroid())
+                OrbisExtract.App.Shared.AppNotificationHelper.CancelExtraction();
+
             timer?.Stop();
             timer?.Dispose();
             _clock.Stop();
