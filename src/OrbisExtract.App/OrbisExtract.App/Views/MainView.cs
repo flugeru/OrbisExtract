@@ -223,7 +223,7 @@ public sealed class MainView : UserControl
 
     private void ApplyContentLayout(double width)
     {
-        var isWide = width >= 600;
+        var isWide = !OperatingSystem.IsAndroid() && width >= 600;
         if (_isWideContent == isWide) return;
         _isWideContent = isWide;
 
