@@ -28,30 +28,39 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         using var accessor = new PkgMemoryReader(request.Package, (long)package.Header.pfs_image_offset, (long)package.Header.pfs_image_size);
         var outer = new PfsReader(accessor, package.Header.pfs_flags, ekpfs);
         var inner = new PfsReader(new PFSCReader(outer.GetFile("pfs_image.dat").GetView()));
-        // Image0 holds the game tree; Sc0 holds system metadata. Emulators expect
-        // Image0 at the dump root and Sc0 merged into sce_sys/.
+        // Match PS4 PKG Tool's full-extract layout: merge Image0 at the dump root
+        // and merge Sc0 metadata into the game's existing sce_sys directory. Do not
+        // leave Image0/Sc0 wrapper directories in the output.
         var files = new List<(PfsReader.File File, string RelativePath, int Priority)>();
         foreach (var file in inner.GetAllFiles())
         {
             var path = NormalizePfsPath(file.FullName);
+            path = StripRoot(path, "Image0");
             if (path.Length == 0) continue;
-            if (path.StartsWith("Image0/", StringComparison.OrdinalIgnoreCase))
-                path = path["Image0/".Length..];
+            path = CanonicalizeSystemDirectory(path);
             files.Add((file, path, 0));
         }
+
         foreach (var file in outer.GetAllFiles())
         {
             var path = NormalizePfsPath(file.FullName);
             if (path.Equals("pfs_image.dat", StringComparison.OrdinalIgnoreCase)) continue;
-            if (path.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase))
-            {
-                var suffix = path["Sc0/".Length..];
-                if (suffix.Length > 0) files.Add((file, "sce_sys/" + suffix, 1));
-            }
+            if (!path.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var suffix = StripRoot(path, "Sc0");
+            // Some packages expose the system directory itself in Sc0; avoid creating
+            // sce_sys/sce_sys when combining it with Image0.
+            suffix = StripRoot(suffix, "sce_sys");
+            if (suffix.Length == 0) continue;
+            files.Add((file, CanonicalizeSystemDirectory("sce_sys/" + suffix), 1));
         }
-        // On duplicate logical paths, prefer Image0 while retaining Sc0-only metadata.
-        files = files.GroupBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.OrderBy(x => x.Priority).First()).ToList();
+
+        // Image0 is authoritative for duplicate paths; Sc0 contributes missing metadata.
+        files = files
+            .GroupBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderBy(x => x.Priority).First())
+            .OrderBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
         long count = 0, bytes = 0;
         var totalBytes = files.Sum(item => (long)item.File.size);
         var buffer = new byte[1024 * 1024];
@@ -122,6 +131,23 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         if (normalized.Split('/').Any(segment => segment is "." or ".."))
             throw new PkgExtractionException($"Caminho interno inseguro no PKG: {path}");
         return normalized;
+    }
+
+    private static string StripRoot(string path, string root)
+    {
+        if (path.Equals(root, StringComparison.OrdinalIgnoreCase)) return string.Empty;
+        var prefix = root + "/";
+        return path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? path[prefix.Length..]
+            : path;
+    }
+
+    private static string CanonicalizeSystemDirectory(string path)
+    {
+        if (path.Equals("sce_sys", StringComparison.OrdinalIgnoreCase)) return "sce_sys";
+        if (path.StartsWith("sce_sys/", StringComparison.OrdinalIgnoreCase))
+            return "sce_sys/" + path["sce_sys/".Length..];
+        return path;
     }
 
     private static Pkg ReadPackage(Stream stream)
