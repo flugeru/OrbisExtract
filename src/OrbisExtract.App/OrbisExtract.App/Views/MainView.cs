@@ -229,9 +229,15 @@ public sealed class MainView : UserControl
 
         _contentGrid.ColumnDefinitions = new ColumnDefinitions(isWide ? "*,*" : "*");
         _contentGrid.RowDefinitions = new RowDefinitions(isWide ? "Auto,Auto" : "Auto,Auto,Auto");
+
+        // Mobile: package, configuration, then extraction monitor in one column.
+        // Desktop: package top-left, monitor top-right, configuration below the package.
         Place(_packageCard, 0, 0, 1);
-        Place(_settingsCard, isWide ? 1 : 1, 0, 1);
-        Place(_monitorCard, 0, isWide ? 1 : 0, isWide ? 2 : 1);
+        Place(_settingsCard, 1, 0, 1);
+        Place(_monitorCard, isWide ? 0 : 2, isWide ? 1 : 0, 1);
+        _packageCard.IsVisible = true;
+        _settingsCard.IsVisible = true;
+        _monitorCard.IsVisible = true;
     }
 
     private static void Place(Control c, int row, int col, int colSpan)
