@@ -120,7 +120,7 @@ public sealed class MainView : UserControl
         _cancel = UiTheme.OutlinedButton("Cancelar");
         _cancel.IsVisible = false;
         _cancel.HorizontalAlignment = HorizontalAlignment.Left;
-        _cancel.Foreground = UiTheme.Brush(UiTheme.Error);
+        _cancel.Foreground = UiTheme.Brush(UiTheme.Primary);
         _cancel.Click += (_, _) => _run?.Cancel();
 
         _logPanel = new StackPanel { Spacing = 0 };
@@ -145,7 +145,7 @@ public sealed class MainView : UserControl
                 Children = { _logScroll }
             }
         };
-        _logScroll.MaxHeight = 180;
+        _logScroll.MaxHeight = 260;
         _bannerText = UiTheme.Text("", 13, UiTheme.TextPrimary);
         _banner = new Border
         {
@@ -168,7 +168,7 @@ public sealed class MainView : UserControl
 
         _monitorCard = UiTheme.Card(new StackPanel
         {
-            Spacing = 14,
+            Spacing = 10,
             Children = { header, _progress, metaRow, _status, _banner, _cancel, logBox }
         });
 
@@ -228,10 +228,10 @@ public sealed class MainView : UserControl
         _isWideContent = isWide;
 
         _contentGrid.ColumnDefinitions = new ColumnDefinitions(isWide ? "*,*" : "*");
-        _contentGrid.RowDefinitions = new RowDefinitions("Auto,Auto,Auto");
+        _contentGrid.RowDefinitions = new RowDefinitions(isWide ? "Auto,Auto" : "Auto,Auto,Auto");
         Place(_packageCard, 0, 0, 1);
-        Place(_settingsCard, isWide ? 0 : 1, isWide ? 1 : 0, 1);
-        Place(_monitorCard, isWide ? 1 : 2, 0, isWide ? 2 : 1);
+        Place(_settingsCard, isWide ? 1 : 1, 0, 1);
+        Place(_monitorCard, 0, isWide ? 1 : 0, isWide ? 2 : 1);
     }
 
     private static void Place(Control c, int row, int col, int colSpan)
@@ -284,9 +284,7 @@ public sealed class MainView : UserControl
                 _logMessages.RemoveAt(0);
 
             var isError = message.Contains("Falha", StringComparison.OrdinalIgnoreCase) || message.Contains("[ERRO", StringComparison.OrdinalIgnoreCase);
-            var isWarning = message.Contains("Aviso", StringComparison.OrdinalIgnoreCase) || message.Contains("cancelad", StringComparison.OrdinalIgnoreCase);
-            var isSuccess = message.Contains("concluíd", StringComparison.OrdinalIgnoreCase);
-            var accent = isError ? UiTheme.Error : isWarning ? UiTheme.Warning : isSuccess ? UiTheme.Success : UiTheme.Progress;
+            var accent = isError ? UiTheme.Error : UiTheme.Primary;
             var marker = new Border
             {
                 Width = 7,
@@ -307,7 +305,7 @@ public sealed class MainView : UserControl
                     {
                         Text = message,
                         FontSize = 12,
-                        Foreground = UiTheme.Brush(isError ? UiTheme.Error : UiTheme.TextPrimary),
+                        Foreground = UiTheme.Brush(isError ? UiTheme.Error : UiTheme.Primary),
                         Background = Brushes.Transparent,
                         BorderThickness = new Thickness(0),
                         Padding = new Thickness(0),
@@ -616,7 +614,7 @@ public sealed class MainView : UserControl
             _progress.IsIndeterminate = false;
             _stateTitle.Text = "Cancelado";
             _counter.Text = "A extração foi interrompida.";
-            ShowBanner("Extração cancelada.", UiTheme.Warning);
+            ShowBanner("Extração cancelada.", UiTheme.Primary);
             Log("Extração cancelada.");
             
             // Mostra notificação Android de cancelamento se estiver no Android
