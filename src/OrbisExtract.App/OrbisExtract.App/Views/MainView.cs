@@ -133,7 +133,7 @@ public sealed class MainView : UserControl
             Content = _logPanel
         };
         _copyLogs = UiTheme.OutlinedButton("Copiar log");
-        _copyLogs.Margin = new Thickness(0, 0, 0, 8);
+        _copyLogs.Margin = new Thickness(0, 0, 0, 0);
         _copyLogs.HorizontalAlignment = HorizontalAlignment.Left;
         _copyLogs.Click += async (_, _) =>
         {
@@ -160,22 +160,25 @@ public sealed class MainView : UserControl
             }
         };
 
+        var logBox = new Border
+        {
+            Background = UiTheme.Brush(UiTheme.Surface),
+            BorderBrush = UiTheme.Brush(UiTheme.Outline),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(14),
+            MinHeight = 150,
+            Child = new StackPanel
+            {
+                Spacing = 8,
+                Children = { _logScroll }
+            }
+        };
+        _logScroll.MaxHeight = 220;
         var logContent = new StackPanel
         {
             Spacing = 8,
-            Margin = new Thickness(0, 8, 0, 0),
-            Children = { _copyLogs, _logScroll }
-        };
-        var expander = new Expander
-        {
-            Header = "Ver log detalhado",
-            IsExpanded = false,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            Foreground = UiTheme.Brush(UiTheme.TextSecondary),
-            Background = UiTheme.Brush(UiTheme.Surface),
-            BorderThickness = new Thickness(0),
-            Padding = new Thickness(0),
-            Content = logContent
+            Children = { _copyLogs, logBox }
         };
 
         _bannerText = UiTheme.Text("", 13, UiTheme.TextPrimary);
@@ -201,7 +204,7 @@ public sealed class MainView : UserControl
         _monitorCard = UiTheme.Card(new StackPanel
         {
             Spacing = 14,
-            Children = { header, _progress, metaRow, _status, _banner, _cancel, expander }
+            Children = { header, _progress, metaRow, _status, _banner, _cancel, _copyLogs, logBox }
         });
 
         // ---------- Grid responsivo do conteúdo ----------
