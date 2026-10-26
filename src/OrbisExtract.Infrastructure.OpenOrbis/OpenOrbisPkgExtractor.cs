@@ -54,7 +54,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             .Select(group => group.OrderBy(x => x.Priority).First()).ToList();
         long count = 0, bytes = 0;
         var totalBytes = files.Sum(item => (long)item.File.size);
-        var buffer = new byte[128 * 1024];
+        var buffer = new byte[1024 * 1024];
         foreach (var item in files)
         {
             var file = item.File;
