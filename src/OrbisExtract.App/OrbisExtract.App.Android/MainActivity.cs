@@ -9,7 +9,7 @@ using OrbisExtract.App.Shared;
 namespace OrbisExtract.App.Android;
 
 [Activity(
-    Label = "OrbisExtract.App.Android",
+    Label = "OrbisExtract",
     Theme = "@style/MyTheme.NoActionBar",
     Icon = "@drawable/icon",
     MainLauncher = true,
