@@ -134,10 +134,10 @@ public sealed class MainView : UserControl
         };
         var logBox = new Border
         {
-            Background = UiTheme.Brush(UiTheme.Surface),
+            Background = UiTheme.Brush(UiTheme.SurfaceElevated),
             BorderBrush = UiTheme.Brush(UiTheme.Outline),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14),
+            CornerRadius = new CornerRadius(UiTheme.CardRadius),
             Padding = new Thickness(14),
             MinHeight = 112,
             Child = new StackPanel
@@ -261,18 +261,13 @@ public sealed class MainView : UserControl
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(UiTheme.CardRadius),
             Padding = new Thickness(14),
-            Child = new TextBox
+            Child = new ScrollViewer
             {
-                Text = license,
-                IsReadOnly = true,
-                AcceptsReturn = true,
-                TextWrapping = TextWrapping.Wrap,
                 MinHeight = 150,
                 MaxHeight = 200,
-                Background = Brushes.Transparent,
-                Foreground = UiTheme.Brush(UiTheme.TextSecondary),
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(0)
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
+                Content = UiTheme.Text(license, 12, UiTheme.TextSecondary)
             }
         };
         var content = new StackPanel
