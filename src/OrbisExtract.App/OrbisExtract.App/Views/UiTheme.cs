@@ -18,7 +18,7 @@ public static class UiTheme
     public const string Primary = "#B9A7FF";
     public const string PrimaryContainer = "#29243B";
     public const string OnPrimary = "#1A1033";
-    public const string Progress = "#FF8A65";
+    public const string Progress = Primary;
     public const string Success = "#71D6A3";
     public const string Warning = "#FFCC80";
     public const string Error = "#FF8A8A";
