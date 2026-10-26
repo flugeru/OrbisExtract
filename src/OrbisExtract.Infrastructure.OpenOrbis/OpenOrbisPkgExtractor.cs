@@ -19,8 +19,18 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             throw new PkgExtractionException("A biblioteca LibOrbisPkg exige uma origem pesquisável.");
 
         var package = await Task.Run(() => ReadPackage(request.Package), cancellationToken).ConfigureAwait(false);
-        var ekpfs = package.GetEkpfs();
-        if (ekpfs is null && string.IsNullOrEmpty(request.Passcode))
+        // Fake PKGs commonly use the all-zero passcode. Verify it against the
+        // package digest rather than assuming it applies to every PKG.
+        var passcode = request.Passcode;
+        if (string.IsNullOrEmpty(passcode) && package.CheckPasscode(new string('0', 32)))
+            passcode = new string('0', 32);
+        var passcodeValid = !string.IsNullOrEmpty(passcode) && package.CheckPasscode(passcode);
+        if (!string.IsNullOrEmpty(request.Passcode) && !passcodeValid)
+            throw new PkgExtractionException("Passcode inválido para este PKG.");
+        var ekpfs = passcodeValid
+            ? Crypto.ComputeKeys(package.Header.content_id, passcode!, 1)
+            : package.GetEkpfs();
+        if (ekpfs is null)
             throw new PkgExtractionException("Este PKG é criptografado ou exige passcode.");
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -28,17 +38,15 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         using var accessor = new PkgMemoryReader(request.Package, (long)package.Header.pfs_image_offset, (long)package.Header.pfs_image_size);
         var outer = new PfsReader(accessor, package.Header.pfs_flags, ekpfs);
         var inner = new PfsReader(new PFSCReader(outer.GetFile("pfs_image.dat").GetView()));
-        // Reproduce the complete dump: the game payload is in the inner PFS,
-        // while Sc0/system metadata is stored beside pfs_image.dat in the outer
-        // PFS. Both trees are required; reading only inner loses param.sfo,
-        // icons, PlayGo files, licenses and trophies.
-        var files = new List<(PfsReader.File File, string RelativePath)>();
+        // The game payload is in the inner PFS. Some packages also carry Sc0
+        // files in the outer PFS; most system assets are PKG table entries.
+        var files = new List<(string RelativePath, long Size, Func<Stream> Open)>();
         foreach (var file in inner.GetAllFiles())
         {
             var path = NormalizePkgToolPath(file.FullName);
-            path = RemoveContainerRoot(path, "Image0");
             path = RemoveContainerRoot(path, "uroot");
-            files.Add((file, path));
+            path = RemoveContainerRoot(path, "Image0");
+            files.Add((path, file.size, () => new PfsFileStream(file)));
         }
 
         foreach (var file in outer.GetAllFiles())
@@ -64,18 +72,40 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             }
 
             path = NormalizePkgToolPath(path);
-            files.Add((file, path));
+            files.Add((path, file.size, () => new PfsFileStream(file)));
+        }
+
+        // sce_sys assets in a full PKG are *package table entries*, not files
+        // inside either PFS image. This is how Gp4Creator in PkgTool extracts
+        // param.sfo, icons, licenses, PlayGo data and trophies. Copy the raw
+        // bytes at the entry's DataOffset (decrypting encrypted entries);
+        // parsing/re-serializing param.sfo would change the dump.
+        foreach (var entry in package.Metas.Metas)
+        {
+            if (!EntryNames.IdToName.TryGetValue(entry.id, out var name) ||
+                name.StartsWith(".", StringComparison.Ordinal))
+                continue;
+
+            var path = NormalizePkgToolPath("sce_sys/" + name);
+            var readSize = entry.Encrypted ? ((long)entry.DataSize + 15) & ~15L : entry.DataSize;
+            if ((ulong)entry.DataOffset + (ulong)readSize > (ulong)request.Package.Length)
+                throw new PkgExtractionException($"Entrada PKG fora dos limites: {path}");
+            files.Add((path, entry.DataSize,
+                () => OpenPkgEntry(request.Package, package, entry, passcode, readSize)));
         }
 
         files = files
             .OrderBy(item => item.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToList();
+        var duplicate = files.GroupBy(item => item.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicate is not null)
+            throw new PkgExtractionException($"Caminho duplicado no PKG: {duplicate.Key}");
         long count = 0, bytes = 0;
-        var totalBytes = files.Sum(item => (long)item.File.size);
+        var totalBytes = files.Sum(item => item.Size);
         var buffer = new byte[1024 * 1024];
         foreach (var item in files)
         {
-            var file = item.File;
             cancellationToken.ThrowIfCancellationRequested();
             var destination = request.Destination ?? new LocalExtractionDestination(request.DestinationDirectory, request.FailOnExistingFiles);
             Stream? target = null;
@@ -86,7 +116,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                     throw new PkgExtractionException("O pacote contém um caminho interno vazio.");
 
                 target = await destination.CreateTemporaryFileAsync(relativePath, cancellationToken).ConfigureAwait(false);
-                using var source = new PfsFileStream(file);
+                using var source = item.Open();
                 long fileBytes = 0;
                 var lastReport = System.Diagnostics.Stopwatch.StartNew();
                 progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Count, bytes, totalBytes));
@@ -97,12 +127,15 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                     if (read == 0) break;
                     await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                     fileBytes += read;
-                    if (lastReport.ElapsedMilliseconds >= 150 || fileBytes == file.size)
+                    if (lastReport.ElapsedMilliseconds >= 150 || fileBytes == item.Size)
                     {
                         progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Count, bytes + fileBytes, totalBytes));
                         lastReport.Restart();
                     }
                 }
+
+                if (fileBytes != item.Size)
+                    throw new PkgExtractionException($"Arquivo truncado: {relativePath} ({fileBytes}/{item.Size} bytes).");
 
                 await target.FlushAsync(cancellationToken).ConfigureAwait(false);
                 await destination.CommitAsync(target, relativePath, cancellationToken).ConfigureAwait(false);
@@ -158,6 +191,23 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         return path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
             ? path[prefix.Length..]
             : path;
+    }
+
+    private static Stream OpenPkgEntry(Stream stream, Pkg package, MetaEntry entry, string? passcode, long readSize)
+    {
+        if (!entry.Encrypted)
+            return new PkgStreamAccessor(stream, entry.DataOffset, entry.DataSize);
+        if (entry.KeyIndex != 3 && string.IsNullOrEmpty(passcode))
+            throw new PkgExtractionException($"A entrada {entry.id} exige passcode para descriptografia.");
+        if (readSize > int.MaxValue)
+            throw new PkgExtractionException($"Entrada criptografada grande demais: {entry.id}");
+        var encrypted = new byte[(int)readSize];
+        using (var source = new PkgStreamAccessor(stream, entry.DataOffset, readSize))
+            source.ReadExactly(encrypted);
+        var decrypted = entry.KeyIndex == 3
+            ? Entry.Decrypt(encrypted, package, entry)
+            : Entry.Decrypt(encrypted, package.Header.content_id, passcode!, entry);
+        return new MemoryStream(decrypted, 0, checked((int)entry.DataSize), writable: false);
     }
 
     private static Pkg ReadPackage(Stream stream)

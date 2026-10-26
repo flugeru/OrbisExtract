@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\OrbisExtract.Core\OrbisExtract.Core.csproj" />
+    <ProjectReference Include="..\..\src\OrbisExtract.Infrastructure.OpenOrbis\OrbisExtract.Infrastructure.OpenOrbis.csproj" />
   </ItemGroup>
 
 </Project>
