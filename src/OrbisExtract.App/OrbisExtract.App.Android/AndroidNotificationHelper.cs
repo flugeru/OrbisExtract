@@ -14,7 +14,7 @@ namespace OrbisExtract.App.Android;
 public static class AndroidNotificationHelper
 {
     private const string CHANNEL_ID = "orbis_extract_channel";
-    public const int NotificationId = 1;
+    private const int NOTIFICATION_ID = 1;
     private static Context? _context;
     private static int _smallIcon;
 
@@ -38,44 +38,15 @@ public static class AndroidNotificationHelper
         var context = _context;
         if (context is null) return;
 
-        var serviceIntent = new Intent(context, typeof(ExtractionForegroundService));
-        serviceIntent.PutExtra("packageName", packageName);
-        serviceIntent.PutExtra("destinationName", destinationName);
-        try
-        {
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-                context.StartForegroundService(serviceIntent);
-            else
-                context.StartService(serviceIntent);
-        }
-        catch (Exception ex)
-        {
-            global::Android.Util.Log.Error("OrbisExtract", $"Não foi possível iniciar o serviço de extração: {ex.Message}");
-        }
-
-        var notification = BuildForegroundNotification(packageName, destinationName);
-        NotificationManagerCompat.From(context).Notify(NotificationId, notification);
-    }
-
-    public static Notification BuildForegroundNotification(string packageName, string destinationName)
-    {
-        var context = _context ?? Application.Context;
-        return new NotificationCompat.Builder(context, CHANNEL_ID)
+        var notification = new NotificationCompat.Builder(context, CHANNEL_ID)
             .SetSmallIcon(SmallIcon(context))
             .SetContentTitle($"Extraindo: {packageName}")
             .SetSubText($"Destino: {destinationName}")
-            .SetProgress(100, 0, true)
+            .SetProgress(100, 0, totalFiles <= 0)
             .SetOngoing(true)
-            .SetOnlyAlertOnce(true)
             .Build();
-    }
 
-    private static void StopForegroundService()
-    {
-        var context = _context;
-        if (context is null) return;
-        try { context.StopService(new Intent(context, typeof(ExtractionForegroundService))); }
-        catch (Exception ex) { global::Android.Util.Log.Warn("OrbisExtract", $"Não foi possível parar o serviço de extração: {ex.Message}"); }
+        NotificationManagerCompat.From(context).Notify(NOTIFICATION_ID, notification);
     }
 
     public static void UpdateProgress(long currentFiles, long totalFiles, string state, string? currentFile = null)
@@ -96,7 +67,7 @@ public static class AndroidNotificationHelper
         else
             builder.SetSubText(totalFiles > 0 ? $"Progresso: {progress}%" : $"{currentFiles} arquivos");
 
-        NotificationManagerCompat.From(context).Notify(NotificationId, builder.Build());
+        NotificationManagerCompat.From(context).Notify(NOTIFICATION_ID, builder.Build());
     }
 
     public static void CompleteExtraction(long filesExtracted, long bytesExtracted)
@@ -113,8 +84,7 @@ public static class AndroidNotificationHelper
             .SetAutoCancel(true)
             .Build();
 
-        NotificationManagerCompat.From(context).Notify(NotificationId, notification);
-        StopForegroundService();
+        NotificationManagerCompat.From(context).Notify(NOTIFICATION_ID, notification);
     }
 
     public static void CancelExtraction()
@@ -122,8 +92,7 @@ public static class AndroidNotificationHelper
         var context = _context;
         if (context is null) return;
 
-        NotificationManagerCompat.From(context).Cancel(NotificationId);
-        StopForegroundService();
+        NotificationManagerCompat.From(context).Cancel(NOTIFICATION_ID);
     }
 
     public static void ShowError(string message)
@@ -140,8 +109,7 @@ public static class AndroidNotificationHelper
             .SetAutoCancel(true)
             .Build();
 
-        NotificationManagerCompat.From(context).Notify(NotificationId, notification);
-        StopForegroundService();
+        NotificationManagerCompat.From(context).Notify(NOTIFICATION_ID, notification);
     }
 
     private static void CreateNotificationChannel()
