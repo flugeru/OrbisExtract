@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <AndroidResource Include="Icon.png">
-      <Link>Resources\drawable\orbisextract_icon.png</Link>
+      <Link>Resources\drawable\icon.png</Link>
     </AndroidResource>
   </ItemGroup>
 
