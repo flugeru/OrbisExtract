@@ -281,21 +281,32 @@ public sealed class MainView : UserControl
             }
         };
         close.Click += (_, _) => _aboutOverlay.IsVisible = false;
+        var dialogCard = new Border
+        {
+            MaxWidth = 520,
+            MaxHeight = 620,
+            Margin = new Thickness(18),
+            Child = UiTheme.Card(new ScrollViewer
+            {
+                Content = new Border { Padding = new Thickness(18), Child = content },
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            })
+        };
+        var overlayGrid = new Grid
+        {
+            RowDefinitions = new RowDefinitions("*,Auto,*"),
+            ColumnDefinitions = new ColumnDefinitions("*,Auto,*")
+        };
+        overlayGrid.Children.Add(dialogCard);
+        Grid.SetColumn(dialogCard, 1);
+        Grid.SetRow(dialogCard, 1);
         return new Border
         {
             IsVisible = false,
             Background = new SolidColorBrush(Color.Parse("#CC000000")),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
-            Child = new Grid
-            {
-                RowDefinitions = new RowDefinitions("*,Auto,*"),
-                ColumnDefinitions = new ColumnDefinitions("*,Auto,*"),
-                Children =
-                {
-                    new Border { GridColumn = 1, GridRow = 1, MaxWidth = 520, MaxHeight = 620, Margin = new Thickness(18), Child = UiTheme.Card(new ScrollViewer { Content = new Border { Padding = new Thickness(18), Child = content }, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }) }
-                }
-            }
+            Child = overlayGrid
         };
     }
 
