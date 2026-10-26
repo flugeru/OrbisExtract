@@ -98,11 +98,33 @@ jobs:
           -p:AndroidUseLatestBuildTools=true
           -o artifacts/android
 
-      - name: Upload APK artifact
+      - name: Validate and package installable APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SIGNED="artifacts/android/OrbisExtract.App.Android-Signed.apk"
+          if [ ! -f "$SIGNED" ]; then
+            SIGNED="$(find artifacts/android -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)"
+          fi
+          test -n "$SIGNED" && test -f "$SIGNED"
+          APKSIGNER="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          AAPT="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          test -x "$AAPT"
+          "$APKSIGNER" verify --verbose --print-certs "$SIGNED"
+          "$AAPT" dump badging "$SIGNED" | tee artifacts/android/package-info.txt
+          grep -q "package: name='orbisextract.app'" artifacts/android/package-info.txt
+          mkdir -p artifacts/release
+          cp "$SIGNED" artifacts/release/OrbisExtract.apk
+          "$APKSIGNER" verify artifacts/release/OrbisExtract.apk
+          "$AAPT" dump badging artifacts/release/OrbisExtract.apk >/dev/null
+          ls -lh artifacts/release/OrbisExtract.apk
+
+      - name: Upload installable APK only
         uses: actions/upload-artifact@v4
         with:
-          name: orbisextract-android-apk
-          path: artifacts/android/*.apk
+          name: OrbisExtract-Android-APK
+          path: artifacts/release/OrbisExtract.apk
           if-no-files-found: error
           retention-days: 14
 
