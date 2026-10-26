@@ -92,6 +92,29 @@ public sealed class PkgMetadataEntriesTests
             inventory.Add(name, f.size);
             if (!File.Exists(Path.Combine(reference, name.Replace('/', Path.DirectorySeparatorChar))))
                 missing.Add(name);
+            if (f.size < 100_000_000)
+            {
+                var referencePath = Path.Combine(reference, name.Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(referencePath))
+                {
+                    using var expected = File.OpenRead(referencePath);
+                    using var hash = SHA256.Create();
+                    var viewFile = f.GetView();
+                    var buffer = new byte[128 * 1024];
+                    using var actual = new MemoryStream();
+                    long position = 0;
+                    while (position < f.size)
+                    {
+                        var length = (int)Math.Min(buffer.Length, f.size - position);
+                        viewFile.Read(position, buffer, 0, length);
+                        actual.Write(buffer, 0, length);
+                        position += length;
+                    }
+                    actual.Position = 0;
+                    Assert.True(hash.ComputeHash(expected).SequenceEqual(hash.ComputeHash(actual)),
+                        $"PFS divergente do PS4 PKG Tool: {name}");
+                }
+            }
         }
         output.WriteLine($"PFS interno: {payloadCount} arquivos");
         Assert.Empty(missing);
@@ -112,6 +135,51 @@ public sealed class PkgMetadataEntriesTests
             var name = Path.GetRelativePath(reference, file).Replace('\\', '/');
             Assert.True(inventory.TryGetValue(name, out var size), $"Ausente no plano: {name}");
             Assert.Equal(new FileInfo(file).Length, size);
+        }
+    }
+
+    [Fact]
+    public void LargePayloadMatchesReferenceDumpWithoutBufferingWholeFile()
+    {
+        var pkgPath = Environment.GetEnvironmentVariable("ORBISEXTRACT_TEST_PKG");
+        var reference = Environment.GetEnvironmentVariable("ORBISEXTRACT_TEST_DUMP");
+        if (string.IsNullOrEmpty(pkgPath) || string.IsNullOrEmpty(reference)) return;
+
+        using var pkgFile = File.OpenRead(pkgPath);
+        var pkg = new PkgReader(pkgFile).ReadPkg();
+        using var map = MemoryMappedFile.CreateFromFile(pkgFile, null, 0, MemoryMappedFileAccess.Read, HandleInheritability.None, leaveOpen: true);
+        using var view = map.CreateViewAccessor((long)pkg.Header.pfs_image_offset, (long)pkg.Header.pfs_image_size, MemoryMappedFileAccess.Read);
+        var outer = new PfsReader(view, pkg.Header.pfs_flags, pkg.GetEkpfs());
+        var inner = new PfsReader(new PFSCReader(outer.GetFile("pfs_image.dat").GetView()));
+        var files = inner.GetAllFiles().Where(f => f.size >= 100_000_000).ToList();
+        Assert.NotEmpty(files);
+        foreach (var file in files)
+        {
+            var name = file.FullName.TrimStart('/');
+            if (name.StartsWith("uroot/", StringComparison.OrdinalIgnoreCase)) name = name[6..];
+            var path = Path.Combine(reference, name.Replace('/', Path.DirectorySeparatorChar));
+            using var expected = File.OpenRead(path);
+            Assert.Equal(expected.Length, file.size);
+            using var actualHash = SHA256.Create();
+            using var expectedHash = SHA256.Create();
+            var source = file.GetView();
+            var buffer = new byte[1024 * 1024];
+            var referenceBuffer = new byte[buffer.Length];
+            long position = 0;
+            while (position < file.size)
+            {
+                var length = (int)Math.Min(buffer.Length, file.size - position);
+                source.Read(position, buffer, 0, length);
+                expected.ReadExactly(referenceBuffer, 0, length);
+                Assert.True(buffer.AsSpan(0, length).SequenceEqual(referenceBuffer.AsSpan(0, length)),
+                    $"PFS divergente: {name} no offset {position}");
+                actualHash.TransformBlock(buffer, 0, length, null, 0);
+                position += length;
+            }
+            actualHash.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+            expected.Position = 0;
+            Assert.True(actualHash.Hash!.SequenceEqual(expectedHash.ComputeHash(expected)), name);
+            output.WriteLine($"SHA-256 idêntico: {name} ({file.size} bytes)");
         }
     }
 }

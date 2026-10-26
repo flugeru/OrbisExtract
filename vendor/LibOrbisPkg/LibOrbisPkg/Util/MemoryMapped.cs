@@ -106,7 +106,7 @@ namespace LibOrbisPkg.Util
       {
         int offsetIntoChunk = (int)(pos % chunkSize);
         int toReadFromChunk = Math.Min(chunkSize - offsetIntoChunk, count);
-        reader.Read((long)chunks[chunkIdx++]*chunkSize + offsetIntoChunk, buf, offset, count);
+        reader.Read((long)chunks[chunkIdx++]*chunkSize + offsetIntoChunk, buf, offset, toReadFromChunk);
         pos += toReadFromChunk;
         offset += toReadFromChunk;
         count -= toReadFromChunk;

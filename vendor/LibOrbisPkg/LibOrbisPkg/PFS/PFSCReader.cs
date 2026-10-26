@@ -61,7 +61,7 @@ namespace LibOrbisPkg.PFS
     /// <param name="output">byte array where sector will be written</param>
     public void ReadSector(int idx, byte[] output)
     {
-      if (idx < 0 || idx > sectorMap.Length - 1)
+      if (idx < 0 || idx >= sectorMap.Length - 1)
         throw new ArgumentException("Invalid index", nameof(idx));
 
       var sectorOffset = sectorMap[idx];
@@ -84,7 +84,11 @@ namespace LibOrbisPkg.PFS
         using (var bufStream = new MemoryStream(sectorBuf))
         using (var ds = new DeflateStream(bufStream, CompressionMode.Decompress))
         {
-          ds.Read(output, 0, hdr.BlockSz);
+          // DeflateStream.Read may return fewer bytes than requested without
+          // reaching EOF. A single read leaves the remainder of this reused
+          // sector buffer filled with data from the preceding sector, corrupting
+          // large files at compression boundaries.
+          ds.ReadExactly(output, 0, hdr.BlockSz);
         }
       }
     }
