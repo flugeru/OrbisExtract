@@ -93,7 +93,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             .GroupBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
             .SelectMany(group => group.Select((item, index) => index == 0
                 ? item
-                : (item.File, item.RelativePath + $"~duplicate-{index}", item.Priority)))
+                : (File: item.File, RelativePath: item.RelativePath + $"~duplicate-{index}", Priority: item.Priority)))
             .OrderBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToList();
         long count = 0, bytes = 0;
