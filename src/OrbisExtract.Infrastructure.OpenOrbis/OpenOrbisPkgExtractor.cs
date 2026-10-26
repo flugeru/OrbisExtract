@@ -71,7 +71,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 using var source = new PfsFileStream(file);
                 long fileBytes = 0;
                 var lastReport = System.Diagnostics.Stopwatch.StartNew();
-                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, totalBytes));
+                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Count, bytes, totalBytes));
                 while (true)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -81,7 +81,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                     fileBytes += read;
                     if (lastReport.ElapsedMilliseconds >= 150 || fileBytes == file.size)
                     {
-                        progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes + fileBytes, totalBytes));
+                        progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Count, bytes + fileBytes, totalBytes));
                         lastReport.Restart();
                     }
                 }
@@ -91,7 +91,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 target = null;
                 count++;
                 bytes += fileBytes;
-                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Length, bytes, totalBytes));
+                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Count, bytes, totalBytes));
             }
             catch
             {
@@ -100,13 +100,13 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 throw;
             }
         }
-        progress?.Report(new ExtractionProgress("Concluído", null, count, files.Length, bytes, null));
+        progress?.Report(new ExtractionProgress("Concluído", null, count, files.Count, bytes, null));
         return new ExtractionResult(count, bytes);
     }
 
     private static string NormalizePfsPath(string path)
     {
-        var normalized = path.Replace('\\\\', '/').TrimStart('/');
+        var normalized = path.Replace('\\', '/').TrimStart('/');
         if (normalized.Split('/').Any(segment => segment is "." or ".."))
             throw new PkgExtractionException($"Caminho interno inseguro no PKG: {path}");
         return normalized;
