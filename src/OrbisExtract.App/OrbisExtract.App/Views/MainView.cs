@@ -604,6 +604,11 @@ public sealed class MainView : UserControl
 
         try
         {
+            // Ativa o serviço foreground antes de abrir/copiar um PKG grande.
+            // Assim o Android não pode encerrar o processo durante a preparação inicial.
+            OrbisExtract.App.Shared.AppNotificationHelper.StartExtraction(
+                _package.Name, _destination.Name, 0, 0);
+
             // Use o fluxo original diretamente quando ele permite seek. Alguns provedores
             // Android retornam content:// sem seek; só nesses casos o parser exige um arquivo temporário.
             var source = await _package.OpenReadAsync();
@@ -667,10 +672,6 @@ public sealed class MainView : UserControl
                     return new WindowsFallbackDestination(fallbackRoot, _package.Name, Log);
                 }
             });
-
-            // Notificação nativa de progresso (apenas Android; placeholder nas demais plataformas)
-            OrbisExtract.App.Shared.AppNotificationHelper.StartExtraction(
-                _package.Name, _destination.Name, 0, 0);
 
             var progress = new Progress<ExtractionProgress>(p =>
             {
