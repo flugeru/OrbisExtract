@@ -50,7 +50,7 @@ public static class AndroidNotificationHelper
         }
         catch (Exception ex)
         {
-            Android.Util.Log.Error("OrbisExtract", $"Não foi possível iniciar o serviço de extração: {ex.Message}");
+            global::Android.Util.Log.Error("OrbisExtract", $"Não foi possível iniciar o serviço de extração: {ex.Message}");
         }
 
         var notification = BuildForegroundNotification(packageName, destinationName);
