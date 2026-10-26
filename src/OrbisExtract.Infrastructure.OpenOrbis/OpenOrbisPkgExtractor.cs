@@ -96,7 +96,19 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             catch
             {
                 if (target is not null)
-                    await destination.DeleteTemporaryFileAsync(target, CancellationToken.None).ConfigureAwait(false);
+                {
+                    // Cleanup must never replace the real extraction error or cancellation
+                    // with a secondary SAF DeleteAsync failure.
+                    try
+                    {
+                        await destination.DeleteTemporaryFileAsync(target, CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // The original exception is more useful; some Android document providers
+                        // refuse deletion even after a write was cancelled.
+                    }
+                }
                 throw;
             }
         }
