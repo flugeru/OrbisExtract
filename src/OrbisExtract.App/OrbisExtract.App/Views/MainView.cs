@@ -155,7 +155,7 @@ public sealed class MainView : UserControl
                     return;
                 }
 
-                await clipboard.SetTextAsync(string.Join(Environment.NewLine, _logMessages));
+                await clipboard.SetDataAsync(new DataTransfer { Items = { DataTransferItem.CreateText(string.Join(Environment.NewLine, _logMessages)) } });
                 ShowBanner("Log copiado para a área de transferência.", UiTheme.Success);
             }
             catch (Exception ex)
