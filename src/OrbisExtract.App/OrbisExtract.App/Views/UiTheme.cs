@@ -25,6 +25,10 @@ public static class UiTheme
     public const string TextPrimary = "#F5F7FA";
     public const string TextSecondary = "#AAB4C3";
     public const string TextDisabled = "#667181";
+    public const double CardRadius = 18;
+    public const double ControlRadius = 12;
+    public const double CompactGap = 8;
+    public const double SectionGap = 14;
 
     public static readonly FontFamily Mono = new("Cascadia Mono, Consolas, Menlo, DejaVu Sans Mono, monospace");
 
@@ -52,7 +56,7 @@ public static class UiTheme
         Background = Brush(Surface),
         BorderBrush = Brush(Outline),
         BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(18),
+        CornerRadius = new CornerRadius(CardRadius),
         Padding = new Thickness(padding),
         Child = child
     };
@@ -86,12 +90,15 @@ public static class UiTheme
         BorderThickness = new Thickness(1)
     });
 
+    public static Button ActionButton(string text, bool primary = false) =>
+        primary ? PrimaryButton(text) : OutlinedButton(text);
+
     private static Button Styled(Button button)
     {
         button.HorizontalAlignment = HorizontalAlignment.Stretch;
         button.HorizontalContentAlignment = HorizontalAlignment.Center;
         button.Padding = new Thickness(16, 13);
-        button.CornerRadius = new CornerRadius(12);
+        button.CornerRadius = new CornerRadius(ControlRadius);
         button.FontSize = 14;
         button.PropertyChanged += (_, e) =>
         {
