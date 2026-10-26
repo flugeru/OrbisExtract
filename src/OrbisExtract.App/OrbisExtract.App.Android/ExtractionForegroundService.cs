@@ -47,6 +47,7 @@ public sealed class ExtractionForegroundService : Service
     {
         try
         {
+            StopForeground(StopForegroundFlags.Detach);
             if (_wakeLock?.IsHeld == true)
                 _wakeLock.Release();
         }
