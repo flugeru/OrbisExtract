@@ -739,11 +739,11 @@ public sealed class MainView : UserControl
             }
 
             var targetFolder = folder ?? throw new PkgExtractionException($"Pasta de destino inválida para '{relativePath}'.");
-            var temporaryName = $".{segments[^1]}.{Guid.NewGuid():N}.orbisextract.tmp";
-            // Avoid one UI log entry per file: on large PKGs this can flood the UI thread and slow extraction.
-            var file = await targetFolder.CreateFileAsync(temporaryName);
+            // Grava diretamente no arquivo final do SAF: evita copiar cada arquivo extraído
+            // novamente do temporário para o destino, o que era muito lento em PKGs grandes.
+            var file = await targetFolder.CreateFileAsync(segments[^1]);
             if (file is null)
-                throw new PkgExtractionException($"O provedor de armazenamento não criou o arquivo temporário para '{relativePath}'.");
+                throw new PkgExtractionException($"O provedor de armazenamento não criou o arquivo de destino para '{relativePath}'.");
             var stream = await file.OpenWriteAsync();
             if (stream is null)
                 throw new PkgExtractionException($"Não foi possível abrir o arquivo temporário para escrita: '{relativePath}'.");
@@ -758,25 +758,14 @@ public sealed class MainView : UserControl
                 throw new PkgExtractionException("Arquivo temporário de destino inválido.");
             await temporaryFile.FlushAsync(cancellationToken);
             await temporaryFile.DisposeAsync();
-
-            var segments = relativePath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-            IStorageFolder folder = _root;
-            foreach (var segment in segments[..^1])
-                folder = await folder.GetFolderAsync(segment);
-
-            var finalFile = await folder.CreateFileAsync(segments[^1]);
-            await using var input = await file.OpenReadAsync();
-            await using var output = await finalFile.OpenWriteAsync();
-            await input.CopyToAsync(output, cancellationToken);
-            await output.FlushAsync(cancellationToken);
-            await file.DeleteAsync();
+            // O arquivo já é o destino final; não faça uma segunda cópia de seus bytes.
         }
 
         public async Task DeleteTemporaryFileAsync(Stream temporaryFile, CancellationToken cancellationToken = default)
         {
             if (_files.Remove(temporaryFile, out var file))
             {
-                await temporaryFile.DisposeAsync();
+                try { await temporaryFile.DisposeAsync(); } catch { }
                 await file.DeleteAsync();
             }
         }
