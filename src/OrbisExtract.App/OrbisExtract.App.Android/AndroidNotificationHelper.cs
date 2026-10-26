@@ -93,10 +93,8 @@ public static class AndroidNotificationHelper
             .SetPriority((int)NotificationPriority.Low)
             .SetProgress(100, _lastProgress, _lastTotal <= 0)
             .SetWhen(Java.Lang.JavaSystem.CurrentTimeMillis())
-            .SetShowWhen(true);
-
-        if (ongoing)
-            builder.AddAction(0, "Em andamento", PendingIntentForStatus(context));
+            .SetShowWhen(true)
+            .SetContentIntent(PendingIntentForStatus(context));
 
         return builder.Build();
     }
