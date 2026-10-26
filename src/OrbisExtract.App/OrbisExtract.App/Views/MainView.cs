@@ -56,7 +56,7 @@ public sealed class MainView : UserControl
     private IStorageFolder? _destination;
     private CancellationTokenSource? _run;
     private readonly CancellationTokenSource _lifetime = new();
-    private readonly Queue<TextBlock> _logLines = new();
+    private readonly Queue<Control> _logLines = new();
     private readonly List<string> _logMessages = new();
     private readonly Button _copyLogs;
 
@@ -124,7 +124,7 @@ public sealed class MainView : UserControl
         _cancel.Foreground = UiTheme.Brush(UiTheme.Error);
         _cancel.Click += (_, _) => _run?.Cancel();
 
-        _logPanel = new StackPanel { Spacing = 2 };
+        _logPanel = new StackPanel { Spacing = 6 };
         _logScroll = new ScrollViewer
         {
             MaxHeight = 260,
@@ -134,10 +134,10 @@ public sealed class MainView : UserControl
         };
         var logBox = new Border
         {
-            Background = UiTheme.Brush("#0D1017"),
+            Background = UiTheme.Brush(UiTheme.Surface),
             BorderBrush = UiTheme.Brush(UiTheme.Outline),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(12),
+            CornerRadius = new CornerRadius(14),
             Padding = new Thickness(12),
             MinHeight = 120,
             Child = _logScroll
@@ -322,15 +322,41 @@ public sealed class MainView : UserControl
             while (_logMessages.Count > MaxLogLines)
                 _logMessages.RemoveAt(0);
 
-            var color = message.Contains("Falha", StringComparison.OrdinalIgnoreCase) || message.Contains("[ERRO", StringComparison.OrdinalIgnoreCase)
-                ? UiTheme.Error
-                : message.Contains("Aviso", StringComparison.OrdinalIgnoreCase) || message.Contains("cancelad", StringComparison.OrdinalIgnoreCase)
-                    ? UiTheme.Warning
-                    : message.Contains("concluíd", StringComparison.OrdinalIgnoreCase)
-                        ? UiTheme.Success
-                        : UiTheme.TextSecondary;
-            var line = UiTheme.Text($"{time}  {message}", 12, color);
-            line.FontFamily = UiTheme.Mono;
+            var isError = message.Contains("Falha", StringComparison.OrdinalIgnoreCase) || message.Contains("[ERRO", StringComparison.OrdinalIgnoreCase);
+            var isWarning = message.Contains("Aviso", StringComparison.OrdinalIgnoreCase) || message.Contains("cancelad", StringComparison.OrdinalIgnoreCase);
+            var isSuccess = message.Contains("concluíd", StringComparison.OrdinalIgnoreCase);
+            var accent = isError ? UiTheme.Error : isWarning ? UiTheme.Warning : isSuccess ? UiTheme.Success : UiTheme.Progress;
+            var marker = new Border
+            {
+                Width = 7,
+                Height = 7,
+                CornerRadius = new CornerRadius(4),
+                Background = UiTheme.Brush(accent),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            var details = new StackPanel
+            {
+                Spacing = 2,
+                VerticalAlignment = VerticalAlignment.Center,
+                Children =
+                {
+                    UiTheme.Text(time, 10, UiTheme.TextSecondary),
+                    UiTheme.Text(message, 12, isError ? UiTheme.Error : UiTheme.TextPrimary)
+                }
+            };
+            var line = new Border
+            {
+                Padding = new Thickness(10, 8),
+                CornerRadius = new CornerRadius(9),
+                Background = UiTheme.Brush(UiTheme.Background),
+                Child = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Children = { marker, details }
+                }
+            };
             _logPanel.Children.Add(line);
             _logLines.Enqueue(line);
             while (_logLines.Count > MaxLogLines)
