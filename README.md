@@ -81,6 +81,8 @@ bash scripts/publish-android.sh
 
 Or download `OrbisExtract-1.0.1-signed.apk` from the [1.0.1 release](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.1). CI also builds an APK on every push as an [Actions](https://github.com/flugeru/OrbisExtract/actions) artifact.
 
+For a Google Play upload, see the [signed AAB workflow and private upload-key setup](docs/android-play-upload.md). This is separate from the installable APK.
+
 ### Credits
 
 - **[OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg)** — library that reads and extracts PKG packages. Source included in `vendor/LibOrbisPkg/` under the **LGPL-3.0** license. Thanks to the OpenOrbis project and the LibOrbisPkg contributors.
@@ -168,6 +170,8 @@ bash scripts/publish-android.sh
 ```
 
 Ou baixe `OrbisExtract-1.0.1-signed.apk` no [release 1.0.1](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.1). O CI também gera um APK a cada push como artefato de [Actions](https://github.com/flugeru/OrbisExtract/actions).
+
+Para publicar na Google Play, veja as [instruções do workflow AAB assinado e da chave de upload privada](docs/android-play-upload.md). Esse processo é separado do APK instalável.
 
 ### Créditos
 

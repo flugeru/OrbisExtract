@@ -29,6 +29,10 @@ packages/
 *.nupkg
 project.lock.json
 
+# Android upload signing material (never commit private keys or passwords)
+*.keystore
+*.jks
+
 # ===================== SO =====================
 Thumbs.db
 Desktop.ini

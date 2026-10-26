@@ -1,0 +1,129 @@
+name: Android AAB (Google Play upload)
+
+# Never run signing on pull requests or automatically on pushes.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-aab:
+    name: Build signed Android AAB
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install Android workload
+        run: dotnet workload install android
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-36" "platforms;android-35" "build-tools;36.0.0" "build-tools;35.0.0"
+
+      - name: Prepare signing files
+        shell: bash
+        env:
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in UPLOAD_KEYSTORE_BASE64 UPLOAD_KEY_ALIAS UPLOAD_STORE_PASSWORD UPLOAD_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "Missing secret for Android AAB signing: $name" >&2
+              exit 1
+            fi
+          done
+          if [[ ! "$UPLOAD_KEY_ALIAS" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+            echo 'Invalid upload key alias' >&2
+            exit 1
+          fi
+          signing_dir="$(mktemp -d "$RUNNER_TEMP/aab-signing.XXXXXX")"
+          chmod 700 "$signing_dir"
+          printf '%s' "$UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$signing_dir/upload.keystore"
+          printf '%s' "$UPLOAD_STORE_PASSWORD" > "$signing_dir/store-password"
+          printf '%s' "$UPLOAD_KEY_PASSWORD" > "$signing_dir/key-password"
+          chmod 600 "$signing_dir"/*
+          printf 'SIGNING_DIR=%s\n' "$signing_dir" >> "$GITHUB_ENV"
+          printf 'SIGNING_ALIAS=%s\n' "$UPLOAD_KEY_ALIAS" >> "$GITHUB_ENV"
+
+      - name: Restore and test
+        run: |
+          dotnet restore OrbisExtract.sln
+          dotnet restore src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
+          dotnet test OrbisExtract.sln --no-restore --configuration Release
+
+      - name: Publish signed AAB
+        run: >-
+          dotnet publish
+          src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj
+          -f net10.0-android
+          -c Release
+          --no-restore
+          -p:AndroidPackageFormat=aab
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore="$SIGNING_DIR/upload.keystore"
+          -p:AndroidSigningKeyAlias="$SIGNING_ALIAS"
+          -p:AndroidSigningStorePass="file:$SIGNING_DIR/store-password"
+          -p:AndroidSigningKeyPass="file:$SIGNING_DIR/key-password"
+          -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
+          -p:AndroidUseLatestPlatformSdk=true
+          -p:AndroidUseLatestBuildTools=true
+          -o artifacts/aab
+
+      - name: Verify and package signed AAB only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' bundles < <(find artifacts/aab -maxdepth 1 -type f -iname '*-signed.aab' -print0)
+          if [ "${#bundles[@]}" -ne 1 ]; then
+            echo "Expected exactly one signed AAB, found ${#bundles[@]}" >&2
+            exit 1
+          fi
+          mkdir -p artifacts/play-upload
+          cp "${bundles[0]}" artifacts/play-upload/OrbisExtract-play-upload.aab
+          unzip -tqq artifacts/play-upload/OrbisExtract-play-upload.aab
+          jarsigner -verify artifacts/play-upload/OrbisExtract-play-upload.aab
+
+      - name: Remove signing files
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${SIGNING_DIR:-}" ] && [ -d "$SIGNING_DIR" ]; then
+            rm -f -- "$SIGNING_DIR/upload.keystore" "$SIGNING_DIR/store-password" "$SIGNING_DIR/key-password"
+            rmdir -- "$SIGNING_DIR"
+          fi
+
+      - name: Upload signed AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrbisExtract-Android-Play-AAB
+          path: artifacts/play-upload/OrbisExtract-play-upload.aab
+          if-no-files-found: error
+          retention-days: 14
