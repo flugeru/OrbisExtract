@@ -58,7 +58,6 @@ public sealed class MainView : UserControl
     private readonly CancellationTokenSource _lifetime = new();
     private readonly Queue<Control> _logLines = new();
     private readonly List<string> _logMessages = new();
-    private readonly Button _copyLogs;
 
     public MainView()
     {
@@ -132,34 +131,6 @@ public sealed class MainView : UserControl
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             Content = _logPanel
         };
-        _copyLogs = UiTheme.OutlinedButton("Copiar log");
-        _copyLogs.Margin = new Thickness(0, 0, 0, 0);
-        _copyLogs.HorizontalAlignment = HorizontalAlignment.Left;
-        _copyLogs.Click += async (_, _) =>
-        {
-            try
-            {
-                var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-                if (clipboard is null)
-                {
-                    ShowBanner("A área de transferência não está disponível neste dispositivo.");
-                    return;
-                }
-
-                var transfer = new DataTransfer();
-                var textItem = new DataTransferItem();
-                textItem.SetText(string.Join(Environment.NewLine, _logMessages));
-                transfer.Add(textItem);
-                await clipboard.SetDataAsync(transfer);
-                ShowBanner("Log copiado para a área de transferência.", UiTheme.Success);
-            }
-            catch (Exception ex)
-            {
-                Log($"Aviso ao copiar o log: {ex.Message}");
-                ShowBanner($"Não foi possível copiar o log: {ex.Message}");
-            }
-        };
-
         var logBox = new Border
         {
             Background = UiTheme.Brush(UiTheme.Surface),
@@ -167,14 +138,14 @@ public sealed class MainView : UserControl
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(14),
             Padding = new Thickness(14),
-            MinHeight = 150,
+            MinHeight = 112,
             Child = new StackPanel
             {
                 Spacing = 8,
                 Children = { _logScroll }
             }
         };
-        _logScroll.MaxHeight = 220;
+        _logScroll.MaxHeight = 180;
         _bannerText = UiTheme.Text("", 13, UiTheme.TextPrimary);
         _banner = new Border
         {
@@ -198,7 +169,7 @@ public sealed class MainView : UserControl
         _monitorCard = UiTheme.Card(new StackPanel
         {
             Spacing = 14,
-            Children = { header, _progress, metaRow, _status, _banner, _cancel, _copyLogs, logBox }
+            Children = { header, _progress, metaRow, _status, _banner, _cancel, logBox }
         });
 
         // ---------- Grid responsivo do conteúdo ----------
@@ -211,8 +182,8 @@ public sealed class MainView : UserControl
         var isAndroid = OperatingSystem.IsAndroid();
         var page = new StackPanel
         {
-            Spacing = 24,
-            Margin = isAndroid ? new Thickness(16, 20, 16, 24) : new Thickness(32, 32, 32, 28),
+            Spacing = 18,
+            Margin = isAndroid ? new Thickness(14, 14, 14, 18) : new Thickness(28, 28, 28, 24),
             Children =
             {
                 new StackPanel
@@ -225,10 +196,9 @@ public sealed class MainView : UserControl
                     }
                 },
                 _contentGrid,
-                UiTheme.Text("Use apenas pacotes e chaves que você tem autorização para acessar.", 12, UiTheme.TextDisabled)
             }
         };
-        var centered = new Border { MaxWidth = 900, HorizontalAlignment = HorizontalAlignment.Stretch, Child = page };
+        var centered = new Border { MaxWidth = 820, HorizontalAlignment = HorizontalAlignment.Stretch, Child = page };
         var scroll = new ScrollViewer
         {
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
@@ -333,7 +303,20 @@ public sealed class MainView : UserControl
                 Children =
                 {
                     UiTheme.Text(time, 10, UiTheme.TextSecondary),
-                    UiTheme.Text(message, 12, isError ? UiTheme.Error : UiTheme.TextPrimary)
+                    new TextBox
+                    {
+                        Text = message,
+                        FontSize = 12,
+                        Foreground = UiTheme.Brush(isError ? UiTheme.Error : UiTheme.TextPrimary),
+                        Background = Brushes.Transparent,
+                        BorderThickness = new Thickness(0),
+                        Padding = new Thickness(0),
+                        IsReadOnly = true,
+                        AcceptsReturn = true,
+                        TextWrapping = TextWrapping.Wrap,
+                        MinHeight = 22,
+                        HorizontalAlignment = HorizontalAlignment.Stretch
+                    }
                 }
             };
             var line = new Border
