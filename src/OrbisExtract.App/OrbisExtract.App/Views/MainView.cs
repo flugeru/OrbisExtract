@@ -80,7 +80,7 @@ public sealed class MainView : UserControl
             Margin = new Thickness(0, 4, 0, 0),
             Children = { Field("Jogo", _gameTitle), Field("Versão", _version), Field("Content ID", _contentId) }
         };
-        _choosePackage = UiTheme.OutlinedButton("Selecionar arquivo PKG");
+        _choosePackage = UiTheme.ActionButton("Selecionar arquivo PKG");
         _choosePackage.Click += async (_, _) => await ChoosePackageAsync();
 
         _packageCard = Section("Arquivo do pacote",
@@ -89,9 +89,9 @@ public sealed class MainView : UserControl
 
         // ---------- Cartão de configuração (passcode removido da UI) ----------
         _destinationName = UiTheme.Text("Nenhuma pasta escolhida", 14, UiTheme.TextSecondary);
-        _chooseDestination = UiTheme.OutlinedButton("Escolher pasta");
+        _chooseDestination = UiTheme.ActionButton("Escolher pasta");
         _chooseDestination.Click += async (_, _) => await ChooseDestinationAsync();
-        _extract = UiTheme.PrimaryButton("Extrair arquivos");
+        _extract = UiTheme.ActionButton("Extrair arquivos", primary: true);
         _extract.IsEnabled = false;
         _extract.Margin = new Thickness(0, 6, 0, 0);
         _extract.Click += async (_, _) => await ExtractAsync();
@@ -250,22 +250,31 @@ public sealed class MainView : UserControl
     private Border CreateAboutOverlay()
     {
         const string license = "MIT License\n\nCopyright (c) 2026 flugeru\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the Software), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.";
-        var close = UiTheme.OutlinedButton("Fechar");
-        var licenseBox = new TextBox
+        var close = UiTheme.ActionButton("Fechar");
+        var licenseBox = new Border
         {
-            Text = license,
-            IsReadOnly = true,
-            AcceptsReturn = true,
-            TextWrapping = TextWrapping.Wrap,
-            MinHeight = 150,
-            MaxHeight = 200,
-            Background = UiTheme.Brush(UiTheme.Background),
-            Foreground = UiTheme.Brush(UiTheme.TextSecondary),
-            BorderBrush = UiTheme.Brush(UiTheme.Outline)
+            Background = UiTheme.Brush(UiTheme.SurfaceElevated),
+            BorderBrush = UiTheme.Brush(UiTheme.Outline),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(UiTheme.CardRadius),
+            Padding = new Thickness(14),
+            Child = new TextBox
+            {
+                Text = license,
+                IsReadOnly = true,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                MinHeight = 150,
+                MaxHeight = 200,
+                Background = Brushes.Transparent,
+                Foreground = UiTheme.Brush(UiTheme.TextSecondary),
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0)
+            }
         };
         var content = new StackPanel
         {
-            Spacing = 12,
+            Spacing = UiTheme.SectionGap,
             Children =
             {
                 UiTheme.Text("Sobre o OrbisExtract", 22, UiTheme.TextPrimary, FontWeight.SemiBold),
@@ -285,9 +294,11 @@ public sealed class MainView : UserControl
             MaxWidth = 520,
             MaxHeight = 620,
             Margin = new Thickness(18),
+            CornerRadius = new CornerRadius(UiTheme.CardRadius),
+            ClipToBounds = true,
             Child = UiTheme.Card(new ScrollViewer
             {
-                Content = new Border { Padding = new Thickness(18), Child = content },
+                Content = new Border { Padding = new Thickness(20), Child = content },
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto
             })
         };
