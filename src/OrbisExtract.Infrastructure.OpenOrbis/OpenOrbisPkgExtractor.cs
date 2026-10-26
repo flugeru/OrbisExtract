@@ -39,7 +39,14 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             // uroot/Image0/... (and some packages use only uroot/...). PS4 PKG
             // Tool does not preserve either container directory in a full dump.
             path = StripRoot(path, "uroot");
-            path = StripRoot(path, "Image0");
+            if (path.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase))
+            {
+                path = "sce_sys/" + StripRoot(path, "Sc0");
+            }
+            else
+            {
+                path = StripRoot(path, "Image0");
+            }
             if (path.Length == 0) continue;
             path = CanonicalizeSystemDirectory(path);
             files.Add((file, path, 0));
@@ -49,12 +56,19 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         {
             var path = NormalizePfsPath(file.FullName);
             if (path.Equals("pfs_image.dat", StringComparison.OrdinalIgnoreCase)) continue;
-            if (!path.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase)) continue;
+            // LibOrbisPkg versions/layouts expose Sc0 either as Sc0/...,
+            // uroot/Sc0/..., or directly as sce_sys/... in the outer PFS.
+            // Accept all three forms; filtering only Sc0/ drops most metadata
+            // from packages such as GR2.
+            var suffix = path;
+            if (suffix.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase))
+                suffix = StripRoot(suffix, "Sc0");
+            else if (suffix.StartsWith("sce_sys/", StringComparison.OrdinalIgnoreCase))
+                suffix = StripRoot(suffix, "sce_sys");
+            else
+                continue;
 
-            var suffix = StripRoot(path, "Sc0");
             suffix = StripRoot(suffix, "uroot");
-            // Some packages expose the system directory itself in Sc0; avoid creating
-            // sce_sys/sce_sys when combining it with Image0.
             suffix = StripRoot(suffix, "sce_sys");
             if (suffix.Length == 0) continue;
             files.Add((file, CanonicalizeSystemDirectory("sce_sys/" + suffix), 1));
