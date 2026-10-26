@@ -64,8 +64,8 @@ jobs:
       - name: Use supplied square Android icon
         run: |
           test -f OrbisExtract-square.png
-          cp OrbisExtract-square.png src/OrbisExtract.App/OrbisExtract.App.Android/orbisextract_icon.png
-          file src/OrbisExtract.App/OrbisExtract.App.Android/orbisextract_icon.png
+          cp OrbisExtract-square.png src/OrbisExtract.App/OrbisExtract.App.Android/Icon.png
+          file src/OrbisExtract.App/OrbisExtract.App.Android/Icon.png
 
       - name: Clean Android build outputs
         run: |
