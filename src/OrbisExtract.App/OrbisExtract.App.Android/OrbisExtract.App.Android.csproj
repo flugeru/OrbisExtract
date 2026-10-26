@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <ApplicationId>orbisextract.app</ApplicationId>
     <ApplicationTitle>OrbisExtract</ApplicationTitle>
-    <ApplicationDisplayVersion>1.0.2</ApplicationDisplayVersion>
-    <Version>1.0.2</Version>
-    <AndroidPackageVersion>1030002</AndroidPackageVersion>
+    <ApplicationDisplayVersion>1.0.1</ApplicationDisplayVersion>
+    <Version>1.0.1</Version>
+    <AndroidPackageVersion>1030003</AndroidPackageVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
   </PropertyGroup>
