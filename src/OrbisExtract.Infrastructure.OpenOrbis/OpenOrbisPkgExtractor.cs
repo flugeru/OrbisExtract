@@ -28,21 +28,42 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         using var accessor = new PkgMemoryReader(request.Package, (long)package.Header.pfs_image_offset, (long)package.Header.pfs_image_size);
         var outer = new PfsReader(accessor, package.Header.pfs_flags, ekpfs);
         var inner = new PfsReader(new PFSCReader(outer.GetFile("pfs_image.dat").GetView()));
-        var files = inner.GetAllFiles().ToArray();
-        long count = 0, bytes = 0;
-        var totalBytes = files.Sum(file => (long)file.size);
-        var buffer = new byte[128 * 1024];
-        foreach (var file in files)
+        // Image0 holds the game tree; Sc0 holds system metadata. Emulators expect
+        // Image0 at the dump root and Sc0 merged into sce_sys/.
+        var files = new List<(PfsReader.File File, string RelativePath, int Priority)>();
+        foreach (var file in inner.GetAllFiles())
         {
+            var path = NormalizePfsPath(file.FullName);
+            if (path.Length == 0) continue;
+            if (path.StartsWith("Image0/", StringComparison.OrdinalIgnoreCase))
+                path = path["Image0/".Length..];
+            files.Add((file, path, 0));
+        }
+        foreach (var file in outer.GetAllFiles())
+        {
+            var path = NormalizePfsPath(file.FullName);
+            if (path.Equals("pfs_image.dat", StringComparison.OrdinalIgnoreCase)) continue;
+            if (path.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase))
+            {
+                var suffix = path["Sc0/".Length..];
+                if (suffix.Length > 0) files.Add((file, "sce_sys/" + suffix, 1));
+            }
+        }
+        // On duplicate logical paths, prefer Image0 while retaining Sc0-only metadata.
+        files = files.GroupBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderBy(x => x.Priority).First()).ToList();
+        long count = 0, bytes = 0;
+        var totalBytes = files.Sum(item => (long)item.File.size);
+        var buffer = new byte[128 * 1024];
+        foreach (var item in files)
+        {
+            var file = item.File;
             cancellationToken.ThrowIfCancellationRequested();
             var destination = request.Destination ?? new LocalExtractionDestination(request.DestinationDirectory, request.FailOnExistingFiles);
             Stream? target = null;
             try
             {
-                // LibOrbisPkg exposes PFS paths with a leading slash (for example
-                // "/sce_sys/param.sfo"). Extraction destinations are relative paths,
-                // so normalize that root marker before applying path-safety checks.
-                var relativePath = file.FullName.TrimStart('/', '\\');
+                var relativePath = item.RelativePath;
                 if (string.IsNullOrWhiteSpace(relativePath))
                     throw new PkgExtractionException("O pacote contém um caminho interno vazio.");
 
@@ -81,6 +102,14 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         }
         progress?.Report(new ExtractionProgress("Concluído", null, count, files.Length, bytes, null));
         return new ExtractionResult(count, bytes);
+    }
+
+    private static string NormalizePfsPath(string path)
+    {
+        var normalized = path.Replace('\\\\', '/').TrimStart('/');
+        if (normalized.Split('/').Any(segment => segment is "." or ".."))
+            throw new PkgExtractionException($"Caminho interno inseguro no PKG: {path}");
+        return normalized;
     }
 
     private static Pkg ReadPackage(Stream stream)
