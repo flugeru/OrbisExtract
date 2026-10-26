@@ -120,7 +120,9 @@ public sealed class MainView : UserControl
         };
         _cancel = UiTheme.OutlinedButton("Cancelar");
         _cancel.IsVisible = false;
-        _cancel.HorizontalAlignment = HorizontalAlignment.Left;
+        _cancel.HorizontalAlignment = HorizontalAlignment.Right;
+        _cancel.VerticalAlignment = VerticalAlignment.Center;
+        _cancel.Margin = new Thickness(8, 0, 0, 0);
         _cancel.Foreground = UiTheme.Brush(UiTheme.Primary);
         _cancel.Click += (_, _) => _run?.Cancel();
 
@@ -129,7 +131,7 @@ public sealed class MainView : UserControl
         {
             MaxHeight = 260,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
             Content = _logPanel
         };
         var logBox = new Border
@@ -162,15 +164,17 @@ public sealed class MainView : UserControl
         Grid.SetColumn(_percent, 1);
         header.Children.Add(_percent);
 
-        var metaRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        var metaRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 8, VerticalAlignment = VerticalAlignment.Center };
         metaRow.Children.Add(_counter);
         Grid.SetColumn(_elapsed, 1);
         metaRow.Children.Add(_elapsed);
+        Grid.SetColumn(_cancel, 2);
+        metaRow.Children.Add(_cancel);
 
         _monitorCard = UiTheme.Card(new StackPanel
         {
             Spacing = 10,
-            Children = { header, _progress, metaRow, _status, _banner, _cancel, logBox }
+            Children = { header, _progress, metaRow, _status, _banner, logBox }
         });
 
         // ---------- Grid responsivo do conteúdo ----------
@@ -213,7 +217,7 @@ public sealed class MainView : UserControl
         var scroll = new ScrollViewer
         {
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
             Content = centered
         };
         scroll.SizeChanged += (_, e) => ApplyContentLayout(e.NewSize.Width);
@@ -299,7 +303,7 @@ public sealed class MainView : UserControl
             Child = UiTheme.Card(new ScrollViewer
             {
                 Content = new Border { Padding = new Thickness(20), Child = content },
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+                VerticalScrollBarVisibility = ScrollBarVisibility.Hidden
             })
         };
         // A single flexible cell constrains the dialog to the actual viewport,
