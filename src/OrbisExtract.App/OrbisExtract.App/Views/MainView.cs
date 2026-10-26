@@ -175,12 +175,6 @@ public sealed class MainView : UserControl
             }
         };
         _logScroll.MaxHeight = 220;
-        var logContent = new StackPanel
-        {
-            Spacing = 8,
-            Children = { _copyLogs, logBox }
-        };
-
         _bannerText = UiTheme.Text("", 13, UiTheme.TextPrimary);
         _banner = new Border
         {
