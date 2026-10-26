@@ -28,73 +28,12 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         using var accessor = new PkgMemoryReader(request.Package, (long)package.Header.pfs_image_offset, (long)package.Header.pfs_image_size);
         var outer = new PfsReader(accessor, package.Header.pfs_flags, ekpfs);
         var inner = new PfsReader(new PFSCReader(outer.GetFile("pfs_image.dat").GetView()));
-        // Match PS4 PKG Tool's full-extract layout: merge Image0 at the dump root
-        // and merge Sc0 metadata into the game's existing sce_sys directory. Do not
-        // leave Image0/Sc0 wrapper directories in the output.
-        var files = new List<(PfsReader.File File, string RelativePath, int Priority)>();
-        foreach (var file in inner.GetAllFiles())
-        {
-            var path = NormalizePfsPath(file.FullName);
-            // LibOrbisPkg can expose the inner image as either Image0/... or
-            // uroot/Image0/... (and some packages use only uroot/...). PS4 PKG
-            // Tool does not preserve either container directory in a full dump.
-            path = StripRoot(path, "uroot");
-            if (path.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase))
-            {
-                path = "sce_sys/" + StripRoot(path, "Sc0");
-            }
-            else
-            {
-                // Keep every file from the inner image, like pkg_extract. Only
-                // remove presentation/container roots; never discard a file
-                // because it is not under Image0.
-                path = StripRoot(path, "Image0");
-            }
-            if (path.Length == 0) continue;
-            path = CanonicalizeSystemDirectory(path);
-            files.Add((file, path, 0));
-        }
-
-        foreach (var file in outer.GetAllFiles())
-        {
-            var path = NormalizePfsPath(file.FullName);
-            if (path.Equals("pfs_image.dat", StringComparison.OrdinalIgnoreCase)) continue;
-            // LibOrbisPkg versions/layouts expose Sc0 either as Sc0/...,
-            // uroot/Sc0/..., or directly as sce_sys/... in the outer PFS.
-            // Accept all three forms; filtering only Sc0/ drops most metadata
-            // from packages such as GR2.
-            var suffix = path;
-            if (suffix.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase))
-                suffix = StripRoot(suffix, "Sc0");
-            else if (suffix.StartsWith("sce_sys/", StringComparison.OrdinalIgnoreCase))
-                suffix = StripRoot(suffix, "sce_sys");
-            else
-            {
-                // Full pkg_extract must not discard an outer-PFS entry merely
-                // because its producer used a different Sc0 naming convention.
-                // Keep every outer entry and only omit the container itself.
-                suffix = StripRoot(suffix, "uroot");
-                if (suffix.Equals("pfs_image.dat", StringComparison.OrdinalIgnoreCase))
-                    continue;
-                files.Add((file, suffix, 1));
-                continue;
-            }
-
-            suffix = StripRoot(suffix, "uroot");
-            suffix = StripRoot(suffix, "sce_sys");
-            if (suffix.Length == 0) continue;
-            files.Add((file, CanonicalizeSystemDirectory("sce_sys/" + suffix), 1));
-        }
-
-        // Never discard package entries. The PS4 PKG Tool extracts every file
-        // returned by the PFS walk; duplicate logical names are retained by
-        // resolving their output path below instead of selecting one source.
-        files = files
-            .GroupBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .SelectMany(group => group.Select((item, index) => index == 0
-                ? item
-                : (File: item.File, RelativePath: item.RelativePath + $"~duplicate-{index}", Priority: item.Priority)))
-            .OrderBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
+        // This is the same extraction flow used by PkgTool's pkg_extract:
+        // enumerate every file in the inner image and use its original PFS path.
+        // Do not merge, prioritize, deduplicate, or synthesize paths here.
+        var files = inner.GetAllFiles()
+            .Select(file => (File: file, RelativePath: NormalizePkgToolPath(file.FullName)))
+            .OrderBy(item => item.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToList();
         long count = 0, bytes = 0;
         var totalBytes = files.Sum(item => (long)item.File.size);
@@ -168,21 +107,13 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         return normalized;
     }
 
-    private static string StripRoot(string path, string root)
+    private static string NormalizePkgToolPath(string path)
     {
-        if (path.Equals(root, StringComparison.OrdinalIgnoreCase)) return string.Empty;
-        var prefix = root + "/";
-        return path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-            ? path[prefix.Length..]
-            : path;
-    }
-
-    private static string CanonicalizeSystemDirectory(string path)
-    {
-        if (path.Equals("sce_sys", StringComparison.OrdinalIgnoreCase)) return "sce_sys";
-        if (path.StartsWith("sce_sys/", StringComparison.OrdinalIgnoreCase))
-            return "sce_sys/" + path["sce_sys/".Length..];
-        return path;
+        var normalized = NormalizePfsPath(path);
+        if (normalized.Length == 0)
+            throw new PkgExtractionException("O PKG contém uma entrada sem nome.");
+        // PkgTool removes only the leading separator returned by FullName.
+        return normalized.TrimStart('/');
     }
 
     private static Pkg ReadPackage(Stream stream)
