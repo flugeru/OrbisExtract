@@ -239,8 +239,11 @@ public sealed class MainView : UserControl
         button.MinWidth = 44;
         button.MinHeight = 44;
         button.Padding = new Thickness(0);
+        button.HorizontalContentAlignment = HorizontalAlignment.Center;
+        button.VerticalContentAlignment = VerticalAlignment.Center;
+        button.HorizontalAlignment = HorizontalAlignment.Center;
         button.VerticalAlignment = VerticalAlignment.Center;
-        button.HorizontalAlignment = HorizontalAlignment.Right;
+        button.CornerRadius = new CornerRadius(22);
         button.FontSize = 22;
         button.Click += (_, _) => _aboutOverlay.IsVisible = true;
         Grid.SetColumn(button, 1);
@@ -293,7 +296,9 @@ public sealed class MainView : UserControl
         {
             MaxWidth = 520,
             MaxHeight = 620,
-            Margin = new Thickness(18),
+            Margin = new Thickness(12),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
             CornerRadius = new CornerRadius(UiTheme.CardRadius),
             ClipToBounds = true,
             Child = UiTheme.Card(new ScrollViewer
@@ -302,14 +307,19 @@ public sealed class MainView : UserControl
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto
             })
         };
+        // A single flexible cell constrains the dialog to the actual viewport,
+        // including narrow Android screens, instead of letting an Auto column overflow.
         var overlayGrid = new Grid
         {
-            RowDefinitions = new RowDefinitions("*,Auto,*"),
-            ColumnDefinitions = new ColumnDefinitions("*,Auto,*")
+            RowDefinitions = new RowDefinitions("*"),
+            ColumnDefinitions = new ColumnDefinitions("*")
         };
         overlayGrid.Children.Add(dialogCard);
-        Grid.SetColumn(dialogCard, 1);
-        Grid.SetRow(dialogCard, 1);
+        overlayGrid.SizeChanged += (_, e) =>
+        {
+            dialogCard.MaxWidth = Math.Min(520, Math.Max(0, e.NewSize.Width - 24));
+            dialogCard.MaxHeight = Math.Min(620, Math.Max(0, e.NewSize.Height - 24));
+        };
         return new Border
         {
             IsVisible = false,
