@@ -9,7 +9,7 @@ namespace OrbisExtract.App.Android;
 /// The extraction pipeline remains owned by the app process so SAF document permissions
 /// and the selected destination stay valid.
 /// </summary>
-[Service(Exported = false, ForegroundServiceType = ForegroundService.TypeDataSync)]
+[Service(Exported = false)]
 public sealed class ExtractionForegroundService : Service
 {
     private PowerManager.WakeLock? _wakeLock;
