@@ -124,23 +124,13 @@ public sealed class MainView : UserControl
         _cancel.Foreground = UiTheme.Brush(UiTheme.Error);
         _cancel.Click += (_, _) => _run?.Cancel();
 
-        _logPanel = new StackPanel { Spacing = 6 };
+        _logPanel = new StackPanel { Spacing = 0 };
         _logScroll = new ScrollViewer
         {
             MaxHeight = 260,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             Content = _logPanel
-        };
-        var logBox = new Border
-        {
-            Background = UiTheme.Brush(UiTheme.Surface),
-            BorderBrush = UiTheme.Brush(UiTheme.Outline),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(12),
-            MinHeight = 120,
-            Child = _logScroll
         };
         _copyLogs = UiTheme.OutlinedButton("Copiar log");
         _copyLogs.Margin = new Thickness(0, 0, 0, 8);
@@ -173,7 +163,8 @@ public sealed class MainView : UserControl
         var logContent = new StackPanel
         {
             Spacing = 8,
-            Children = { _copyLogs, logBox }
+            Margin = new Thickness(0, 8, 0, 0),
+            Children = { _copyLogs, _logScroll }
         };
         var expander = new Expander
         {
@@ -181,6 +172,9 @@ public sealed class MainView : UserControl
             IsExpanded = false,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Foreground = UiTheme.Brush(UiTheme.TextSecondary),
+            Background = UiTheme.Brush(UiTheme.Surface),
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(0),
             Content = logContent
         };
 
@@ -347,9 +341,9 @@ public sealed class MainView : UserControl
             };
             var line = new Border
             {
-                Padding = new Thickness(10, 8),
-                CornerRadius = new CornerRadius(9),
-                Background = UiTheme.Brush(UiTheme.Background),
+                Padding = new Thickness(4, 8),
+                BorderBrush = UiTheme.Brush(UiTheme.Outline),
+                BorderThickness = new Thickness(0, 0, 0, 1),
                 Child = new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
