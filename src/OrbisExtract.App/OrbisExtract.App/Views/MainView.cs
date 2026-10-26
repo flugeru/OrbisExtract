@@ -102,7 +102,7 @@ public sealed class MainView : UserControl
 
         // ---------- Monitor de extração ----------
         _stateTitle = UiTheme.Text("Pronto para extrair", 18, UiTheme.TextPrimary, FontWeight.SemiBold);
-        _percent = UiTheme.Text("", 18, UiTheme.Primary, FontWeight.SemiBold);
+        _percent = UiTheme.Text("", 18, UiTheme.Progress, FontWeight.SemiBold);
         _counter = UiTheme.Text("Aguardando seleção de arquivo e destino.", 13, UiTheme.TextSecondary);
         _status = UiTheme.Text("", 13, UiTheme.TextSecondary);
         _status.IsVisible = false;
@@ -114,13 +114,12 @@ public sealed class MainView : UserControl
             Maximum = 100,
             Height = 8,
             CornerRadius = new CornerRadius(4),
-            Foreground = UiTheme.Brush(UiTheme.Primary),
+            Foreground = UiTheme.Brush(UiTheme.Progress),
             Background = UiTheme.Brush(UiTheme.Outline)
         };
         _cancel = UiTheme.OutlinedButton("Cancelar");
         _cancel.IsVisible = false;
         _cancel.HorizontalAlignment = HorizontalAlignment.Left;
-        _cancel.Margin = new Thickness(0, 0, 0, 0);
         _cancel.Foreground = UiTheme.Brush(UiTheme.Primary);
         _cancel.Click += (_, _) => _run?.Cancel();
 
@@ -146,14 +145,13 @@ public sealed class MainView : UserControl
                 Children = { _logScroll }
             }
         };
-        _logScroll.MaxHeight = OperatingSystem.IsAndroid() ? 220 : 360;
+        _logScroll.MaxHeight = 260;
         _bannerText = UiTheme.Text("", 13, UiTheme.TextPrimary);
         _banner = new Border
         {
             IsVisible = false,
             CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(12, 8),
-            Margin = new Thickness(0, 0, 0, 0),
+            Padding = new Thickness(14, 10),
             BorderThickness = new Thickness(1),
             Child = _bannerText
         };
@@ -170,7 +168,7 @@ public sealed class MainView : UserControl
 
         _monitorCard = UiTheme.Card(new StackPanel
         {
-            Spacing = 8,
+            Spacing = 10,
             Children = { header, _progress, metaRow, _status, _banner, _cancel, logBox }
         });
 
@@ -232,15 +230,11 @@ public sealed class MainView : UserControl
         _contentGrid.ColumnDefinitions = new ColumnDefinitions(isWide ? "*,*" : "*");
         _contentGrid.RowDefinitions = new RowDefinitions(isWide ? "Auto,Auto" : "Auto,Auto,Auto");
 
-        // Mobile: package, configuration and extraction monitor vertically.
-        // Desktop: package and configuration on the left; extraction monitor on the right.
+        // Mobile: package, configuration, then extraction monitor in one column.
+        // Desktop: package top-left, monitor top-right, configuration below the package.
         Place(_packageCard, 0, 0, 1);
-        Place(_settingsCard, isWide ? 1 : 1, 0, 1);
+        Place(_settingsCard, 1, 0, 1);
         Place(_monitorCard, isWide ? 0 : 2, isWide ? 1 : 0, 1);
-        if (isWide)
-            Grid.SetRowSpan(_monitorCard, 2);
-        else
-            Grid.SetRowSpan(_monitorCard, 1);
         _packageCard.IsVisible = true;
         _settingsCard.IsVisible = true;
         _monitorCard.IsVisible = true;
