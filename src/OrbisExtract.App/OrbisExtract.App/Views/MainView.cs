@@ -236,7 +236,7 @@ public sealed class MainView : UserControl
         // Desktop: package and configuration on the left; extraction monitor on the right.
         Place(_packageCard, 0, 0, 1);
         Place(_settingsCard, isWide ? 1 : 1, 0, 1);
-        Place(_monitorCard, 0, isWide ? 1 : 0, 1);
+        Place(_monitorCard, isWide ? 0 : 2, isWide ? 1 : 0, 1);
         if (isWide)
             Grid.SetRowSpan(_monitorCard, 2);
         else
