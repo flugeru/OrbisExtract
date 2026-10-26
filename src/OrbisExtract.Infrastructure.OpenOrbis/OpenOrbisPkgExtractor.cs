@@ -86,10 +86,14 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             files.Add((file, CanonicalizeSystemDirectory("sce_sys/" + suffix), 1));
         }
 
-        // Image0 is authoritative for duplicate paths; Sc0 contributes missing metadata.
+        // Never discard package entries. The PS4 PKG Tool extracts every file
+        // returned by the PFS walk; duplicate logical names are retained by
+        // resolving their output path below instead of selecting one source.
         files = files
             .GroupBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.OrderBy(x => x.Priority).First())
+            .SelectMany(group => group.Select((item, index) => index == 0
+                ? item
+                : (item.File, item.RelativePath + $"~duplicate-{index}", item.Priority)))
             .OrderBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToList();
         long count = 0, bytes = 0;
