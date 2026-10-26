@@ -56,6 +56,8 @@ public sealed class MainView : UserControl
     private CancellationTokenSource? _run;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly Queue<TextBlock> _logLines = new();
+    private readonly List<string> _logMessages = new();
+    private readonly Button _copyLogs;
 
     public MainView()
     {
@@ -139,13 +141,42 @@ public sealed class MainView : UserControl
             MinHeight = 120,
             Child = _logScroll
         };
+        _copyLogs = UiTheme.OutlinedButton("Copiar log");
+        _copyLogs.Margin = new Thickness(0, 0, 0, 8);
+        _copyLogs.HorizontalAlignment = HorizontalAlignment.Left;
+        _copyLogs.Click += async (_, _) =>
+        {
+            try
+            {
+                var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+                if (clipboard is null)
+                {
+                    ShowBanner("A área de transferência não está disponível neste dispositivo.");
+                    return;
+                }
+
+                await clipboard.SetTextAsync(string.Join(Environment.NewLine, _logMessages));
+                ShowBanner("Log copiado para a área de transferência.", UiTheme.Success);
+            }
+            catch (Exception ex)
+            {
+                Log($"Aviso ao copiar o log: {ex.Message}");
+                ShowBanner($"Não foi possível copiar o log: {ex.Message}");
+            }
+        };
+
+        var logContent = new StackPanel
+        {
+            Spacing = 8,
+            Children = { _copyLogs, logBox }
+        };
         var expander = new Expander
         {
             Header = "Ver log detalhado",
             IsExpanded = false,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Foreground = UiTheme.Brush(UiTheme.TextSecondary),
-            Content = logBox
+            Content = logContent
         };
 
         _bannerText = UiTheme.Text("", 13, UiTheme.TextPrimary);
@@ -282,6 +313,10 @@ public sealed class MainView : UserControl
         var time = $"{DateTime.Now:HH:mm:ss}";
         Dispatcher.UIThread.Post(() =>
         {
+            _logMessages.Add($"{time}  {message}");
+            while (_logMessages.Count > MaxLogLines)
+                _logMessages.RemoveAt(0);
+
             var color = message.Contains("Falha", StringComparison.OrdinalIgnoreCase) || message.Contains("[ERRO", StringComparison.OrdinalIgnoreCase)
                 ? UiTheme.Error
                 : message.Contains("Aviso", StringComparison.OrdinalIgnoreCase) || message.Contains("cancelad", StringComparison.OrdinalIgnoreCase)
