@@ -45,6 +45,9 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             }
             else
             {
+                // Keep every file from the inner image, like pkg_extract. Only
+                // remove presentation/container roots; never discard a file
+                // because it is not under Image0.
                 path = StripRoot(path, "Image0");
             }
             if (path.Length == 0) continue;
@@ -66,7 +69,16 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             else if (suffix.StartsWith("sce_sys/", StringComparison.OrdinalIgnoreCase))
                 suffix = StripRoot(suffix, "sce_sys");
             else
+            {
+                // Full pkg_extract must not discard an outer-PFS entry merely
+                // because its producer used a different Sc0 naming convention.
+                // Keep every outer entry and only omit the container itself.
+                suffix = StripRoot(suffix, "uroot");
+                if (suffix.Equals("pfs_image.dat", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                files.Add((file, suffix, 1));
                 continue;
+            }
 
             suffix = StripRoot(suffix, "uroot");
             suffix = StripRoot(suffix, "sce_sys");
