@@ -44,11 +44,13 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         foreach (var file in outer.GetAllFiles())
         {
             var path = NormalizePkgToolPath(file.FullName);
-            if (path.Equals("pfs_image.dat", StringComparison.OrdinalIgnoreCase))
+            if (path.Equals("pfs_image.dat", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith("/pfs_image.dat", StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            // Sc0 is the outer-PFS system tree. Normalize all layouts emitted by
-            // LibOrbisPkg without filtering any file below it.
+            // Only Sc0 is an extractable system tree in the outer PFS. The
+            // remaining outer entries are PKG containers/index data and must not
+            // be emitted as game files (especially pfs_image.dat).
             path = RemoveContainerRoot(path, "uroot");
             if (path.StartsWith("Sc0/", StringComparison.OrdinalIgnoreCase))
                 path = "sce_sys/" + path["Sc0/".Length..];
@@ -57,7 +59,9 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 // Already in the final system-tree layout.
             }
             else
-                path = "sce_sys/" + path;
+            {
+                continue;
+            }
 
             path = NormalizePkgToolPath(path);
             files.Add((file, path));
