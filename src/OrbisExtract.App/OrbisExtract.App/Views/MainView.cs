@@ -181,8 +181,6 @@ public sealed class MainView : UserControl
 
         var mainGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*") };
         _aboutOverlay = CreateAboutOverlay();
-        mainGrid.Children.Add(_aboutOverlay);
-        Panel.SetZIndex(_aboutOverlay, 10);
         var isAndroid = OperatingSystem.IsAndroid();
         var page = new StackPanel
         {
@@ -224,6 +222,7 @@ public sealed class MainView : UserControl
         var wrapper = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
         mainGrid.Children.Add(scroll);
         Grid.SetRow(scroll, 0);
+        mainGrid.Children.Add(_aboutOverlay); // Add last so the modal overlay is rendered above the page.
         wrapper.Children.Add(mainGrid);
         Content = wrapper;
 
