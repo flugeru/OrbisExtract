@@ -50,7 +50,7 @@ public static class AndroidNotificationHelper
         }
         catch (Exception ex)
         {
-            global::Android.Util.Log.Error("OrbisExtract", $"Não foi possível iniciar o serviço de extração: {ex.Message}");
+            global::global::Android.Util.Log.Error("OrbisExtract", $"Não foi possível iniciar o serviço de extração: {ex.Message}");
         }
 
         var notification = BuildForegroundNotification(packageName, destinationName);
@@ -75,7 +75,7 @@ public static class AndroidNotificationHelper
         var context = _context;
         if (context is null) return;
         try { context.StopService(new Intent(context, typeof(ExtractionForegroundService))); }
-        catch (Exception ex) { Android.Util.Log.Warn("OrbisExtract", $"Não foi possível parar o serviço de extração: {ex.Message}"); }
+        catch (Exception ex) { global::Android.Util.Log.Warn("OrbisExtract", $"Não foi possível parar o serviço de extração: {ex.Message}"); }
     }
 
     public static void UpdateProgress(long currentFiles, long totalFiles, string state, string? currentFile = null)
