@@ -50,6 +50,7 @@ public sealed class MainView : UserControl
     private readonly Grid _contentGrid;
     private readonly Control _packageCard, _settingsCard, _monitorCard;
     private bool? _isWideContent;
+    private readonly Border _aboutOverlay;
 
     // Estado
     private IStorageFile? _package;
@@ -179,6 +180,9 @@ public sealed class MainView : UserControl
         _contentGrid.Children.Add(_monitorCard);
 
         var mainGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*") };
+        _aboutOverlay = CreateAboutOverlay();
+        mainGrid.Children.Add(_aboutOverlay);
+        Panel.SetZIndex(_aboutOverlay, 10);
         var isAndroid = OperatingSystem.IsAndroid();
         var page = new StackPanel
         {
@@ -228,64 +232,71 @@ public sealed class MainView : UserControl
         Log("[INFO]  OrbisExtract iniciado.");
     }
 
-    private static Button CreateAboutButton()
+    private Button CreateAboutButton()
     {
         var button = UiTheme.OutlinedButton("ⓘ");
         button.Width = 44;
         button.Height = 44;
+        button.MinWidth = 44;
+        button.MinHeight = 44;
         button.Padding = new Thickness(0);
-        button.VerticalAlignment = VerticalAlignment.Top;
+        button.VerticalAlignment = VerticalAlignment.Center;
+        button.HorizontalAlignment = HorizontalAlignment.Right;
+        button.FontSize = 22;
+        button.Click += (_, _) => _aboutOverlay.IsVisible = true;
         Grid.SetColumn(button, 1);
-        button.Click += (_, _) => ShowAboutDialog();
         return button;
     }
 
-    private static void ShowAboutDialog()
+    private Border CreateAboutOverlay()
     {
-        const string license = "MIT License\\n\\nCopyright (c) 2026 flugeru\\n\\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the Software), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\\n\\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\\n\\nTHE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.";
+        const string license = "MIT License\n\nCopyright (c) 2026 flugeru\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the Software), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.";
+        var close = UiTheme.OutlinedButton("Fechar");
+        var licenseBox = new TextBox
+        {
+            Text = license,
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            MinHeight = 150,
+            MaxHeight = 200,
+            Background = UiTheme.Brush(UiTheme.Background),
+            Foreground = UiTheme.Brush(UiTheme.TextSecondary),
+            BorderBrush = UiTheme.Brush(UiTheme.Outline)
+        };
         var content = new StackPanel
         {
-            Spacing = 14,
+            Spacing = 12,
             Children =
             {
-                UiTheme.Text("OrbisExtract", 24, UiTheme.TextPrimary, FontWeight.SemiBold),
+                UiTheme.Text("Sobre o OrbisExtract", 22, UiTheme.TextPrimary, FontWeight.SemiBold),
                 UiTheme.Text("Versão 1.0.1", 14, UiTheme.TextSecondary),
-                UiTheme.Text("Código-fonte", 16, UiTheme.TextPrimary, FontWeight.SemiBold),
-                new TextBlock { Text = "https://github.com/flugeru/OrbisExtract", Foreground = UiTheme.Brush(UiTheme.Primary), TextWrapping = TextWrapping.Wrap },
-                UiTheme.Text("Changelog", 16, UiTheme.TextPrimary, FontWeight.SemiBold),
-                UiTheme.Text("• Melhorias na extração de PKG e no tratamento de arquivos.\\n• Ajustes na interface e no registro de eventos.\\n• Correções de compatibilidade e estabilidade.", 13, UiTheme.TextSecondary),
-                UiTheme.Text("Licença MIT", 16, UiTheme.TextPrimary, FontWeight.SemiBold),
-                new TextBox
-                {
-                    Text = license.Replace("\\n", Environment.NewLine),
-                    IsReadOnly = true,
-                    AcceptsReturn = true,
-                    TextWrapping = TextWrapping.Wrap,
-                    MinHeight = 170,
-                    MaxHeight = 220,
-                    Background = UiTheme.Brush(UiTheme.Surface),
-                    Foreground = UiTheme.Brush(UiTheme.TextSecondary),
-                    BorderBrush = UiTheme.Brush(UiTheme.Outline)
-                },
-                UiTheme.PrimaryButton("Fechar")
+                UiTheme.Text("Repositório", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
+                UiTheme.Text("https://github.com/flugeru/OrbisExtract", 13, UiTheme.Primary),
+                UiTheme.Text("Changelog", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
+                UiTheme.Text("• Melhorias na extração de PKG e no tratamento de arquivos.\n• Ajustes na interface e nos logs.\n• Correções de compatibilidade e estabilidade.", 13, UiTheme.TextSecondary),
+                UiTheme.Text("Licença MIT", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
+                licenseBox,
+                close
             }
         };
-        var close = (Button)content.Children[^1];
-        var dialog = new Window
+        close.Click += (_, _) => _aboutOverlay.IsVisible = false;
+        return new Border
         {
-            Title = "Sobre o OrbisExtract",
-            Width = 480,
-            Height = 650,
-            MinWidth = 320,
-            MinHeight = 420,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Background = UiTheme.Brush(UiTheme.Background),
-            Content = new ScrollViewer { Content = new Border { Padding = new Thickness(22), Child = content }, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }
+            IsVisible = false,
+            Background = new SolidColorBrush(Color.Parse("#CC000000")),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Child = new Grid
+            {
+                RowDefinitions = new RowDefinitions("*,Auto,*"),
+                ColumnDefinitions = new ColumnDefinitions("*,Auto,*"),
+                Children =
+                {
+                    new Border { GridColumn = 1, GridRow = 1, MaxWidth = 520, MaxHeight = 620, Margin = new Thickness(18), Child = UiTheme.Card(new ScrollViewer { Content = new Border { Padding = new Thickness(18), Child = content }, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }) }
+                }
+            }
         };
-        close.Click += (_, _) => dialog.Close();
-        var owner = Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null;
-        if (owner is not null) dialog.ShowDialog(owner);
-        else dialog.Show();
     }
 
     // ===================== Layout =====================
