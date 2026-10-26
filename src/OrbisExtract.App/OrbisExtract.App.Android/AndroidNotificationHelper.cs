@@ -96,7 +96,7 @@ public static class AndroidNotificationHelper
         else
             builder.SetSubText(totalFiles > 0 ? $"Progresso: {progress}%" : $"{currentFiles} arquivos");
 
-        NotificationManagerCompat.From(context).Notify(NOTIFICATION_ID, builder.Build());
+        NotificationManagerCompat.From(context).Notify(NotificationId, builder.Build());
     }
 
     public static void CompleteExtraction(long filesExtracted, long bytesExtracted)
@@ -113,7 +113,8 @@ public static class AndroidNotificationHelper
             .SetAutoCancel(true)
             .Build();
 
-        NotificationManagerCompat.From(context).Notify(NOTIFICATION_ID, notification);
+        NotificationManagerCompat.From(context).Notify(NotificationId, notification);
+        StopForegroundService();
     }
 
     public static void CancelExtraction()
@@ -121,7 +122,8 @@ public static class AndroidNotificationHelper
         var context = _context;
         if (context is null) return;
 
-        NotificationManagerCompat.From(context).Cancel(NOTIFICATION_ID);
+        NotificationManagerCompat.From(context).Cancel(NotificationId);
+        StopForegroundService();
     }
 
     public static void ShowError(string message)
@@ -138,7 +140,8 @@ public static class AndroidNotificationHelper
             .SetAutoCancel(true)
             .Build();
 
-        NotificationManagerCompat.From(context).Notify(NOTIFICATION_ID, notification);
+        NotificationManagerCompat.From(context).Notify(NotificationId, notification);
+        StopForegroundService();
     }
 
     private static void CreateNotificationChannel()
