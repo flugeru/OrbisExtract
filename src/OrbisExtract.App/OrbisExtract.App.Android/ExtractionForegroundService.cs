@@ -38,7 +38,7 @@ public sealed class ExtractionForegroundService : Service
         }
         catch (Exception ex)
         {
-            global::global::Android.Util.Log.Warn("OrbisExtract", $"Não foi possível adquirir o wake lock: {ex.Message}");
+            global::Android.Util.Log.Warn("OrbisExtract", $"Não foi possível adquirir o wake lock: {ex.Message}");
         }
 
         return StartCommandResult.NotSticky;
