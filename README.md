@@ -16,7 +16,14 @@ Built in C#/.NET with an [Avalonia](https://avaloniaui.net) UI, using the [OpenO
 
 ### Downloads
 
-See the **[1.0.3 release](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)**. Once its assets are uploaded, choose the Windows installer or portable ZIP, Linux AppImage, or Android APK.
+Download **1.0.3** from the **[release page](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)**:
+
+| Platform | Release asset |
+|---|---|
+| Windows x64 — installer | [`OrbisExtract-1.0.3-windows-x64-setup.exe`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-setup.exe) |
+| Windows x64 — portable | [`OrbisExtract-1.0.3-windows-x64-portable.zip`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-portable.zip) |
+| Linux x64 — AppImage | [`OrbisExtract-1.0.3-x86_64.appimage`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-x86_64.appimage) |
+| Android — APK | [`OrbisExtract-1.0.3-signed.apk`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk) |
 
 ### Version 1.0.3 changes
 
@@ -26,7 +33,7 @@ See the **[1.0.3 release](https://github.com/flugeru/OrbisExtract/releases/tag/1
 - More compact About dialog with a persistent Close button and a clickable repository link.
 - Bilingual update notes; the no-update prompt now says Close instead of Not now.
 
-The 1.0.3 release page is published; its downloads will appear there after the assets are uploaded. The Play Store AAB is signed locally, not in GitHub Actions.
+The Play Store AAB is signed locally, not in GitHub Actions.
 
 ### What it does
 
@@ -46,15 +53,15 @@ The 1.0.3 release page is published; its downloads will appear there after the a
 | **Android** (APK) | ✅ Supported and tested | APK |
 | macOS, iOS, Web (Browser) | ❌ Not available | project files exist, but they are not built or validated |
 
-Downloads: **[1.0.3 release](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)** (when assets are available). CI builds of every push are also available as artifacts on the [Actions](https://github.com/flugeru/OrbisExtract/actions) page (kept for 14 days).
+Downloads: **[1.0.3 release](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)**. CI builds of every push are also available as artifacts on the [Actions](https://github.com/flugeru/OrbisExtract/actions) page (kept for 14 days).
 
 ### Installing on Windows
 
-Once available, download the Windows installer from the [1.0.3 release](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3) and run it:
+Download the [1.0.3 Windows installer](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-setup.exe) and run it:
 
 - Installs to `C:\Program Files\OrbisExtract` (Start Menu + desktop shortcut, entry in *Apps and features*)
 - **To update an older version:** just run the new installer. It detects the previous installation and installs right over it — same location, no need to uninstall first
-- A portable ZIP is also available on releases that include it, for use without installation
+- The [1.0.3 portable ZIP](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-portable.zip) is available without installation
 
 ### How to build
 
@@ -84,7 +91,7 @@ To produce a releasable build:
 bash scripts/publish-android.sh
 ```
 
-Or download the Android APK from the [1.0.3 release](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3), when available. CI also builds an APK on every push as an [Actions](https://github.com/flugeru/OrbisExtract/actions) artifact.
+Or download the [1.0.3 Android APK](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk). CI also builds an APK on every push as an [Actions](https://github.com/flugeru/OrbisExtract/actions) artifact.
 
 For a Google Play upload, see the [local signed AAB instructions](docs/android-play-upload-local.md). Your upload key stays on your computer; the GitHub Actions build continues to provide an installable APK only.
 
@@ -111,7 +118,14 @@ Feito em C#/.NET com interface [Avalonia](https://avaloniaui.net), usando a bibl
 
 ### Downloads
 
-Veja o **[release 1.0.3](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)**. Quando os arquivos forem enviados, escolha o instalador ou ZIP portátil do Windows, AppImage do Linux ou APK do Android.
+Baixe a versão **1.0.3** na **[página do release](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)**:
+
+| Plataforma | Arquivo do release |
+|---|---|
+| Windows x64 — instalador | [`OrbisExtract-1.0.3-windows-x64-setup.exe`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-setup.exe) |
+| Windows x64 — portátil | [`OrbisExtract-1.0.3-windows-x64-portable.zip`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-portable.zip) |
+| Linux x64 — AppImage | [`OrbisExtract-1.0.3-x86_64.appimage`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-x86_64.appimage) |
+| Android — APK | [`OrbisExtract-1.0.3-signed.apk`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk) |
 
 ### Mudanças da versão 1.0.3
 
@@ -121,7 +135,7 @@ Veja o **[release 1.0.3](https://github.com/flugeru/OrbisExtract/releases/tag/1.
 - Janela Sobre mais compacta, com botão Fechar fixo e link clicável para o repositório.
 - Notas de atualização bilíngues; o aviso de que não há atualização agora mostra Fechar em vez de Agora não.
 
-A página do release 1.0.3 já está publicada; os downloads aparecerão nela após o envio dos arquivos. O AAB da Play Store é assinado localmente, não no GitHub Actions.
+O AAB da Play Store é assinado localmente, não no GitHub Actions.
 
 ### O que ele faz
 
@@ -141,15 +155,15 @@ A página do release 1.0.3 já está publicada; os downloads aparecerão nela ap
 | **Android** (APK) | ✅ Suportado e testado | APK |
 | macOS, iOS, Web (Browser) | ❌ Não disponível | os arquivos de projeto existem, mas não são compilados nem validados |
 
-Downloads: **[release 1.0.3](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)** (quando os arquivos estiverem disponíveis). Os builds de cada push também ficam disponíveis como artefatos na página de [Actions](https://github.com/flugeru/OrbisExtract/actions) (por 14 dias).
+Downloads: **[release 1.0.3](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)**. Os builds de cada push também ficam disponíveis como artefatos na página de [Actions](https://github.com/flugeru/OrbisExtract/actions) (por 14 dias).
 
 ### Instalação no Windows
 
-Quando disponível, baixe o instalador Windows no [release 1.0.3](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3) e execute:
+Baixe o [instalador Windows 1.0.3](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-setup.exe) e execute:
 
 - Instala em `C:\Program Files\OrbisExtract` (atalhos no Menu Iniciar e na área de trabalho, entrada em *Programas e Recursos*)
 - **Para atualizar uma versão antiga:** basta rodar o instalador novo. Ele detecta a instalação anterior e instala por cima — mesma pasta, sem precisar desinstalar antes
-- Se o release incluir o ZIP portátil, ele pode ser usado sem instalação
+- O [ZIP portátil 1.0.3](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-portable.zip) pode ser usado sem instalação
 
 ### Como compilar
 
@@ -179,7 +193,7 @@ Para gerar a versão publicável:
 bash scripts/publish-android.sh
 ```
 
-Ou baixe o APK do Android no [release 1.0.3](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3), quando disponível. O CI também gera um APK a cada push como artefato de [Actions](https://github.com/flugeru/OrbisExtract/actions).
+Ou baixe o [APK Android 1.0.3](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk). O CI também gera um APK a cada push como artefato de [Actions](https://github.com/flugeru/OrbisExtract/actions).
 
 Para publicar na Google Play, veja as [instruções do AAB assinado localmente](docs/android-play-upload-local.md). Sua chave de upload permanece no seu computador; o GitHub Actions continua gerando somente o APK instalável.
 

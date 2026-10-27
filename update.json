@@ -1,13 +1,21 @@
 {
   "version": "1.0.3",
   "releaseNotes": [
-    "Versão 1.0.3 anunciada apenas para testar a verificação de atualizações; ainda não há download desta versão."
+    "Novo botão de Configurações: idioma automático (sistema), português ou inglês, com escolha manual salva no dispositivo.",
+    "Interface e principais mensagens disponíveis em português e inglês.",
+    "Layout reorganizado: três cartões lado a lado em desktops largos e disposição vertical no Android.",
+    "Janela Sobre mais compacta, com botão Fechar fixo e link clicável para o repositório.",
+    "Avisos de atualização com notas em português e inglês; quando não há atualização, o botão mostra Fechar."
   ],
   "releaseNotesEn": [
-    "Version 1.0.3 is announced only to test update checking; there is no download for this version yet."
+    "New Settings button: automatic (system), Portuguese or English language, with manual selection saved on the device.",
+    "Interface and main messages available in Portuguese and English.",
+    "Refined layout: three side-by-side cards on wide desktops and a vertical layout on Android.",
+    "More compact About dialog with a fixed Close button and a clickable repository link.",
+    "Update prompts with notes in Portuguese and English; when no update is available, the button reads Close."
   ],
   "androidPlayUrl": "https://play.google.com/store/apps/details?id=com.tatsuya.orbisextract",
-  "androidGithubUrl": "https://github.com/flugeru/OrbisExtract/releases/latest",
-  "windowsUrl": "https://github.com/flugeru/OrbisExtract/releases/latest",
-  "linuxUrl": "https://github.com/flugeru/OrbisExtract/releases/latest"
+  "androidGithubUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3",
+  "windowsUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3",
+  "linuxUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3"
 }
