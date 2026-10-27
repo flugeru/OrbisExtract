@@ -1,10 +1,12 @@
 ﻿using Android.App;
 using Android.Content.PM;
+using Android.Content;
 using Android.OS;
 using AndroidX.Core.App;
 using Avalonia;
 using Avalonia.Android;
 using OrbisExtract.App.Shared;
+using OrbisExtract.App.Updates;
 
 namespace OrbisExtract.App.Android;
 
@@ -20,6 +22,9 @@ public class MainActivity : AvaloniaMainActivity
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
+        UpdateChecker.IsPlayInstall = () => PackageManager?.GetInstallerPackageName(PackageName ?? "") == "com.android.vending";
+        UpdateChecker.GetInstalledVersion = () => PackageManager?.GetPackageInfo(PackageName ?? "", 0)?.VersionName ?? "1.0.2";
+        UpdateChecker.OpenAndroidUrl = url => StartActivity(new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(url)));
         base.OnCreate(savedInstanceState);
 
         // Cria o canal de notificação imediatamente para evitar erros em versões recentes do Android

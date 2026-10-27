@@ -12,6 +12,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using OrbisExtract.Core;
 using OrbisExtract.Infrastructure.OpenOrbis;
+using OrbisExtract.App.Updates;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -51,6 +52,11 @@ public sealed class MainView : UserControl
     private readonly Control _packageCard, _settingsCard, _monitorCard;
     private bool? _isWideContent;
     private readonly Border _aboutOverlay;
+    private readonly Border _updateOverlay;
+    private readonly TextBlock _updateMessage;
+    private readonly Button _updateOpen;
+    private string? _updateUrl;
+    private bool _startupUpdateChecked;
 
     // Estado
     private IStorageFile? _package;
@@ -185,6 +191,7 @@ public sealed class MainView : UserControl
 
         var mainGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*") };
         _aboutOverlay = CreateAboutOverlay();
+        _updateOverlay = CreateUpdateOverlay(out _updateMessage, out _updateOpen);
         var isAndroid = OperatingSystem.IsAndroid();
         var page = new StackPanel
         {
@@ -227,12 +234,19 @@ public sealed class MainView : UserControl
         mainGrid.Children.Add(scroll);
         Grid.SetRow(scroll, 0);
         mainGrid.Children.Add(_aboutOverlay); // Add last so the modal overlay is rendered above the page.
+        mainGrid.Children.Add(_updateOverlay);
         wrapper.Children.Add(mainGrid);
         Content = wrapper;
 
         ApplyContentLayout(isAndroid ? 400 : 900);
         SetProgressIdle();
         Log("[INFO]  OrbisExtract iniciado.");
+        AttachedToVisualTree += (_, _) =>
+        {
+            if (_startupUpdateChecked) return;
+            _startupUpdateChecked = true;
+            _ = CheckForUpdatesAsync(false);
+        };
     }
 
     private Button CreateAboutButton()
@@ -280,11 +294,12 @@ public sealed class MainView : UserControl
             Children =
             {
                 UiTheme.Text("Sobre o OrbisExtract", 22, UiTheme.TextPrimary, FontWeight.SemiBold),
-                UiTheme.Text("Versão 1.0.1", 14, UiTheme.TextSecondary),
+                UiTheme.Text($"Versão {UpdateChecker.CurrentVersion}", 14, UiTheme.TextSecondary),
                 UiTheme.Text("Repositório", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
                 UiTheme.Text("https://github.com/flugeru/OrbisExtract", 13, UiTheme.Primary),
                 UiTheme.Text("Changelog", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
-                UiTheme.Text("• Melhorias na extração de PKG e no tratamento de arquivos.\n• Ajustes na interface e nos logs.\n• Correções de compatibilidade e estabilidade.", 13, UiTheme.TextSecondary),
+                UiTheme.Text("• Splash Android com ícone transparente do OrbisExtract.\n• Verificação opcional de atualizações ao abrir e pelo botão abaixo.\n• Correções na extração de PKG e na estabilidade.", 13, UiTheme.TextSecondary),
+                CreateUpdateButton(),
                 UiTheme.Text("Licença MIT", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
                 licenseBox,
                 close
@@ -327,6 +342,80 @@ public sealed class MainView : UserControl
             VerticalAlignment = VerticalAlignment.Stretch,
             Child = overlayGrid
         };
+    }
+
+    private Button CreateUpdateButton()
+    {
+        var button = UiTheme.OutlinedButton("Verificar atualizações");
+        button.Click += async (_, _) => await CheckForUpdatesAsync(true);
+        return button;
+    }
+
+    private Border CreateUpdateOverlay(out TextBlock message, out Button open)
+    {
+        message = UiTheme.Text("", 14, UiTheme.TextPrimary);
+        message.TextWrapping = TextWrapping.Wrap;
+        open = UiTheme.ActionButton("Abrir atualização", primary: true);
+        open.Click += (_, _) =>
+        {
+            if (_updateUrl is not null)
+            {
+                try
+                {
+                    if (OperatingSystem.IsAndroid())
+                        (UpdateChecker.OpenAndroidUrl ?? throw new InvalidOperationException("Navegador indisponível."))(_updateUrl);
+                    else
+                        Process.Start(new ProcessStartInfo(_updateUrl) { UseShellExecute = true });
+                }
+                catch (Exception ex) { _updateMessage.Text = $"Não foi possível abrir o link: {ex.Message}"; return; }
+            }
+            _updateOverlay.IsVisible = false;
+        };
+        var later = UiTheme.OutlinedButton("Agora não");
+        later.Click += (_, _) => _updateOverlay.IsVisible = false;
+        var card = UiTheme.Card(new StackPanel
+        {
+            Spacing = 14,
+            Children = { UiTheme.Text("Atualização do OrbisExtract", 20, UiTheme.TextPrimary, FontWeight.SemiBold), message, open, later }
+        });
+        card.MaxWidth = 460;
+        card.HorizontalAlignment = HorizontalAlignment.Center;
+        card.VerticalAlignment = VerticalAlignment.Center;
+        card.Margin = new Thickness(16);
+        return new Border
+        {
+            IsVisible = false,
+            Background = new SolidColorBrush(Color.Parse("#CC000000")),
+            Child = card
+        };
+    }
+
+    private async Task CheckForUpdatesAsync(bool manual)
+    {
+        try
+        {
+            var update = await UpdateChecker.CheckAsync(_lifetime.Token);
+            if (update is null)
+            {
+                if (manual) ShowUpdateMessage("Você já está na versão mais recente.", null);
+                return;
+            }
+            ShowUpdateMessage($"Versão {update.Version} disponível. Deseja abrir a página para baixar a atualização?", update.Url);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (manual) ShowUpdateMessage($"Não foi possível verificar atualizações: {ex.Message}", null);
+        }
+    }
+
+    private void ShowUpdateMessage(string message, string? url)
+    {
+        _updateUrl = url;
+        _updateMessage.Text = message;
+        _updateOpen.IsVisible = url is not null;
+        _aboutOverlay.IsVisible = false;
+        _updateOverlay.IsVisible = true;
     }
 
     // ===================== Layout =====================

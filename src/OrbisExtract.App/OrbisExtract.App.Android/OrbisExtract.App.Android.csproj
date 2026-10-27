@@ -2,13 +2,13 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-android</TargetFramework>
-    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
-    <ApplicationId>orbisextract.app</ApplicationId>
+    <ApplicationId>com.tatsuya.orbisextract</ApplicationId>
     <ApplicationTitle>OrbisExtract</ApplicationTitle>
-    <ApplicationDisplayVersion>1.0.1</ApplicationDisplayVersion>
-    <Version>1.0.1</Version>
-    <AndroidPackageVersion>1030003</AndroidPackageVersion>
+    <ApplicationDisplayVersion>1.0.2</ApplicationDisplayVersion>
+    <ApplicationVersion>1030004</ApplicationVersion>
+    <Version>1.0.2</Version>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
   </PropertyGroup>
@@ -37,6 +37,7 @@
     <Compile Include="..\OrbisExtract.App\AppNotificationHelper.cs" Link="AppNotificationHelper.cs" />
     <Compile Include="..\OrbisExtract.App\ViewModels\**\*.cs" Link="ViewModels\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\OrbisExtract.App\Views\**\*.cs" Link="Views\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\OrbisExtract.App\Updates\**\*.cs" Link="Updates\%(RecursiveDir)%(Filename)%(Extension)" />
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/App.axaml" Link="App.axaml" />
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/Views/**/*.axaml" Link="Views/%(RecursiveDir)%(Filename)%(Extension)" />
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/Assets/**/*" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" />

@@ -10,7 +10,7 @@ namespace OrbisExtract.App.Android;
 /// impede que o Android trate o aplicativo como um processo comum em segundo plano.
 /// </summary>
 [Service(
-    Name = "orbisextract.app.ExtractionForegroundService",
+    Name = "com.tatsuya.orbisextract.ExtractionForegroundService",
     Exported = false,
     ForegroundServiceType = global::Android.Content.PM.ForegroundService.TypeDataSync)]
 public sealed class ExtractionForegroundService : Service
