@@ -39,7 +39,6 @@ The Play Store listing is **not published yet**. When it is available, the app w
 - More compact About dialog with a persistent Close button and a clickable repository link.
 - Bilingual update notes; the no-update prompt now says Close instead of Not now.
 
-The Play Store AAB is signed locally, not in GitHub Actions.
 
 ### What it does
 
@@ -99,8 +98,6 @@ bash scripts/publish-android.sh
 
 Or download the [1.0.3 Android APK](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk). CI also builds an APK on every push as an [Actions](https://github.com/flugeru/OrbisExtract/actions) artifact.
 
-For a Google Play upload, see the [local signed AAB instructions](docs/android-play-upload-local.md). Your upload key stays on your computer; the GitHub Actions build continues to provide an installable APK only.
-
 ### Credits
 
 - **[OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg)** — library that reads and extracts PKG packages. Source included in `vendor/LibOrbisPkg/` under the **LGPL-3.0** license. Thanks to the OpenOrbis project and the LibOrbisPkg contributors.
@@ -147,7 +144,6 @@ O app **ainda não foi publicado** na Play Store. Quando disponível, será publ
 - Janela Sobre mais compacta, com botão Fechar fixo e link clicável para o repositório.
 - Notas de atualização bilíngues; o aviso de que não há atualização agora mostra Fechar em vez de Agora não.
 
-O AAB da Play Store é assinado localmente, não no GitHub Actions.
 
 ### O que ele faz
 
@@ -206,8 +202,6 @@ bash scripts/publish-android.sh
 ```
 
 Ou baixe o [APK Android 1.0.3](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk). O CI também gera um APK a cada push como artefato de [Actions](https://github.com/flugeru/OrbisExtract/actions).
-
-Para publicar na Google Play, veja as [instruções do AAB assinado localmente](docs/android-play-upload-local.md). Sua chave de upload permanece no seu computador; o GitHub Actions continua gerando somente o APK instalável.
 
 ### Créditos
 
