@@ -25,6 +25,12 @@ Download **1.0.3** from the **[release page](https://github.com/flugeru/OrbisExt
 | Linux x64 — AppImage | [`OrbisExtract-1.0.3-x86_64.appimage`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-x86_64.appimage) |
 | Android — APK | [`OrbisExtract-1.0.3-signed.apk`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk) |
 
+### Google Play
+
+The Play Store listing is **not published yet**. When it is available, the app will be published as `com.tatsuya.orbisextract` on Google Play. For now, use the GitHub APK and check the [releases page](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3).
+
+![Google Play](https://img.shields.io/badge/Google_Play-Coming_Soon-lightgrey?logo=google-play&logoColor=white)
+
 ### Version 1.0.3 changes
 
 - Settings beside About: follow the system language or choose Portuguese or English; manual selection is saved locally.
@@ -126,6 +132,12 @@ Baixe a versão **1.0.3** na **[página do release](https://github.com/flugeru/O
 | Windows x64 — portátil | [`OrbisExtract-1.0.3-windows-x64-portable.zip`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-portable.zip) |
 | Linux x64 — AppImage | [`OrbisExtract-1.0.3-x86_64.appimage`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-x86_64.appimage) |
 | Android — APK | [`OrbisExtract-1.0.3-signed.apk`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk) |
+
+### Google Play
+
+O app **ainda não foi publicado** na Play Store. Quando disponível, será publicado como `com.tatsuya.orbisextract`. Por enquanto, use o APK do GitHub na [página de releases](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3).
+
+![Google Play](https://img.shields.io/badge/Google_Play-Em_Breve-lightgrey?logo=google-play&logoColor=white)
 
 ### Mudanças da versão 1.0.3
 
