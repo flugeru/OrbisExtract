@@ -55,6 +55,7 @@ public sealed class MainView : UserControl
     private readonly Border _updateOverlay;
     private readonly TextBlock _updateMessage;
     private readonly Button _updateOpen;
+    private TextBlock _aboutChangelog = null!;
     private string? _updateUrl;
     private bool _startupUpdateChecked;
 
@@ -288,6 +289,8 @@ public sealed class MainView : UserControl
                 Content = UiTheme.Text(license, 12, UiTheme.TextSecondary)
             }
         };
+        _aboutChangelog = UiTheme.Text("• Splash Android com ícone transparente do OrbisExtract.\n• Verificação opcional de atualizações ao abrir e pelo botão abaixo.\n• Correções na extração de PKG e na estabilidade.", 13, UiTheme.TextSecondary);
+        _aboutChangelog.TextWrapping = TextWrapping.Wrap;
         var content = new StackPanel
         {
             Spacing = UiTheme.SectionGap,
@@ -298,7 +301,7 @@ public sealed class MainView : UserControl
                 UiTheme.Text("Repositório", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
                 UiTheme.Text("https://github.com/flugeru/OrbisExtract", 13, UiTheme.Primary),
                 UiTheme.Text("Changelog", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
-                UiTheme.Text("• Splash Android com ícone transparente do OrbisExtract.\n• Verificação opcional de atualizações ao abrir e pelo botão abaixo.\n• Correções na extração de PKG e na estabilidade.", 13, UiTheme.TextSecondary),
+                _aboutChangelog,
                 CreateUpdateButton(),
                 UiTheme.Text("Licença MIT", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
                 licenseBox,
@@ -373,10 +376,15 @@ public sealed class MainView : UserControl
         };
         var later = UiTheme.OutlinedButton("Agora não");
         later.Click += (_, _) => _updateOverlay.IsVisible = false;
-        var card = UiTheme.Card(new StackPanel
+        var card = UiTheme.Card(new ScrollViewer
         {
-            Spacing = 14,
-            Children = { UiTheme.Text("Atualização do OrbisExtract", 20, UiTheme.TextPrimary, FontWeight.SemiBold), message, open, later }
+            MaxHeight = 520,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = new StackPanel
+            {
+                Spacing = 14,
+                Children = { UiTheme.Text("Atualização do OrbisExtract", 20, UiTheme.TextPrimary, FontWeight.SemiBold), message, open, later }
+            }
         });
         card.MaxWidth = 460;
         card.HorizontalAlignment = HorizontalAlignment.Center;
@@ -400,7 +408,12 @@ public sealed class MainView : UserControl
                 if (manual) ShowUpdateMessage("Você já está na versão mais recente.", null);
                 return;
             }
-            ShowUpdateMessage($"Versão {update.Version} disponível. Deseja abrir a página para baixar a atualização?", update.Url);
+            var notes = update.ReleaseNotes.Count == 0
+                ? ""
+                : "\n\nNovidades:\n" + string.Join("\n", update.ReleaseNotes.Select(note => "• " + note));
+            if (update.ReleaseNotes.Count > 0)
+                _aboutChangelog.Text = $"Nova versão {update.Version}:\n" + string.Join("\n", update.ReleaseNotes.Select(note => "• " + note));
+            ShowUpdateMessage($"Versão {update.Version} disponível.{notes}\n\nDeseja abrir a página para baixar a atualização?", update.Url);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)

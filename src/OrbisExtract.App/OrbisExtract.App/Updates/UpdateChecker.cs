@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -42,7 +43,7 @@ public static class UpdateChecker
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
             throw new InvalidOperationException("Link de atualização inválido ou indisponível para esta plataforma.");
 
-        return new UpdateResult(manifest.Version!, uri.ToString());
+        return new UpdateResult(manifest.Version!, uri.ToString(), manifest.ReleaseNotes ?? Array.Empty<string>());
     }
 
     private sealed class UpdateManifest
@@ -52,7 +53,8 @@ public static class UpdateChecker
         public string? AndroidGithubUrl { get; set; }
         public string? WindowsUrl { get; set; }
         public string? LinuxUrl { get; set; }
+        public string[]? ReleaseNotes { get; set; }
     }
 }
 
-public sealed record UpdateResult(string Version, string Url);
+public sealed record UpdateResult(string Version, string Url, IReadOnlyList<string> ReleaseNotes);

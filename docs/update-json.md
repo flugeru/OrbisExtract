@@ -15,6 +15,10 @@ Example:
 ```json
 {
   "version": "1.0.2",
+  "releaseNotes": [
+    "Nova splash screen no Android com o ícone do OrbisExtract.",
+    "Verificação opcional de atualizações em Sobre."
+  ],
   "androidPlayUrl": "https://play.google.com/store/apps/details?id=com.tatsuya.orbisextract",
   "androidGithubUrl": "https://github.com/flugeru/OrbisExtract/releases/latest",
   "windowsUrl": "https://github.com/flugeru/OrbisExtract/releases/latest",
@@ -29,3 +33,7 @@ if the package ID matches. GitHub Actions builds an APK, not a Play-signed AAB.
 
 The JSON link is informational, not an installation mechanism; always verify
 that the version and compatible download are published before advertising them.
+`releaseNotes` is an optional array of short strings shown in the update prompt
+by builds that support it. Replace the notes with the real changelog for the
+announced version when publishing. Older builds (including desktop 1.0.2)
+ignore this new field and continue to show only the version and download link.
