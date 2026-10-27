@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using OrbisExtract.App.Localization;
 
 namespace OrbisExtract.App.Updates;
 
@@ -18,7 +19,7 @@ public static class UpdateChecker
     public static Action<string>? OpenAndroidUrl { get; set; }
 
     public static Func<string>? GetInstalledVersion { get; set; }
-    public static string CurrentVersion => GetInstalledVersion?.Invoke() ?? (Assembly.GetEntryAssembly() ?? typeof(UpdateChecker).Assembly).GetName().Version?.ToString(3) ?? "1.0.2";
+    public static string CurrentVersion => GetInstalledVersion?.Invoke() ?? (Assembly.GetEntryAssembly() ?? typeof(UpdateChecker).Assembly).GetName().Version?.ToString(3) ?? "1.0.3";
 
     public static async Task<UpdateResult?> CheckAsync(CancellationToken cancellationToken = default)
     {
@@ -32,7 +33,7 @@ public static class UpdateChecker
         }, cancellationToken);
         if (manifest is null || !Version.TryParse(manifest.Version, out var latest) ||
             !Version.TryParse(CurrentVersion, out var installed))
-            throw new InvalidOperationException("Manifesto de atualização inválido.");
+            throw new InvalidOperationException(AppLanguage.Text("Manifesto de atualização inválido."));
 
         if (latest <= installed) return null;
 
@@ -41,9 +42,9 @@ public static class UpdateChecker
             : OperatingSystem.IsWindows() ? manifest.WindowsUrl
             : OperatingSystem.IsLinux() ? manifest.LinuxUrl : null;
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
-            throw new InvalidOperationException("Link de atualização inválido ou indisponível para esta plataforma.");
+            throw new InvalidOperationException(AppLanguage.Text("Link de atualização inválido ou indisponível para esta plataforma."));
 
-        return new UpdateResult(manifest.Version!, uri.ToString(), manifest.ReleaseNotes ?? Array.Empty<string>());
+        return new UpdateResult(manifest.Version!, uri.ToString(), manifest.ReleaseNotes ?? Array.Empty<string>(), manifest.ReleaseNotesEn);
     }
 
     private sealed class UpdateManifest
@@ -54,7 +55,11 @@ public static class UpdateChecker
         public string? WindowsUrl { get; set; }
         public string? LinuxUrl { get; set; }
         public string[]? ReleaseNotes { get; set; }
+        public string[]? ReleaseNotesEn { get; set; }
     }
 }
 
-public sealed record UpdateResult(string Version, string Url, IReadOnlyList<string> ReleaseNotes);
+public sealed record UpdateResult(string Version, string Url, IReadOnlyList<string> ReleaseNotes, IReadOnlyList<string>? ReleaseNotesEn)
+{
+    public IReadOnlyList<string> NotesForCurrentLanguage => AppLanguage.IsEnglish && ReleaseNotesEn is { Count: > 0 } ? ReleaseNotesEn : ReleaseNotes;
+}

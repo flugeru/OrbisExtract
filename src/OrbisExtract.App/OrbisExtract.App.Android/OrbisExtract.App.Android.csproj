@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <ApplicationId>com.tatsuya.orbisextract</ApplicationId>
     <ApplicationTitle>OrbisExtract</ApplicationTitle>
-    <ApplicationDisplayVersion>1.0.2</ApplicationDisplayVersion>
-    <ApplicationVersion>1030004</ApplicationVersion>
-    <Version>1.0.2</Version>
+    <ApplicationDisplayVersion>1.0.3</ApplicationDisplayVersion>
+    <ApplicationVersion>1030005</ApplicationVersion>
+    <Version>1.0.3</Version>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
   </PropertyGroup>
@@ -38,6 +38,7 @@
     <Compile Include="..\OrbisExtract.App\ViewModels\**\*.cs" Link="ViewModels\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\OrbisExtract.App\Views\**\*.cs" Link="Views\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\OrbisExtract.App\Updates\**\*.cs" Link="Updates\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\OrbisExtract.App\Localization\**\*.cs" Link="Localization\%(RecursiveDir)%(Filename)%(Extension)" />
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/App.axaml" Link="App.axaml" />
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/Views/**/*.axaml" Link="Views/%(RecursiveDir)%(Filename)%(Extension)" />
     <AvaloniaResource Include="$(MSBuildProjectDirectory)/../OrbisExtract.App/Assets/**/*" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" />

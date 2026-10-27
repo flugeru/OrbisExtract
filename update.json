@@ -3,6 +3,9 @@
   "releaseNotes": [
     "Versão 1.0.3 anunciada apenas para testar a verificação de atualizações; ainda não há download desta versão."
   ],
+  "releaseNotesEn": [
+    "Version 1.0.3 is announced only to test update checking; there is no download for this version yet."
+  ],
   "androidPlayUrl": "https://play.google.com/store/apps/details?id=com.tatsuya.orbisextract",
   "androidGithubUrl": "https://github.com/flugeru/OrbisExtract/releases/latest",
   "windowsUrl": "https://github.com/flugeru/OrbisExtract/releases/latest",

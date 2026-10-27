@@ -7,6 +7,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Markup.Xaml;
 using OrbisExtract.App.Views;
+using OrbisExtract.App.Localization;
 
 namespace OrbisExtract.App;
 
@@ -51,7 +52,7 @@ public sealed class App : Application
                     {
                         new TextBlock
                         {
-                            Text = "OrbisExtract não conseguiu iniciar a interface",
+                            Text = AppLanguage.Text("OrbisExtract não conseguiu iniciar a interface"),
                             FontSize = 22,
                             FontWeight = FontWeight.SemiBold,
                             Foreground = Brushes.White,
@@ -73,7 +74,7 @@ public sealed class App : Application
             {
                 desktop.MainWindow = new Window
                 {
-                    Title = "OrbisExtract — erro de inicialização",
+                    Title = AppLanguage.Text("OrbisExtract — erro de inicialização"),
                     Width = 800,
                     Height = 600,
                     Content = errorView

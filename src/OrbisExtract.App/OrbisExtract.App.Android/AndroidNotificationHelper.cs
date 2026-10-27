@@ -3,6 +3,7 @@ using Android.App;
 using Android.Content;
 using Android.OS;
 using AndroidX.Core.App;
+using OrbisExtract.App.Localization;
 
 namespace OrbisExtract.App.Android;
 
@@ -80,13 +81,13 @@ public static class AndroidNotificationHelper
     {
         var detail = _lastCurrentFile is not null
             ? _lastCurrentFile
-            : (_lastTotal > 0 ? $"{_lastFiles:N0} de {_lastTotal:N0} arquivos · {_lastProgress}%" : $"{_lastFiles:N0} arquivos processados");
+            : (_lastTotal > 0 ? $"{_lastFiles:N0} {AppLanguage.Text("de")} {_lastTotal:N0} {AppLanguage.Text("arquivos")} · {_lastProgress}%" : $"{_lastFiles:N0} {AppLanguage.Text("arquivos processados")}");
         var builder = new NotificationCompat.Builder(context, ChannelId)
             .SetSmallIcon(SmallIcon(context))
-            .SetContentTitle(ongoing ? $"OrbisExtract · {_lastState}" : _lastState)
+            .SetContentTitle(ongoing ? $"OrbisExtract · {AppLanguage.Text(_lastState)}" : AppLanguage.Text(_lastState))
             .SetContentText($"{_packageName} → {_destinationName}")
             .SetSubText(detail)
-            .SetStyle(new NotificationCompat.BigTextStyle().BigText($"{_packageName}\nDestino: {_destinationName}\n{detail}"))
+            .SetStyle(new NotificationCompat.BigTextStyle().BigText($"{_packageName}\n{AppLanguage.Text("Destino:")} {_destinationName}\n{detail}"))
             .SetOnlyAlertOnce(true)
             .SetOngoing(ongoing)
             .SetCategory(NotificationCompat.CategoryProgress)
@@ -114,7 +115,7 @@ public static class AndroidNotificationHelper
         _lastFiles = filesExtracted;
         _lastTotal = filesExtracted;
         _lastProgress = 100;
-        _lastCurrentFile = $"{filesExtracted:N0} arquivos · {bytesExtracted / 1024d / 1024d:N1} MiB";
+        _lastCurrentFile = $"{filesExtracted:N0} {AppLanguage.Text("arquivos")} · {bytesExtracted / 1024d / 1024d:N1} MiB";
         var notification = BuildNotification(context, false);
         NotificationManagerCompat.From(context).Notify(NotificationId, notification);
         FinishService(context, ActionFinish);
@@ -149,9 +150,9 @@ public static class AndroidNotificationHelper
     {
         var context = _context;
         if (context is null || Build.VERSION.SdkInt < BuildVersionCodes.O) return;
-        var channel = new NotificationChannel(ChannelId, "OrbisExtract · Extração", NotificationImportance.Low)
+        var channel = new NotificationChannel(ChannelId, AppLanguage.Text("OrbisExtract · Extração"), NotificationImportance.Low)
         {
-            Description = "Progresso da extração de pacotes PKG em segundo plano"
+            Description = AppLanguage.Text("Progresso da extração de pacotes PKG em segundo plano")
         };
         channel.EnableVibration(false);
         channel.SetSound(null, null);

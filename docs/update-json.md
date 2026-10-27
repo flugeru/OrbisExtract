@@ -19,6 +19,10 @@ Example:
     "Nova splash screen no Android com o ícone do OrbisExtract.",
     "Verificação opcional de atualizações em Sobre."
   ],
+  "releaseNotesEn": [
+    "New Android splash screen with the OrbisExtract icon.",
+    "Optional update checks in About."
+  ],
   "androidPlayUrl": "https://play.google.com/store/apps/details?id=com.tatsuya.orbisextract",
   "androidGithubUrl": "https://github.com/flugeru/OrbisExtract/releases/latest",
   "windowsUrl": "https://github.com/flugeru/OrbisExtract/releases/latest",
@@ -37,3 +41,5 @@ that the version and compatible download are published before advertising them.
 by builds that support it. Replace the notes with the real changelog for the
 announced version when publishing. Older builds (including desktop 1.0.2)
 ignore this new field and continue to show only the version and download link.
+`releaseNotesEn` is optional for English users on 1.0.3 and later; if absent,
+the app displays `releaseNotes` verbatim. Provide both languages before publishing.

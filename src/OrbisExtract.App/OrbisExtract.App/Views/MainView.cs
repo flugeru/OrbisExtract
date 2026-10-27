@@ -7,12 +7,14 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using OrbisExtract.Core;
 using OrbisExtract.Infrastructure.OpenOrbis;
 using OrbisExtract.App.Updates;
+using OrbisExtract.App.Localization;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -24,6 +26,7 @@ namespace OrbisExtract.App.Views;
 public sealed class MainView : UserControl
 {
     private const int MaxLogLines = 250;
+    private const string RepositoryUrl = "https://github.com/flugeru/OrbisExtract";
 
     // Pacote
     private readonly TextBlock _fileName;
@@ -50,12 +53,15 @@ public sealed class MainView : UserControl
     // Layout
     private readonly Grid _contentGrid;
     private readonly Control _packageCard, _settingsCard, _monitorCard;
-    private bool? _isWideContent;
+    private int _contentColumns;
     private readonly Border _aboutOverlay;
+    private readonly Border _languageOverlay;
     private readonly Border _updateOverlay;
     private readonly TextBlock _updateMessage;
     private readonly Button _updateOpen;
+    private Button _updateDismiss = null!;
     private TextBlock _aboutChangelog = null!;
+    private TextBlock _repositoryError = null!;
     private string? _updateUrl;
     private bool _startupUpdateChecked;
 
@@ -66,6 +72,11 @@ public sealed class MainView : UserControl
     private readonly CancellationTokenSource _lifetime = new();
     private readonly Queue<Control> _logLines = new();
     private readonly List<string> _logMessages = new();
+    private readonly List<(TextBox Box, string Original)> _logEntries = new();
+    private readonly Dictionary<TextBlock, string> _localizedLabels = new();
+    private readonly Dictionary<Button, string> _localizedButtons = new();
+    private readonly Dictionary<Button, (string Mode, string Label, TextBlock Name, TextBlock Check)> _languageChoices = new();
+    private readonly Dictionary<TextBlock, Func<string>> _dynamicLabels = new();
 
     public MainView()
     {
@@ -146,8 +157,8 @@ public sealed class MainView : UserControl
             Background = UiTheme.Brush(UiTheme.SurfaceElevated),
             BorderBrush = UiTheme.Brush(UiTheme.Outline),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(UiTheme.CardRadius),
-            Padding = new Thickness(14),
+            CornerRadius = new CornerRadius(UiTheme.ControlRadius),
+            Padding = new Thickness(12),
             MinHeight = 112,
             Child = new StackPanel
             {
@@ -194,50 +205,76 @@ public sealed class MainView : UserControl
         _aboutOverlay = CreateAboutOverlay();
         _updateOverlay = CreateUpdateOverlay(out _updateMessage, out _updateOpen);
         var isAndroid = OperatingSystem.IsAndroid();
+        var heading = new StackPanel
+        {
+            Spacing = 6,
+            Children =
+            {
+                UiTheme.Text("Extrair PKG", isAndroid ? 28 : 32, UiTheme.TextPrimary, FontWeight.SemiBold),
+                UiTheme.Text("Ferramenta de extração para pacotes PlayStation 4.", 14, UiTheme.TextSecondary)
+            }
+        };
+        var headerActions = CreateHeaderActions();
+        var pageHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
+        pageHeader.Children.Add(heading);
+        pageHeader.Children.Add(headerActions);
         var page = new StackPanel
         {
             Spacing = 18,
             Margin = isAndroid ? new Thickness(14, 14, 14, 18) : new Thickness(28, 28, 28, 24),
             Children =
             {
-                new Grid
-                {
-                    ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-                    ColumnSpacing = 12,
-                    Children =
-                    {
-                        new StackPanel
-                        {
-                            Spacing = 6,
-                            Children =
-                            {
-                                UiTheme.Text("Extrair PKG", isAndroid ? 28 : 32, UiTheme.TextPrimary, FontWeight.SemiBold),
-                                UiTheme.Text("Ferramenta de extração para pacotes PlayStation 4.", 14, UiTheme.TextSecondary)
-                            }
-                        },
-                        CreateAboutButton()
-                    }
-                },
+                pageHeader,
                 _contentGrid,
             }
         };
-        var centered = new Border { MaxWidth = 820, HorizontalAlignment = HorizontalAlignment.Stretch, Child = page };
+        var centered = new Border { MaxWidth = isAndroid ? 820 : 1240, HorizontalAlignment = HorizontalAlignment.Stretch, Child = page };
         var scroll = new ScrollViewer
         {
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
             Content = centered
         };
-        scroll.SizeChanged += (_, e) => ApplyContentLayout(e.NewSize.Width);
+        scroll.SizeChanged += (_, e) =>
+        {
+            ApplyContentLayout(e.NewSize.Width);
+            // On narrow phones keep the subtitle full-width below the action icons.
+            var narrow = e.NewSize.Width < 390;
+            pageHeader.ColumnDefinitions = new ColumnDefinitions(narrow ? "*" : "*,Auto");
+            pageHeader.RowDefinitions = new RowDefinitions(narrow ? "Auto,Auto" : "Auto");
+            Grid.SetRow(headerActions, 0);
+            Grid.SetColumn(headerActions, narrow ? 0 : 1);
+            Grid.SetRow(heading, narrow ? 1 : 0);
+            Grid.SetColumn(heading, 0);
+            headerActions.HorizontalAlignment = narrow ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
+        };
 
         // ---------- Layout principal (coluna única simplificada) ----------
         var wrapper = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
         mainGrid.Children.Add(scroll);
         Grid.SetRow(scroll, 0);
         mainGrid.Children.Add(_aboutOverlay); // Add last so the modal overlay is rendered above the page.
+        _languageOverlay = CreateLanguageOverlay();
+        mainGrid.Children.Add(_languageOverlay);
         mainGrid.Children.Add(_updateOverlay);
         wrapper.Children.Add(mainGrid);
         Content = wrapper;
+
+        foreach (var label in this.GetLogicalDescendants().OfType<TextBlock>())
+            if (label.Text is { } text) _localizedLabels[label] = text;
+        foreach (var label in new[] { _fileName, _destinationName, _gameTitle, _version, _contentId, _stateTitle, _counter, _status, _bannerText, _updateMessage, _aboutChangelog })
+            _localizedLabels.Remove(label);
+        foreach (var button in this.GetLogicalDescendants().OfType<Button>())
+            if (button.Content is string text) _localizedButtons[button] = text;
+        AppLanguage.Changed += ApplyLanguage;
+        DetachedFromVisualTree += (_, _) => AppLanguage.Changed -= ApplyLanguage;
+        AttachedToVisualTree += (_, _) => { AppLanguage.Changed -= ApplyLanguage; AppLanguage.Changed += ApplyLanguage; };
+        ApplyLanguage();
+        SetLocalized(_fileName, () => AppLanguage.Text("Nenhum pacote selecionado"));
+        SetLocalized(_destinationName, () => AppLanguage.Text("Nenhuma pasta escolhida"));
+        SetLocalized(_stateTitle, () => AppLanguage.Text("Pronto para extrair"));
+        SetLocalized(_counter, () => AppLanguage.Text("Aguardando seleção de arquivo e destino."));
+        SetLocalized(_aboutChangelog, () => AppLanguage.Text("• Configurações de idioma: automático, português ou inglês.\n• Idioma inicial de acordo com o sistema; escolha manual salva no aparelho."));
 
         ApplyContentLayout(isAndroid ? 400 : 900);
         SetProgressIdle();
@@ -250,9 +287,43 @@ public sealed class MainView : UserControl
         };
     }
 
-    private Button CreateAboutButton()
+    private StackPanel CreateHeaderActions()
     {
-        var button = UiTheme.OutlinedButton("ⓘ");
+        var settings = CreateRoundHeaderButton(true, "Configurações");
+        settings.Click += (_, _) => _languageOverlay.IsVisible = true;
+        var about = CreateRoundHeaderButton(false, "Sobre");
+        about.Click += (_, _) => _aboutOverlay.IsVisible = true;
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { settings, about } };
+        return actions;
+    }
+
+    private static Button CreateRoundHeaderButton(bool settings, string tip)
+    {
+        // Both actions use the same outlined icon stroke, rather than mixing font glyphs.
+        var icon = new Grid { Width = 24, Height = 24 };
+        void Line(string data) => icon.Children.Add(new Avalonia.Controls.Shapes.Path
+        {
+            Data = Geometry.Parse(data), Stroke = UiTheme.Brush(UiTheme.Primary), StrokeThickness = 1.8,
+            StrokeLineCap = PenLineCap.Round, StrokeJoin = PenLineJoin.Round
+        });
+        if (settings)
+        {
+            // Sliders are used as a clear, lightweight settings symbol.
+            Line("M4 7 L9 7 M15 7 L20 7 M4 17 L9 17 M15 17 L20 17");
+            Line("M12 4 A3 3 0 1 1 12 10 A3 3 0 1 1 12 4 M12 14 A3 3 0 1 1 12 20 A3 3 0 1 1 12 14");
+        }
+        else
+        {
+            Line("M12 3 A9 9 0 1 1 12 21 A9 9 0 1 1 12 3 M12 11 L12 16");
+            icon.Children.Add(new Avalonia.Controls.Shapes.Ellipse
+            {
+                Width = 2, Height = 2, Fill = UiTheme.Brush(UiTheme.Primary),
+                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 7, 0, 0)
+            });
+        }
+        var button = UiTheme.OutlinedButton("");
+        button.Content = icon;
         button.Width = 44;
         button.Height = 44;
         button.MinWidth = 44;
@@ -263,10 +334,87 @@ public sealed class MainView : UserControl
         button.HorizontalAlignment = HorizontalAlignment.Center;
         button.VerticalAlignment = VerticalAlignment.Center;
         button.CornerRadius = new CornerRadius(22);
-        button.FontSize = 22;
-        button.Click += (_, _) => _aboutOverlay.IsVisible = true;
-        Grid.SetColumn(button, 1);
+        ToolTip.SetTip(button, tip);
         return button;
+    }
+
+    private Border CreateLanguageOverlay()
+    {
+        var options = new StackPanel { Spacing = 8 };
+        foreach (var (mode, label) in new[] { ("system", "Automático (sistema)"), ("pt", "Português"), ("en", "Inglês") })
+        {
+            var name = UiTheme.Text(label, 15);
+            var check = UiTheme.Text("✓", 17, UiTheme.Primary, FontWeight.SemiBold);
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+            row.Children.Add(name);
+            Grid.SetColumn(check, 1);
+            row.Children.Add(check);
+            var choice = UiTheme.OutlinedButton("");
+            choice.Content = row;
+            choice.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+            choice.Padding = new Thickness(16, 12);
+            _languageChoices[choice] = (mode, label, name, check);
+            choice.Click += (_, _) =>
+            {
+                try { AppLanguage.SetMode(mode); _languageOverlay.IsVisible = false; }
+                catch (Exception ex) { ShowBanner(ex.Message, UiTheme.Warning); }
+            };
+            options.Children.Add(choice);
+        }
+        var close = UiTheme.ActionButton("Fechar");
+        close.Click += (_, _) => _languageOverlay.IsVisible = false;
+        var card = UiTheme.Card(new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = new StackPanel
+            {
+                Spacing = 16,
+                Children = { UiTheme.Text("Configurações", 22, UiTheme.TextPrimary, FontWeight.SemiBold), UiTheme.Text("Idioma", 15, UiTheme.TextSecondary), options, close }
+            }
+        });
+        card.Width = 440;
+        card.HorizontalAlignment = HorizontalAlignment.Center;
+        card.VerticalAlignment = VerticalAlignment.Center;
+        var overlay = new Border { IsVisible = false, Background = new SolidColorBrush(Color.Parse("#CC000000")), Child = card };
+        overlay.SizeChanged += (_, e) =>
+        {
+            card.Width = Math.Min(440, Math.Max(0, e.NewSize.Width - 32));
+            card.MaxHeight = Math.Max(0, e.NewSize.Height - 32);
+        };
+        return overlay;
+    }
+
+    private void ApplyLanguage()
+    {
+        foreach (var (label, original) in _localizedLabels) label.Text = AppLanguage.Message(original);
+        foreach (var (button, original) in _localizedButtons) button.Content = AppLanguage.Text(original);
+        foreach (var (button, (mode, label, name, check)) in _languageChoices)
+        {
+            var selected = AppLanguage.Mode == mode;
+            name.Text = AppLanguage.Text(label);
+            name.Foreground = UiTheme.Brush(selected ? UiTheme.TextPrimary : UiTheme.TextSecondary);
+            check.IsVisible = selected;
+            button.Background = selected ? UiTheme.Brush(UiTheme.PrimaryContainer) : UiTheme.Brush(UiTheme.Surface);
+            button.BorderBrush = UiTheme.Brush(selected ? UiTheme.Primary : UiTheme.Outline);
+        }
+        foreach (var (label, value) in _dynamicLabels) label.Text = value();
+        foreach (var (box, original) in _logEntries) box.Text = AppLanguage.Message(original);
+        foreach (var button in this.GetLogicalDescendants().OfType<Button>())
+            if (ToolTip.GetTip(button) is string tip && tip is ("Sobre" or "Configurações" or "About" or "Settings"))
+                ToolTip.SetTip(button, AppLanguage.Text(tip is "About" ? "Sobre" : tip is "Settings" ? "Configurações" : tip));
+    }
+
+    private void SetLocalized(TextBlock label, Func<string> value)
+    {
+        _dynamicLabels[label] = value;
+        label.Text = value();
+    }
+
+    private void SetLiteral(TextBlock label, string value)
+    {
+        _dynamicLabels.Remove(label);
+        label.Text = value;
     }
 
     private Border CreateAboutOverlay()
@@ -282,47 +430,83 @@ public sealed class MainView : UserControl
             Padding = new Thickness(14),
             Child = new ScrollViewer
             {
-                MinHeight = 150,
-                MaxHeight = 200,
+                MaxHeight = 120,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
                 Content = UiTheme.Text(license, 12, UiTheme.TextSecondary)
             }
         };
-        _aboutChangelog = UiTheme.Text("• Splash Android com ícone transparente do OrbisExtract.\n• Verificação opcional de atualizações ao abrir e pelo botão abaixo.\n• Correções na extração de PKG e na estabilidade.", 13, UiTheme.TextSecondary);
+        _aboutChangelog = UiTheme.Text("• Configurações de idioma: automático, português ou inglês.\n• Idioma inicial de acordo com o sistema; escolha manual salva no aparelho.", 13, UiTheme.TextSecondary);
         _aboutChangelog.TextWrapping = TextWrapping.Wrap;
+        var repository = new Button
+        {
+            Content = UiTheme.Text(RepositoryUrl, 13, UiTheme.Primary),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(0),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Cursor = new Cursor(StandardCursorType.Hand)
+        };
+        _repositoryError = UiTheme.Text("", 13, UiTheme.Error);
+        _repositoryError.IsVisible = false;
+        repository.Click += (_, _) =>
+        {
+            try
+            {
+                if (OperatingSystem.IsAndroid())
+                    (UpdateChecker.OpenAndroidUrl ?? throw new InvalidOperationException(AppLanguage.Text("Navegador indisponível.")))(RepositoryUrl);
+                else
+                    Process.Start(new ProcessStartInfo(RepositoryUrl) { UseShellExecute = true });
+                _repositoryError.IsVisible = false;
+            }
+            catch (Exception ex)
+            {
+                SetLocalized(_repositoryError, () => $"{AppLanguage.Text("Não foi possível abrir o link:")} {ex.Message}");
+                _repositoryError.IsVisible = true;
+            }
+        };
         var content = new StackPanel
         {
-            Spacing = UiTheme.SectionGap,
+            Spacing = 12,
             Children =
             {
-                UiTheme.Text("Sobre o OrbisExtract", 22, UiTheme.TextPrimary, FontWeight.SemiBold),
-                UiTheme.Text($"Versão {UpdateChecker.CurrentVersion}", 14, UiTheme.TextSecondary),
-                UiTheme.Text("Repositório", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
-                UiTheme.Text("https://github.com/flugeru/OrbisExtract", 13, UiTheme.Primary),
-                UiTheme.Text("Changelog", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
-                _aboutChangelog,
-                CreateUpdateButton(),
-                UiTheme.Text("Licença MIT", 15, UiTheme.TextPrimary, FontWeight.SemiBold),
-                licenseBox,
-                close
+                new StackPanel
+                {
+                    Spacing = 4,
+                    Children =
+                    {
+                        UiTheme.Text("Sobre o OrbisExtract", 22, UiTheme.TextPrimary, FontWeight.SemiBold),
+                        UiTheme.Text($"Versão {UpdateChecker.CurrentVersion}", 14, UiTheme.TextSecondary)
+                    }
+                },
+                AboutSection("Repositório", repository, _repositoryError),
+                AboutSection("Changelog", _aboutChangelog, CreateUpdateButton()),
+                AboutSection("Licença MIT", licenseBox)
             }
         };
         close.Click += (_, _) => _aboutOverlay.IsVisible = false;
+        close.Margin = new Thickness(0, 12, 0, 0);
+        var body = new ScrollViewer
+        {
+            Content = content,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+        var dialogContent = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
+        dialogContent.Children.Add(body);
+        Grid.SetRow(close, 1);
+        dialogContent.Children.Add(close);
         var dialogCard = new Border
         {
             MaxWidth = 520,
-            MaxHeight = 620,
+            MaxHeight = 560,
             Margin = new Thickness(12),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             CornerRadius = new CornerRadius(UiTheme.CardRadius),
             ClipToBounds = true,
-            Child = UiTheme.Card(new ScrollViewer
-            {
-                Content = new Border { Padding = new Thickness(20), Child = content },
-                VerticalScrollBarVisibility = ScrollBarVisibility.Hidden
-            })
+            Child = UiTheme.Card(dialogContent, 20)
         };
         // A single flexible cell constrains the dialog to the actual viewport,
         // including narrow Android screens, instead of letting an Auto column overflow.
@@ -335,7 +519,7 @@ public sealed class MainView : UserControl
         overlayGrid.SizeChanged += (_, e) =>
         {
             dialogCard.MaxWidth = Math.Min(520, Math.Max(0, e.NewSize.Width - 24));
-            dialogCard.MaxHeight = Math.Min(620, Math.Max(0, e.NewSize.Height - 24));
+            dialogCard.MaxHeight = Math.Min(560, Math.Max(0, e.NewSize.Height - 24));
         };
         return new Border
         {
@@ -344,6 +528,18 @@ public sealed class MainView : UserControl
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             Child = overlayGrid
+        };
+    }
+
+    private static Border AboutSection(string title, params Control[] children)
+    {
+        var stack = new StackPanel { Spacing = 6 };
+        stack.Children.Add(UiTheme.Text(title, 15, UiTheme.TextPrimary, FontWeight.SemiBold));
+        foreach (var child in children) stack.Children.Add(child);
+        return new Border
+        {
+            Padding = new Thickness(0, 4),
+            Child = stack
         };
     }
 
@@ -366,19 +562,20 @@ public sealed class MainView : UserControl
                 try
                 {
                     if (OperatingSystem.IsAndroid())
-                        (UpdateChecker.OpenAndroidUrl ?? throw new InvalidOperationException("Navegador indisponível."))(_updateUrl);
+                        (UpdateChecker.OpenAndroidUrl ?? throw new InvalidOperationException(AppLanguage.Text("Navegador indisponível.")))(_updateUrl);
                     else
                         Process.Start(new ProcessStartInfo(_updateUrl) { UseShellExecute = true });
                 }
-                catch (Exception ex) { _updateMessage.Text = $"Não foi possível abrir o link: {ex.Message}"; return; }
+                catch (Exception ex) { SetLocalized(_updateMessage, () => $"{AppLanguage.Text("Não foi possível abrir o link:")} {ex.Message}"); return; }
             }
             _updateOverlay.IsVisible = false;
         };
         var later = UiTheme.OutlinedButton("Agora não");
+        _updateDismiss = later;
         later.Click += (_, _) => _updateOverlay.IsVisible = false;
         var card = UiTheme.Card(new ScrollViewer
         {
-            MaxHeight = 520,
+            MaxHeight = 440,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             Content = new StackPanel
             {
@@ -386,16 +583,21 @@ public sealed class MainView : UserControl
                 Children = { UiTheme.Text("Atualização do OrbisExtract", 20, UiTheme.TextPrimary, FontWeight.SemiBold), message, open, later }
             }
         });
-        card.MaxWidth = 460;
+        card.Width = 440;
         card.HorizontalAlignment = HorizontalAlignment.Center;
         card.VerticalAlignment = VerticalAlignment.Center;
-        card.Margin = new Thickness(16);
-        return new Border
+        var overlay = new Border
         {
             IsVisible = false,
             Background = new SolidColorBrush(Color.Parse("#CC000000")),
             Child = card
         };
+        overlay.SizeChanged += (_, e) =>
+        {
+            card.Width = Math.Min(440, Math.Max(0, e.NewSize.Width - 32));
+            card.MaxHeight = Math.Max(0, e.NewSize.Height - 32);
+        };
+        return overlay;
     }
 
     private async Task CheckForUpdatesAsync(bool manual)
@@ -405,28 +607,29 @@ public sealed class MainView : UserControl
             var update = await UpdateChecker.CheckAsync(_lifetime.Token);
             if (update is null)
             {
-                if (manual) ShowUpdateMessage("Você já está na versão mais recente.", null);
+                if (manual) ShowUpdateMessage(() => AppLanguage.Text("Você já está na versão mais recente."), null);
                 return;
             }
-            var notes = update.ReleaseNotes.Count == 0
-                ? ""
-                : "\n\nNovidades:\n" + string.Join("\n", update.ReleaseNotes.Select(note => "• " + note));
-            if (update.ReleaseNotes.Count > 0)
-                _aboutChangelog.Text = $"Nova versão {update.Version}:\n" + string.Join("\n", update.ReleaseNotes.Select(note => "• " + note));
-            ShowUpdateMessage($"Versão {update.Version} disponível.{notes}\n\nDeseja abrir a página para baixar a atualização?", update.Url);
+            if (update.ReleaseNotes.Count > 0 || update.ReleaseNotesEn is { Count: > 0 })
+                SetLocalized(_aboutChangelog, () => $"{AppLanguage.Text("Nova versão")} {update.Version}:\n" + string.Join("\n", update.NotesForCurrentLanguage.Select(note => "• " + note)));
+            ShowUpdateMessage(() => $"{AppLanguage.Text("Versão")} {update.Version} {AppLanguage.Text("disponível.")}" +
+                (update.NotesForCurrentLanguage.Count == 0 ? "" : $"\n\n{AppLanguage.Text("Novidades:")}\n" + string.Join("\n", update.NotesForCurrentLanguage.Select(note => "• " + note))) +
+                $"\n\n{AppLanguage.Text("Deseja abrir a página para baixar a atualização?")}", update.Url);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            if (manual) ShowUpdateMessage($"Não foi possível verificar atualizações: {ex.Message}", null);
+            if (manual) ShowUpdateMessage(() => $"{AppLanguage.Text("Não foi possível verificar atualizações:")} {ex.Message}", null);
         }
     }
 
-    private void ShowUpdateMessage(string message, string? url)
+    private void ShowUpdateMessage(Func<string> message, string? url)
     {
         _updateUrl = url;
-        _updateMessage.Text = message;
+        SetLocalized(_updateMessage, message);
         _updateOpen.IsVisible = url is not null;
+        _localizedButtons[_updateDismiss] = url is null ? "Fechar" : "Agora não";
+        _updateDismiss.Content = AppLanguage.Text(_localizedButtons[_updateDismiss]);
         _aboutOverlay.IsVisible = false;
         _updateOverlay.IsVisible = true;
     }
@@ -435,18 +638,20 @@ public sealed class MainView : UserControl
 
     private void ApplyContentLayout(double width)
     {
-        var isWide = !OperatingSystem.IsAndroid() && width >= 600;
-        if (_isWideContent == isWide) return;
-        _isWideContent = isWide;
+        // Keep three cards side by side only when each has room for its controls and log.
+        var columns = !OperatingSystem.IsAndroid() && width >= 1080 ? 3
+            : !OperatingSystem.IsAndroid() && width >= 650 ? 2 : 1;
+        if (_contentColumns == columns) return;
+        _contentColumns = columns;
 
-        _contentGrid.ColumnDefinitions = new ColumnDefinitions(isWide ? "*,*" : "*");
-        _contentGrid.RowDefinitions = new RowDefinitions(isWide ? "Auto,Auto" : "Auto,Auto,Auto");
+        _contentGrid.ColumnDefinitions = new ColumnDefinitions(columns == 3 ? "*,*,*" : columns == 2 ? "*,*" : "*");
+        _contentGrid.RowDefinitions = new RowDefinitions(columns == 1 ? "Auto,Auto,Auto" : columns == 2 ? "Auto,Auto" : "Auto");
 
-        // Mobile: package, configuration, then extraction monitor in one column.
-        // Desktop: package top-left, monitor top-right, configuration below the package.
+        // Android/narrow desktop: stacked. Medium desktop: two columns.
+        // Wide desktop: package | destination/settings | extraction monitor.
         Place(_packageCard, 0, 0, 1);
-        Place(_settingsCard, 1, 0, 1);
-        Place(_monitorCard, isWide ? 0 : 2, isWide ? 1 : 0, 1);
+        Place(_settingsCard, columns == 3 ? 0 : 1, columns == 3 ? 1 : 0, 1);
+        Place(_monitorCard, columns == 1 ? 2 : 0, columns == 1 ? 0 : columns == 2 ? 1 : 2, 1);
         _packageCard.IsVisible = true;
         _settingsCard.IsVisible = true;
         _monitorCard.IsVisible = true;
@@ -479,8 +684,14 @@ public sealed class MainView : UserControl
     private void ShowBanner(string? message, string color = UiTheme.Error)
     {
         _banner.IsVisible = !string.IsNullOrEmpty(message);
-        if (message is null) return;
-        _bannerText.Text = message;
+        if (message is null) { _dynamicLabels.Remove(_bannerText); return; }
+        SetBanner(() => AppLanguage.Message(message), color);
+    }
+
+    private void SetBanner(Func<string> message, string color)
+    {
+        _banner.IsVisible = true;
+        SetLocalized(_bannerText, message);
         _banner.BorderBrush = UiTheme.Brush(color);
         _banner.Background = new SolidColorBrush(Color.Parse(color), 0.12);
     }
@@ -512,6 +723,20 @@ public sealed class MainView : UserControl
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 10, 0)
             };
+            var logText = new TextBox
+            {
+                Text = AppLanguage.Message(message),
+                FontSize = 12,
+                Foreground = UiTheme.Brush(isError ? UiTheme.Error : UiTheme.Primary),
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0),
+                IsReadOnly = true,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                MinHeight = 22,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
             var details = new StackPanel
             {
                 Spacing = 2,
@@ -519,20 +744,7 @@ public sealed class MainView : UserControl
                 Children =
                 {
                     UiTheme.Text(time, 10, UiTheme.TextSecondary),
-                    new TextBox
-                    {
-                        Text = message,
-                        FontSize = 12,
-                        Foreground = UiTheme.Brush(isError ? UiTheme.Error : UiTheme.Primary),
-                        Background = Brushes.Transparent,
-                        BorderThickness = new Thickness(0),
-                        Padding = new Thickness(0),
-                        IsReadOnly = true,
-                        AcceptsReturn = true,
-                        TextWrapping = TextWrapping.Wrap,
-                        MinHeight = 22,
-                        HorizontalAlignment = HorizontalAlignment.Stretch
-                    }
+                    logText
                 }
             };
             var line = new Border
@@ -543,9 +755,13 @@ public sealed class MainView : UserControl
                 Child = CreateLogRow(marker, details)
             };
             _logPanel.Children.Add(line);
+            _logEntries.Add((logText, message));
             _logLines.Enqueue(line);
             while (_logLines.Count > MaxLogLines)
+            {
                 _logPanel.Children.Remove(_logLines.Dequeue());
+                _logEntries.RemoveAt(0);
+            }
             _logScroll.ScrollToEnd();
         });
     }
@@ -580,11 +796,11 @@ public sealed class MainView : UserControl
         {
             files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Selecionar pacote PlayStation PKG",
+                Title = AppLanguage.Text("Selecionar pacote PlayStation PKG"),
                 AllowMultiple = false,
                 FileTypeFilter =
                 [
-                    new FilePickerFileType("Pacotes PKG") { Patterns = ["*.pkg", "*.PKG"] },
+                    new FilePickerFileType(AppLanguage.Text("Pacotes PKG")) { Patterns = ["*.pkg", "*.PKG"] },
                     FilePickerFileTypes.All
                 ]
             });
@@ -600,13 +816,13 @@ public sealed class MainView : UserControl
         if (files.Count == 0) return;
 
         _package = files[0];
-        _fileName.Text = _package.Name;
+        SetLiteral(_fileName, _package.Name);
         _fileName.Foreground = UiTheme.Brush(UiTheme.TextPrimary);
         _infoRows.IsVisible = false;
         _chips.Children.Clear();
         _chips.Children.Add(UiTheme.Chip("PS4"));
         _chips.IsVisible = true;
-        _counter.Text = "Arquivo selecionado.";
+        SetLocalized(_counter, () => AppLanguage.Text("Arquivo selecionado."));
         ShowBanner(null);
         Log($"Pacote selecionado: {_package.Name}");
         _extract.IsEnabled = false;
@@ -623,16 +839,16 @@ public sealed class MainView : UserControl
             await using var stream = await _package.OpenReadAsync();
             if (!stream.CanSeek)
             {
-                _counter.Text = "Metadados serão validados durante a extração.";
+                SetLocalized(_counter, () => AppLanguage.Text("Metadados serão validados durante a extração."));
             }
             else
             {
                 Log("Lendo metadados do PKG…");
                 var info = await new OpenOrbisPkgMetadataReader().ReadAsync(stream, _lifetime.Token);
                 Log("Metadados do PKG lidos.");
-                _gameTitle.Text = info.Title?.ToString() ?? "—";
-                _version.Text = info.Version?.ToString() ?? "—";
-                _contentId.Text = info.ContentId?.ToString() ?? "—";
+                SetLiteral(_gameTitle, info.Title?.ToString() ?? "—");
+                SetLiteral(_version, info.Version?.ToString() ?? "—");
+                SetLiteral(_contentId, info.ContentId?.ToString() ?? "—");
                 _infoRows.IsVisible = true;
             }
         }
@@ -654,7 +870,7 @@ public sealed class MainView : UserControl
         {
             folders = await top.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "Escolher pasta para os arquivos extraídos",
+                Title = AppLanguage.Text("Escolher pasta para os arquivos extraídos"),
                 AllowMultiple = false
             });
         }
@@ -671,7 +887,7 @@ public sealed class MainView : UserControl
 
         if (folders.Count == 0) return;
         _destination = folders[0];
-        _destinationName.Text = _destination.Name;
+        SetLiteral(_destinationName, _destination.Name);
         _destinationName.Foreground = UiTheme.Brush(UiTheme.TextPrimary);
         _extract.IsEnabled = _package is not null;
         Log($"Destino selecionado: {_destination.Name}");
@@ -687,8 +903,8 @@ public sealed class MainView : UserControl
 
         ShowBanner(null);
         _cancel.IsVisible = _elapsed.IsVisible = _status.IsVisible = true;
-        _stateTitle.Text = "Preparando";
-        _counter.Text = "Preparando a extração…";
+        SetLocalized(_stateTitle, () => AppLanguage.Text("Preparando"));
+        SetLocalized(_counter, () => AppLanguage.Text("Preparando a extração…"));
         _status.Text = "";
         _progress.IsIndeterminate = true;
         _percent.Text = "";
@@ -723,7 +939,7 @@ public sealed class MainView : UserControl
             {
                 await source.DisposeAsync();
                 tempPath = Path.Combine(Path.GetTempPath(), $"orbisextract-{Guid.NewGuid():N}.pkg");
-                _stateTitle.Text = "Preparando pacote";
+                SetLocalized(_stateTitle, () => AppLanguage.Text("Preparando pacote"));
                 Log("O provedor não permite acesso aleatório; preparando uma cópia temporária necessária para leitura.");
                 await using var input = await _package.OpenReadAsync();
                 await using (var temp = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 1024 * 1024, true))
@@ -792,10 +1008,10 @@ public sealed class MainView : UserControl
                     _progress.IsIndeterminate = total <= 0;
                     _progress.Value = pct;
                     _percent.Text = total > 0 ? $"{pct:0}%" : "";
-                    _stateTitle.Text = p.State == "Concluído" ? "Concluindo" : p.State;
-                    _counter.Text = total > 0
-                        ? $"{p.FilesCompleted:N0} de {total:N0} arquivos"
-                        : $"{p.FilesCompleted:N0} arquivos";
+                    SetLocalized(_stateTitle, () => AppLanguage.Text(p.State == "Concluído" ? "Concluindo" : p.State));
+                    SetLocalized(_counter, () => total > 0
+                        ? $"{p.FilesCompleted:N0} {AppLanguage.Text("de")} {total:N0} {AppLanguage.Text("arquivos")}"
+                        : $"{p.FilesCompleted:N0} {AppLanguage.Text("arquivos")}");
                 });
             });
 
@@ -812,8 +1028,8 @@ public sealed class MainView : UserControl
             _progress.IsIndeterminate = false;
             _progress.Value = 100;
             _percent.Text = "100%";
-            _stateTitle.Text = "Concluído";
-            _counter.Text = $"{result.FilesExtracted:N0} arquivos · {result.BytesExtracted / 1024d / 1024d:N1} MiB";
+            SetLocalized(_stateTitle, () => AppLanguage.Text("Concluído"));
+            SetLocalized(_counter, () => $"{result.FilesExtracted:N0} {AppLanguage.Text("arquivos")} · {result.BytesExtracted / 1024d / 1024d:N1} MiB");
             
             // Mostra notificação Android de sucesso se estiver no Android
             if (OperatingSystem.IsAndroid())
@@ -825,14 +1041,14 @@ public sealed class MainView : UserControl
                 }
             }
             
-            ShowBanner($"Extração concluída com sucesso em {_clock.Elapsed:mm\\:ss}.", UiTheme.Success);
+            SetBanner(() => $"{AppLanguage.Text("Extração concluída com sucesso em")} {_clock.Elapsed:mm\\:ss}.", UiTheme.Success);
             Log($"Extração concluída. Arquivos: {result.FilesExtracted:N0}; bytes: {result.BytesExtracted:N0}.");
         }
         catch (OperationCanceledException)
         {
             _progress.IsIndeterminate = false;
-            _stateTitle.Text = "Cancelado";
-            _counter.Text = "A extração foi interrompida.";
+            SetLocalized(_stateTitle, () => AppLanguage.Text("Cancelado"));
+            SetLocalized(_counter, () => AppLanguage.Text("A extração foi interrompida."));
             ShowBanner("Extração cancelada.", UiTheme.Primary);
             Log("Extração cancelada.");
             
@@ -849,9 +1065,9 @@ public sealed class MainView : UserControl
         catch (Exception ex)
         {
             _progress.IsIndeterminate = false;
-            _stateTitle.Text = "Falha na extração";
-            _counter.Text = "Veja o log detalhado para mais informações.";
-            ShowBanner($"Falha na extração: {ex.Message}");
+            SetLocalized(_stateTitle, () => AppLanguage.Text("Falha na extração"));
+            SetLocalized(_counter, () => AppLanguage.Text("Veja o log detalhado para mais informações."));
+            SetBanner(() => $"{AppLanguage.Text("Falha na extração:")} {ex.Message}", UiTheme.Error);
             Log($"Falha na extração: {ex.Message}");
             
             // Mostra notificação Android de erro se estiver no Android
