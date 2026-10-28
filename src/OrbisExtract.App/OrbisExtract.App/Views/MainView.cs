@@ -399,7 +399,7 @@ public sealed class MainView : UserControl
             button.BorderBrush = UiTheme.Brush(selected ? UiTheme.Primary : UiTheme.Outline);
         }
         foreach (var (label, value) in _dynamicLabels) label.Text = value();
-        foreach (var (box, original) in _logEntries) box.Text = AppLanguage.Message(original);
+        foreach (var (box, original) in _logEntries) box.Text = LocalizeLog(original);
         foreach (var button in this.GetLogicalDescendants().OfType<Button>())
             if (ToolTip.GetTip(button) is string tip && tip is ("Sobre" or "Configurações" or "About" or "Settings"))
                 ToolTip.SetTip(button, AppLanguage.Text(tip is "About" ? "Sobre" : tip is "Settings" ? "Configurações" : tip));
@@ -703,6 +703,16 @@ public sealed class MainView : UserControl
         _percent.Text = "";
     }
 
+    private static string LocalizeLog(string message)
+    {
+        // Keep severity prefixes intact while translating the actual message.
+        // AppLanguage.Message expects the Portuguese text without [INFO]/[ERROR].
+        var prefixEnd = message.IndexOf("]  ", StringComparison.Ordinal);
+        if (message.StartsWith("[", StringComparison.Ordinal) && prefixEnd >= 0)
+            return message[..(prefixEnd + 3)] + AppLanguage.Message(message[(prefixEnd + 3)..]);
+        return AppLanguage.Message(message);
+    }
+
     private void Log(string message)
     {
         var time = $"{DateTime.Now:HH:mm:ss}";
@@ -725,7 +735,7 @@ public sealed class MainView : UserControl
             };
             var logText = new TextBox
             {
-                Text = AppLanguage.Message(message),
+                Text = LocalizeLog(message),
                 FontSize = 12,
                 Foreground = UiTheme.Brush(isError ? UiTheme.Error : UiTheme.Primary),
                 Background = Brushes.Transparent,
