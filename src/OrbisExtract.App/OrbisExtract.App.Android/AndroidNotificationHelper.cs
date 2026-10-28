@@ -14,7 +14,14 @@ public static class AndroidNotificationHelper
     internal const int NotificationId = 1;
     internal const string ActionStart = "orbisextract.action.START";
     internal const string ActionFinish = "orbisextract.action.FINISH";
+    internal const string ActionPause = "orbisextract.action.PAUSE";
+    internal const string ActionResume = "orbisextract.action.RESUME";
     internal const string ActionCancel = "orbisextract.action.CANCEL";
+    public static event Action? PauseRequested;
+    public static event Action? ResumeRequested;
+    internal static void RequestPause() => PauseRequested?.Invoke();
+    internal static void RequestResume() => ResumeRequested?.Invoke();
+    private static bool _paused;
     public static event Action? CancellationRequested;
     internal static void RequestCancellation() => CancellationRequested?.Invoke();
     private static Context? _context;
@@ -47,6 +54,7 @@ public static class AndroidNotificationHelper
 
         _packageName = packageName;
         _destinationName = destinationName;
+        _paused = false;
         _lastProgress = 0;
         _lastFiles = 0;
         _lastTotal = totalFiles;
@@ -74,6 +82,7 @@ public static class AndroidNotificationHelper
         _lastFiles = currentFiles;
         _lastTotal = totalFiles;
         _lastProgress = totalFiles > 0 ? (int)Math.Clamp(currentFiles * 100.0 / totalFiles, 0, 100) : 0;
+        if (_paused) return;
         _lastState = string.IsNullOrWhiteSpace(state) ? "Extraindo arquivos" : state;
         _lastCurrentFile = currentFile;
         NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, true));
@@ -101,6 +110,10 @@ public static class AndroidNotificationHelper
 
         if (ongoing)
         {
+            var pauseIntent = new Intent(context, typeof(ExtractionForegroundService));
+            pauseIntent.SetAction(_paused ? ActionResume : ActionPause);
+            var pausePending = PendingIntent.GetService(context, _paused ? 13 : 12, pauseIntent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+            builder.AddAction(global::Android.Resource.Drawable.IcMediaPause, _paused ? AppLanguage.Text("Retomar") : AppLanguage.Text("Pausar"), pausePending);
             var cancelIntent = new Intent(context, typeof(ExtractionForegroundService));
             cancelIntent.SetAction(ActionCancel);
             var cancelPending = PendingIntent.GetService(context, 11, cancelIntent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
@@ -116,10 +129,20 @@ public static class AndroidNotificationHelper
         return PendingIntent.GetActivity(context, 10, intent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable)!;
     }
 
+    internal static void SetPaused(bool paused)
+    {
+        _paused = paused;
+        var context = _context;
+        if (context is null) return;
+        _lastState = paused ? "Pausado" : "Extraindo";
+        NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, true));
+    }
+
     public static void CompleteExtraction(long filesExtracted, long bytesExtracted)
     {
         var context = _context;
         if (context is null) return;
+        _paused = false;
         _lastState = "Extração concluída";
         _lastFiles = filesExtracted;
         _lastTotal = filesExtracted;
