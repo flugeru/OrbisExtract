@@ -104,22 +104,10 @@ public static class AndroidNotificationHelper
             .SetCategory(NotificationCompat.CategoryProgress)
             .SetPriority((int)NotificationPriority.Default)
             .SetVisibility(NotificationCompat.VisibilityPublic)
-            .SetProgress(100, _lastProgress, _lastTotal <= 0)
             .SetWhen(Java.Lang.JavaSystem.CurrentTimeMillis())
             .SetShowWhen(true)
             .SetContentIntent(PendingIntentForStatus(context));
 
-        if (ongoing)
-        {
-            var pauseIntent = new Intent(context, typeof(ExtractionForegroundService));
-            pauseIntent.SetAction(_paused ? ActionResume : ActionPause);
-            var pausePending = PendingIntent.GetService(context, _paused ? 13 : 12, pauseIntent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
-            builder.AddAction(_paused ? global::Android.Resource.Drawable.IcMediaPlay : global::Android.Resource.Drawable.IcMediaPause, _paused ? AppLanguage.Text("Retomar") : AppLanguage.Text("Pausar"), pausePending);
-            var cancelIntent = new Intent(context, typeof(ExtractionForegroundService));
-            cancelIntent.SetAction(ActionCancel);
-            var cancelPending = PendingIntent.GetService(context, 11, cancelIntent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
-            builder.AddAction(global::Android.Resource.Drawable.IcMenuCloseClearCancel, AppLanguage.Text("Cancelar"), cancelPending);
-        }
         if (ongoing)
         {
             // MIUI/HyperOS Classic often hides standard notification actions.
@@ -129,6 +117,8 @@ public static class AndroidNotificationHelper
                 .SetCustomBigContentView(compact)
                 .SetStyle(new NotificationCompat.DecoratedCustomViewStyle());
         }
+        if (!ongoing)
+            builder.SetProgress(0, 0, false);
         return builder.Build();
     }
 
@@ -136,7 +126,7 @@ public static class AndroidNotificationHelper
     {
         var views = new RemoteViews(context.PackageName, Resource.Layout.notification_extraction);
         views.SetTextViewText(Resource.Id.extraction_title, $"OrbisExtract · {AppLanguage.Text(_lastState)}");
-        views.SetTextViewText(Resource.Id.extraction_detail, $"{_lastProgress}% · {detail}");
+        views.SetTextViewText(Resource.Id.extraction_detail, detail);
         views.SetProgressBar(Resource.Id.extraction_progress, 100, _lastProgress, _lastTotal <= 0);
         views.SetTextViewText(Resource.Id.extraction_pause, AppLanguage.Text(_paused ? "Retomar" : "Pausar"));
         views.SetTextViewText(Resource.Id.extraction_cancel, AppLanguage.Text("Cancelar"));
