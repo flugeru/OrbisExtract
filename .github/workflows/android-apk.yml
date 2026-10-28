@@ -85,21 +85,6 @@ jobs:
       - name: Verify Android assets
         run: test -f src/OrbisExtract.App/OrbisExtract.App.Android/obj/project.assets.json
 
-      - name: Restore GitHub APK signing key
-        shell: bash
-        env:
-          ORBIS_APK_KEYSTORE_BASE64: ${{ secrets.ORBIS_APK_KEYSTORE_BASE64 }}
-        run: |
-          set -euo pipefail
-          if [ -z "$ORBIS_APK_KEYSTORE_BASE64" ]; then
-            echo "::error::Configure ORBIS_APK_KEYSTORE_BASE64 with the dedicated GitHub APK signing keystore (not the Google Play upload key)."
-            exit 1
-          fi
-          printf '%s' "$ORBIS_APK_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/orbis-github.keystore"
-          chmod 600 "$RUNNER_TEMP/orbis-github.keystore"
-          keytool -list -keystore "$RUNNER_TEMP/orbis-github.keystore" -storepass OrbisGithub2026Release -alias orbis-github > /dev/null
-          echo "ORBIS_SIGNING_KEYSTORE=$RUNNER_TEMP/orbis-github.keystore" >> "$GITHUB_ENV"
-
       - name: Publish APK
         run: >-
           dotnet publish
@@ -108,11 +93,6 @@ jobs:
           -c Release
           --no-restore
           -p:AndroidPackageFormat=apk
-          -p:AndroidKeyStore=true
-          -p:AndroidSigningKeyStore="$ORBIS_SIGNING_KEYSTORE"
-          -p:AndroidSigningStorePass=OrbisGithub2026Release
-          -p:AndroidSigningKeyAlias=orbis-github
-          -p:AndroidSigningKeyPass=OrbisGithub2026Release
           -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
           -p:AndroidUseLatestPlatformSdk=true
           -p:AndroidUseLatestBuildTools=true
@@ -132,7 +112,6 @@ jobs:
           test -x "$APKSIGNER"
           test -x "$AAPT"
           "$APKSIGNER" verify --verbose --print-certs "$SIGNED"
-          "$APKSIGNER" verify --print-certs "$SIGNED" | grep -qi "064aa88f9483b842c8ae83185e53efcb3a70d4f1c1932c44297f54a0077e3c5b"
           "$AAPT" dump badging "$SIGNED" | tee artifacts/android/package-info.txt
           grep -q "package: name='com.tatsuya.orbisextract'" artifacts/android/package-info.txt
           grep -q "versionCode='1030005'" artifacts/android/package-info.txt
