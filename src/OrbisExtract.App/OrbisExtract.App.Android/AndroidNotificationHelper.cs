@@ -30,6 +30,7 @@ public static class AndroidNotificationHelper
     private static string _packageName = "PKG";
     private static string _destinationName = "Destino selecionado";
     private static int _lastProgress;
+    private static TimeSpan _elapsed;
     private static long _lastFiles;
     private static long _lastTotal;
     private static string _lastState = "Preparando extração";
@@ -56,6 +57,7 @@ public static class AndroidNotificationHelper
         _packageName = packageName;
         _destinationName = destinationName;
         _paused = false;
+        _elapsed = TimeSpan.Zero;
         _lastProgress = 0;
         _lastFiles = 0;
         _lastTotal = totalFiles;
@@ -87,6 +89,14 @@ public static class AndroidNotificationHelper
         _lastState = string.IsNullOrWhiteSpace(state) ? "Extraindo arquivos" : state;
         _lastCurrentFile = currentFile;
         NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, true));
+    }
+
+    public static void UpdateElapsed(TimeSpan elapsed)
+    {
+        _elapsed = elapsed;
+        var context = _context;
+        if (context is not null)
+            NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, true));
     }
 
     internal static Notification BuildNotification(Context context, bool ongoing)
@@ -126,7 +136,7 @@ public static class AndroidNotificationHelper
     {
         var views = new RemoteViews(context.PackageName, Resource.Layout.notification_extraction);
         views.SetTextViewText(Resource.Id.extraction_title, $"OrbisExtract · {AppLanguage.Text(_lastState)}");
-        views.SetTextViewText(Resource.Id.extraction_detail, detail);
+        views.SetTextViewText(Resource.Id.extraction_detail, $"{detail} · {(int)_elapsed.TotalMinutes:00}:{_elapsed.Seconds:00}");
         views.SetProgressBar(Resource.Id.extraction_progress, 100, _lastProgress, _lastTotal <= 0);
         views.SetTextViewText(Resource.Id.extraction_pause, AppLanguage.Text(_paused ? "Retomar" : "Pausar"));
         views.SetTextViewText(Resource.Id.extraction_cancel, AppLanguage.Text("Cancelar"));
