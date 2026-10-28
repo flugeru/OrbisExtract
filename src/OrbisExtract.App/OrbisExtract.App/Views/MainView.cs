@@ -69,6 +69,7 @@ public sealed class MainView : UserControl
     private IStorageFile? _package;
     private IStorageFolder? _destination;
     private CancellationTokenSource? _run;
+    private ExtractionPauseGate? _pauseGate;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly Queue<Control> _logLines = new();
     private readonly List<string> _logMessages = new();
@@ -144,7 +145,11 @@ public sealed class MainView : UserControl
         _cancel.Foreground = UiTheme.Brush(UiTheme.Primary);
         _cancel.Click += (_, _) => _run?.Cancel();
         if (OperatingSystem.IsAndroid())
+        {
             OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested += CancelFromNotification;
+            OrbisExtract.App.Shared.AppNotificationHelper.PauseRequested += PauseFromNotification;
+            OrbisExtract.App.Shared.AppNotificationHelper.ResumeRequested += ResumeFromNotification;
+        }
 
         _logPanel = new StackPanel { Spacing = 0 };
         _logScroll = new ScrollViewer
@@ -281,7 +286,11 @@ public sealed class MainView : UserControl
             if (OperatingSystem.IsAndroid())
             {
                 OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested -= CancelFromNotification;
+                OrbisExtract.App.Shared.AppNotificationHelper.PauseRequested -= PauseFromNotification;
+                OrbisExtract.App.Shared.AppNotificationHelper.ResumeRequested -= ResumeFromNotification;
                 OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested += CancelFromNotification;
+                OrbisExtract.App.Shared.AppNotificationHelper.PauseRequested += PauseFromNotification;
+                OrbisExtract.App.Shared.AppNotificationHelper.ResumeRequested += ResumeFromNotification;
             }
         };
         ApplyLanguage();
@@ -728,6 +737,21 @@ public sealed class MainView : UserControl
         return AppLanguage.Message(message);
     }
 
+    private void PauseFromNotification() => Dispatcher.UIThread.Post(() =>
+    {
+        if (_run is null || _run.IsCancellationRequested || _pauseGate is null) return;
+        _pauseGate.Pause();
+        OrbisExtract.App.Shared.AppNotificationHelper.SetPaused(true);
+        SetLocalized(_stateTitle, () => AppLanguage.Text("Pausado"));
+    });
+
+    private void ResumeFromNotification() => Dispatcher.UIThread.Post(() =>
+    {
+        if (_run is null || _pauseGate is null) return;
+        _pauseGate.Resume();
+        OrbisExtract.App.Shared.AppNotificationHelper.SetPaused(false);
+    });
+
     private void CancelFromNotification() => Dispatcher.UIThread.Post(() => _run?.Cancel());
 
     private void Log(string message)
@@ -926,6 +950,7 @@ public sealed class MainView : UserControl
 
         _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _extract.IsEnabled = false;
         _run = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        _pauseGate = new ExtractionPauseGate();
         var token = _run.Token;
 
         ShowBanner(null);
@@ -1045,7 +1070,7 @@ public sealed class MainView : UserControl
             var result = await new OpenOrbisPkgExtractor().ExtractAsync(
                 new ExtractionRequest(packageStream, string.Empty,
                     null, // Passcode removido da interface
-                    Destination: destination),
+                    Destination: destination, PauseGate: _pauseGate),
                 progress,
                 token);
 
@@ -1117,6 +1142,8 @@ public sealed class MainView : UserControl
             _clock.Stop();
             _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
             _cancel.IsVisible = false;
+            _pauseGate?.Resume();
+            _pauseGate = null;
             _run?.Dispose();
             _run = null;
             if (packageStream is not null) try { await packageStream.DisposeAsync(); } catch { }
