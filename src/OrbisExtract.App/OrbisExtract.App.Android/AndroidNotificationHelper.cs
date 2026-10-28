@@ -79,10 +79,10 @@ public static class AndroidNotificationHelper
         var context = _context;
         if (context is null) return;
 
+        if (_paused) return;
         _lastFiles = currentFiles;
         _lastTotal = totalFiles;
         _lastProgress = totalFiles > 0 ? (int)Math.Clamp(currentFiles * 100.0 / totalFiles, 0, 100) : 0;
-        if (_paused) return;
         _lastState = string.IsNullOrWhiteSpace(state) ? "Extraindo arquivos" : state;
         _lastCurrentFile = currentFile;
         NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, true));
@@ -96,13 +96,13 @@ public static class AndroidNotificationHelper
         var builder = new NotificationCompat.Builder(context, ChannelId)
             .SetSmallIcon(SmallIcon(context))
             .SetContentTitle(ongoing ? $"OrbisExtract · {AppLanguage.Text(_lastState)}" : AppLanguage.Text(_lastState))
-            .SetContentText($"{_packageName} → {_destinationName}")
-            .SetSubText(detail)
-            .SetStyle(new NotificationCompat.BigTextStyle().BigText($"{_packageName}\n{AppLanguage.Text("Destino:")} {_destinationName}\n{detail}"))
+            .SetContentText($"{_packageName} · {detail}")
+            .SetSubText(_destinationName)
             .SetOnlyAlertOnce(true)
             .SetOngoing(ongoing)
             .SetCategory(NotificationCompat.CategoryProgress)
-            .SetPriority((int)NotificationPriority.Low)
+            .SetPriority((int)NotificationPriority.Default)
+            .SetVisibility(NotificationCompat.VisibilityPublic)
             .SetProgress(100, _lastProgress, _lastTotal <= 0)
             .SetWhen(Java.Lang.JavaSystem.CurrentTimeMillis())
             .SetShowWhen(true)
@@ -113,7 +113,7 @@ public static class AndroidNotificationHelper
             var pauseIntent = new Intent(context, typeof(ExtractionForegroundService));
             pauseIntent.SetAction(_paused ? ActionResume : ActionPause);
             var pausePending = PendingIntent.GetService(context, _paused ? 13 : 12, pauseIntent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
-            builder.AddAction(global::Android.Resource.Drawable.IcMediaPause, _paused ? AppLanguage.Text("Retomar") : AppLanguage.Text("Pausar"), pausePending);
+            builder.AddAction(_paused ? global::Android.Resource.Drawable.IcMediaPlay : global::Android.Resource.Drawable.IcMediaPause, _paused ? AppLanguage.Text("Retomar") : AppLanguage.Text("Pausar"), pausePending);
             var cancelIntent = new Intent(context, typeof(ExtractionForegroundService));
             cancelIntent.SetAction(ActionCancel);
             var cancelPending = PendingIntent.GetService(context, 11, cancelIntent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
@@ -157,8 +157,8 @@ public static class AndroidNotificationHelper
     {
         var context = _context;
         if (context is null) return;
-        NotificationManagerCompat.From(context).Cancel(NotificationId);
         FinishService(context, ActionFinish);
+        NotificationManagerCompat.From(context).Cancel(NotificationId);
     }
 
     public static void ShowError(string message)
