@@ -18,6 +18,7 @@ public static class AppNotificationHelper
         }
     }
 
+    public static event Action? TogglePauseRequested { add => OrbisExtract.App.Android.AndroidNotificationHelper.TogglePauseRequested += value; remove => OrbisExtract.App.Android.AndroidNotificationHelper.TogglePauseRequested -= value; }
     public static event Action? PauseRequested { add => OrbisExtract.App.Android.AndroidNotificationHelper.PauseRequested += value; remove => OrbisExtract.App.Android.AndroidNotificationHelper.PauseRequested -= value; }
     public static event Action? ResumeRequested { add => OrbisExtract.App.Android.AndroidNotificationHelper.ResumeRequested += value; remove => OrbisExtract.App.Android.AndroidNotificationHelper.ResumeRequested -= value; }
     public static void SetPaused(bool paused) => OrbisExtract.App.Android.AndroidNotificationHelper.SetPaused(paused);
@@ -54,6 +55,7 @@ public static class AppNotificationHelper
     }
 #else
     // Placeholder para outras plataformas
+    public static event Action? TogglePauseRequested { add { } remove { } }
     public static event Action? PauseRequested { add { } remove { } }
     public static event Action? ResumeRequested { add { } remove { } }
     public static void SetPaused(bool paused) { }
