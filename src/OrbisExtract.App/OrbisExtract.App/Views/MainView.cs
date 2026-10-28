@@ -76,6 +76,8 @@ public sealed class MainView : UserControl
     private readonly CancellationTokenSource _lifetime = new();
     private readonly Queue<Control> _logLines = new();
     private readonly List<string> _logMessages = new();
+    private readonly List<string> _sessionEvents = new();
+    private bool _recordingHistory;
     private readonly List<(TextBox Box, string Original)> _logEntries = new();
     private readonly Dictionary<TextBlock, string> _localizedLabels = new();
     private readonly Dictionary<Button, string> _localizedButtons = new();
@@ -442,7 +444,7 @@ public sealed class MainView : UserControl
                 $"{entry.StartedAt.ToLocalTime():dd/MM/yyyy HH:mm} · {AppLanguage.Text(entry.Result)} · {TimeSpan.FromSeconds(entry.ElapsedSeconds):hh\\:mm\\:ss}",
                 12, UiTheme.Primary);
             var details = UiTheme.Text(
-                $"{AppLanguage.Text("Destino:")} {entry.Destination}\\n{entry.Files:N0} {AppLanguage.Text("arquivos")} · {entry.Bytes / 1024d / 1024d:N1} MiB",
+                $"{AppLanguage.Text("Destino:")} {entry.Destination}\n{entry.Files:N0} {AppLanguage.Text("arquivos")} · {entry.Bytes / 1024d / 1024d:N1} MiB",
                 12, UiTheme.TextSecondary);
             details.TextWrapping = TextWrapping.Wrap;
             var eventPanel = new StackPanel { Spacing = 4, IsVisible = false };
@@ -875,9 +877,21 @@ public sealed class MainView : UserControl
 
     private void CancelFromNotification() => Dispatcher.UIThread.Post(() => _run?.Cancel());
 
+    private List<string> SnapshotSessionEvents()
+    {
+        lock (_sessionEvents) return new List<string>(_sessionEvents);
+    }
+
     private void Log(string message)
     {
         var time = $"{DateTime.Now:HH:mm:ss}";
+        if (_recordingHistory)
+        {
+            lock (_sessionEvents)
+            {
+                if (_sessionEvents.Count < 2000) _sessionEvents.Add($"{time}  {message}");
+            }
+        }
         Dispatcher.UIThread.Post(() =>
         {
             _logMessages.Add($"{time}  {message}");
@@ -1074,6 +1088,13 @@ public sealed class MainView : UserControl
         _pauseGate = new ExtractionPauseGate();
         _extractionPaused = false;
         var token = _run.Token;
+        lock (_sessionEvents) _sessionEvents.Clear();
+        _recordingHistory = true;
+        var historyStartedAt = DateTimeOffset.Now;
+        var historyPackage = _package.Name;
+        var historyDestination = _destination.Name;
+        var historyResult = "Falha na extração";
+        long historyFiles = 0, historyBytes = 0;
 
         ShowBanner(null);
         _cancel.IsVisible = _pause.IsVisible = _elapsed.IsVisible = _status.IsVisible = true;
@@ -1206,6 +1227,9 @@ public sealed class MainView : UserControl
                 progress,
                 token);
 
+            historyResult = "Concluído";
+            historyFiles = result.FilesExtracted;
+            historyBytes = result.BytesExtracted;
             timer?.Stop();
             timer?.Dispose();
 
@@ -1230,6 +1254,7 @@ public sealed class MainView : UserControl
         }
         catch (OperationCanceledException)
         {
+            historyResult = "Cancelado";
             _progress.IsIndeterminate = false;
             SetLocalized(_stateTitle, () => AppLanguage.Text("Cancelado"));
             SetLocalized(_counter, () => AppLanguage.Text("A extração foi interrompida."));
@@ -1248,6 +1273,7 @@ public sealed class MainView : UserControl
         }
         catch (Exception ex)
         {
+            historyResult = "Falha na extração";
             _progress.IsIndeterminate = false;
             SetLocalized(_stateTitle, () => AppLanguage.Text("Falha na extração"));
             SetLocalized(_counter, () => AppLanguage.Text("Veja o log detalhado para mais informações."));
@@ -1282,6 +1308,11 @@ public sealed class MainView : UserControl
             if (packageStream is not null) try { await packageStream.DisposeAsync(); } catch { }
             if (tempPath is not null) try { File.Delete(tempPath); } catch { }
             Log("Processo de extração finalizado.");
+            _recordingHistory = false;
+            ExtractionHistory.Add(new ExtractionHistoryEntry(
+                historyStartedAt, historyPackage, historyDestination, historyResult,
+                historyFiles, historyBytes, (long)_clock.Elapsed.TotalSeconds,
+                SnapshotSessionEvents()));
             _choosePackage.IsEnabled = _chooseDestination.IsEnabled = true;
             _extract.IsEnabled = _package is not null && _destination is not null;
         }
