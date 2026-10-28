@@ -20,6 +20,16 @@ public sealed class ExtractionForegroundService : Service
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {
         var action = intent?.Action;
+        if (action == AndroidNotificationHelper.ActionPause)
+        {
+            AndroidNotificationHelper.RequestPause();
+            return StartCommandResult.Sticky;
+        }
+        if (action == AndroidNotificationHelper.ActionResume)
+        {
+            AndroidNotificationHelper.RequestResume();
+            return StartCommandResult.Sticky;
+        }
         if (action == AndroidNotificationHelper.ActionFinish || action == AndroidNotificationHelper.ActionCancel)
         {
             if (action == AndroidNotificationHelper.ActionCancel)
