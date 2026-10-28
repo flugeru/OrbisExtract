@@ -20,12 +20,19 @@ public static class AndroidNotificationHelper
     internal const string ActionResume = "orbisextract.action.RESUME";
     internal const string ActionCancel = "orbisextract.action.CANCEL";
     public static event Action? TogglePauseRequested;
-    internal static void RequestTogglePause() => TogglePauseRequested?.Invoke();
+    internal static void RequestTogglePause()
+    {
+        // Update the notification immediately on the service thread. The UI callback
+        // is dispatched asynchronously and must not be required for the first redraw.
+        if (TogglePauseRequested is null) return;
+        SetPaused(!_paused);
+        TogglePauseRequested.Invoke();
+    }
     public static event Action? PauseRequested;
     public static event Action? ResumeRequested;
     internal static void RequestPause() => PauseRequested?.Invoke();
     internal static void RequestResume() => ResumeRequested?.Invoke();
-    private static bool _paused;
+    private static volatile bool _paused;
     public static event Action? CancellationRequested;
     internal static void RequestCancellation() => CancellationRequested?.Invoke();
     private static Context? _context;
