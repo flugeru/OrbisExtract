@@ -138,7 +138,7 @@ public static class AndroidNotificationHelper
     private static RemoteViews BuildCompactControls(Context context, string detail)
     {
         var views = new RemoteViews(context.PackageName, Resource.Layout.notification_extraction);
-        views.SetTextViewText(Resource.Id.extraction_title, $"OrbisExtract · {AppLanguage.Text(_lastState)}");
+        views.SetTextViewText(Resource.Id.extraction_title, AppLanguage.Text(_lastState));
         views.SetTextViewText(Resource.Id.extraction_detail, $"{detail} · {(int)_elapsed.TotalMinutes:00}:{_elapsed.Seconds:00}");
         views.SetProgressBar(Resource.Id.extraction_progress, 100, _lastProgress, _lastTotal <= 0);
         views.SetTextViewText(Resource.Id.extraction_pause, AppLanguage.Text(_paused ? "Retomar" : "Pausar"));
