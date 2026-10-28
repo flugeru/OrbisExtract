@@ -11,61 +11,65 @@
     android:paddingEnd="2dp"
     android:paddingTop="2dp"
     android:paddingBottom="2dp">
+    <TextView
+        android:id="@+id/extraction_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#FFFFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:gravity="center_vertical"/>
+    <ProgressBar
+        android:id="@+id/extraction_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_marginTop="7dp"
+        android:max="100"
+        android:progressTint="#FF85B3FF"
+        android:progressBackgroundTint="#FF52545B"/>
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:layout_marginTop="6dp">
         <TextView
-            android:id="@+id/extraction_title"
+            android:id="@+id/extraction_detail"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:textColor="#FFFFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold"
+            android:textColor="#FFCED0D6"
+            android:textSize="12sp"
             android:singleLine="true"
             android:ellipsize="end"/>
         <TextView
             android:id="@+id/extraction_pause"
             android:background="@drawable/notification_pause_bg"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:minWidth="66dp"
+            android:layout_height="32dp"
             android:gravity="center"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
+            android:layout_marginStart="8dp"
             android:layout_marginEnd="6dp"
             android:textColor="#FFB8D2FF"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:clickable="true"/>
         <TextView
             android:id="@+id/extraction_cancel"
             android:background="@drawable/notification_cancel_bg"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:minWidth="66dp"
+            android:layout_height="32dp"
             android:gravity="center"
-            android:paddingStart="8dp"
-            android:paddingEnd="4dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
             android:textColor="#FFFFC2C2"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:clickable="true"/>
     </LinearLayout>
-    <ProgressBar
-        android:id="@+id/extraction_progress"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="3dp"
-        android:layout_marginTop="1dp"
-        android:max="100"
-        android:progressTint="#FF85B3FF"
-        android:progressBackgroundTint="#FF52545B"/>
-    <TextView
-        android:id="@+id/extraction_detail"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        android:textColor="#FFCED0D6"
-        android:textSize="12sp"
-        android:singleLine="true"
-        android:ellipsize="end"/>
 </LinearLayout>
