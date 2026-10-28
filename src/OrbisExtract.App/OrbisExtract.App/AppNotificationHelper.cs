@@ -21,6 +21,7 @@ public static class AppNotificationHelper
     public static event Action? PauseRequested { add => OrbisExtract.App.Android.AndroidNotificationHelper.PauseRequested += value; remove => OrbisExtract.App.Android.AndroidNotificationHelper.PauseRequested -= value; }
     public static event Action? ResumeRequested { add => OrbisExtract.App.Android.AndroidNotificationHelper.ResumeRequested += value; remove => OrbisExtract.App.Android.AndroidNotificationHelper.ResumeRequested -= value; }
     public static void SetPaused(bool paused) => OrbisExtract.App.Android.AndroidNotificationHelper.SetPaused(paused);
+    public static void UpdateElapsed(TimeSpan elapsed) => OrbisExtract.App.Android.AndroidNotificationHelper.UpdateElapsed(elapsed);
     public static event Action? CancellationRequested
     {
         add => OrbisExtract.App.Android.AndroidNotificationHelper.CancellationRequested += value;
@@ -56,6 +57,7 @@ public static class AppNotificationHelper
     public static event Action? PauseRequested { add { } remove { } }
     public static event Action? ResumeRequested { add { } remove { } }
     public static void SetPaused(bool paused) { }
+    public static void UpdateElapsed(TimeSpan elapsed) { }
     public static event Action? CancellationRequested { add { } remove { } }
     public static void StartExtraction(string packageName, string destinationName, long totalFiles, long totalBytes)
     {
