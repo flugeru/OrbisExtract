@@ -1097,7 +1097,9 @@ public sealed class MainView : UserControl
         long historyFiles = 0, historyBytes = 0;
 
         ShowBanner(null);
-        _cancel.IsVisible = _pause.IsVisible = _elapsed.IsVisible = _status.IsVisible = true;
+        _cancel.IsVisible = _pause.IsVisible = _elapsed.IsVisible = true;
+        // An empty status line must not reserve vertical space between controls and logs.
+        _status.IsVisible = false;
         _pause.Content = AppLanguage.Text("Pausar");
         SetLocalized(_stateTitle, () => AppLanguage.Text("Preparando"));
         SetLocalized(_counter, () => AppLanguage.Text("Preparando a extração…"));
