@@ -50,6 +50,7 @@ public static class AppNotificationHelper
     }
 #else
     // Placeholder para outras plataformas
+    public static event Action? CancellationRequested { add { } remove { } }
     public static void StartExtraction(string packageName, string destinationName, long totalFiles, long totalBytes)
     {
         System.Diagnostics.Debug.WriteLine($"Extração iniciada (placeholder): {packageName} -> {destinationName}");
