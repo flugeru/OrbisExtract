@@ -10,7 +10,29 @@ public sealed record ExtractionRequest(
     string DestinationDirectory,
     string? Passcode = null,
     bool FailOnExistingFiles = true,
-    IExtractionDestination? Destination = null);
+    IExtractionDestination? Destination = null,
+    ExtractionPauseGate? PauseGate = null);
+
+public sealed class ExtractionPauseGate
+{
+    private readonly object _sync = new();
+    private TaskCompletionSource<bool>? _resume;
+    public bool IsPaused { get { lock (_sync) return _resume is not null; } }
+    public void Pause() { lock (_sync) _resume ??= new(TaskCreationOptions.RunContinuationsAsynchronously); }
+    public void Resume()
+    {
+        TaskCompletionSource<bool>? pending;
+        lock (_sync) { pending = _resume; _resume = null; }
+        pending?.TrySetResult(true);
+    }
+    public async Task WaitAsync(CancellationToken cancellationToken)
+    {
+        Task? pending;
+        lock (_sync) pending = _resume?.Task;
+        if (pending is not null) await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+}
 
 public sealed record ExtractionProgress(
     string State,
