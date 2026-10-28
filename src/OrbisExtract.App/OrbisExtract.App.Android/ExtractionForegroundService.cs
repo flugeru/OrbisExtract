@@ -22,10 +22,12 @@ public sealed class ExtractionForegroundService : Service
         var action = intent?.Action;
         if (action == AndroidNotificationHelper.ActionFinish || action == AndroidNotificationHelper.ActionCancel)
         {
+            if (action == AndroidNotificationHelper.ActionCancel)
+                AndroidNotificationHelper.RequestCancellation();
             if (Build.VERSION.SdkInt >= BuildVersionCodes.N)
-                StopForeground(StopForegroundFlags.Detach);
+                StopForeground(StopForegroundFlags.Remove);
             else
-                StopForeground(false);
+                StopForeground(true);
             StopSelf(startId);
             return StartCommandResult.NotSticky;
         }
