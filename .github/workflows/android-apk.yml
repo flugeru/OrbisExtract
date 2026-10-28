@@ -85,7 +85,31 @@ jobs:
       - name: Verify Android assets
         run: test -f src/OrbisExtract.App/OrbisExtract.App.Android/obj/project.assets.json
 
+      - name: Restore persistent Android signing key
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing $name signing secret. Use the original 1.0.2 signing key to enable in-place upgrades."
+              exit 1
+            fi
+          done
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/orbisextract-release.keystore"
+          chmod 600 "$RUNNER_TEMP/orbisextract-release.keystore"
+          keytool -list -keystore "$RUNNER_TEMP/orbisextract-release.keystore" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/orbisextract-release.keystore" >> "$GITHUB_ENV"
+
       - name: Publish APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: >-
           dotnet publish
           src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj
@@ -93,6 +117,11 @@ jobs:
           -c Release
           --no-restore
           -p:AndroidPackageFormat=apk
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore="$ANDROID_KEYSTORE_PATH"
+          -p:AndroidSigningStorePass=env:KEYSTORE_PASSWORD
+          -p:AndroidSigningKeyAlias="$KEY_ALIAS"
+          -p:AndroidSigningKeyPass=env:KEY_PASSWORD
           -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
           -p:AndroidUseLatestPlatformSdk=true
           -p:AndroidUseLatestBuildTools=true
@@ -112,6 +141,10 @@ jobs:
           test -x "$APKSIGNER"
           test -x "$AAPT"
           "$APKSIGNER" verify --verbose --print-certs "$SIGNED"
+          keytool -exportcert -rfc -keystore "$ANDROID_KEYSTORE_PATH" -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" -alias "${{ secrets.ANDROID_KEY_ALIAS }}" > "$RUNNER_TEMP/expected-cert.pem"
+          openssl x509 -in "$RUNNER_TEMP/expected-cert.pem" -outform DER | sha256sum | cut -d\x27 \x27 -f1 > "$RUNNER_TEMP/expected-sha256"
+          "$APKSIGNER" verify --print-certs "$SIGNED" | grep "Signer #1 certificate SHA-256 digest:" | sed -E "s/.*digest: //" | tr -d : | tr "[:upper:]" "[:lower:]" > "$RUNNER_TEMP/apk-sha256"
+          diff -u "$RUNNER_TEMP/expected-sha256" "$RUNNER_TEMP/apk-sha256"
           "$AAPT" dump badging "$SIGNED" | tee artifacts/android/package-info.txt
           grep -q "package: name='com.tatsuya.orbisextract'" artifacts/android/package-info.txt
           grep -q "versionCode='1030005'" artifacts/android/package-info.txt
