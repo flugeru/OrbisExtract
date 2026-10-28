@@ -18,6 +18,12 @@ public static class AppNotificationHelper
         }
     }
 
+    public static event Action? CancellationRequested
+    {
+        add => OrbisExtract.App.Android.AndroidNotificationHelper.CancellationRequested += value;
+        remove => OrbisExtract.App.Android.AndroidNotificationHelper.CancellationRequested -= value;
+    }
+
     public static void StartExtraction(string packageName, string destinationName, long totalFiles, long totalBytes)
     {
         OrbisExtract.App.Android.AndroidNotificationHelper.StartExtraction(packageName, destinationName, totalFiles, totalBytes);
