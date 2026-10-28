@@ -15,6 +15,8 @@ public static class AndroidNotificationHelper
     internal const string ActionStart = "orbisextract.action.START";
     internal const string ActionFinish = "orbisextract.action.FINISH";
     internal const string ActionCancel = "orbisextract.action.CANCEL";
+    public static event Action? CancellationRequested;
+    internal static void RequestCancellation() => CancellationRequested?.Invoke();
     private static Context? _context;
     private static int _smallIcon;
     private static string _packageName = "PKG";
@@ -97,6 +99,13 @@ public static class AndroidNotificationHelper
             .SetShowWhen(true)
             .SetContentIntent(PendingIntentForStatus(context));
 
+        if (ongoing)
+        {
+            var cancelIntent = new Intent(context, typeof(ExtractionForegroundService));
+            cancelIntent.SetAction(ActionCancel);
+            var cancelPending = PendingIntent.GetService(context, 11, cancelIntent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+            builder.AddAction(global::Android.Resource.Drawable.IcMenuCloseClearCancel, AppLanguage.Text("Cancelar"), cancelPending);
+        }
         return builder.Build();
     }
 
@@ -117,16 +126,16 @@ public static class AndroidNotificationHelper
         _lastProgress = 100;
         _lastCurrentFile = $"{filesExtracted:N0} {AppLanguage.Text("arquivos")} · {bytesExtracted / 1024d / 1024d:N1} MiB";
         var notification = BuildNotification(context, false);
-        NotificationManagerCompat.From(context).Notify(NotificationId, notification);
         FinishService(context, ActionFinish);
+        NotificationManagerCompat.From(context).Notify(NotificationId, notification);
     }
 
     public static void CancelExtraction()
     {
         var context = _context;
         if (context is null) return;
-        FinishService(context, ActionCancel);
         NotificationManagerCompat.From(context).Cancel(NotificationId);
+        FinishService(context, ActionFinish);
     }
 
     public static void ShowError(string message)
