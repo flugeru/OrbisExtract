@@ -277,7 +277,12 @@ public sealed class MainView : UserControl
         DetachedFromVisualTree += (_, _) =>
         {
             AppLanguage.Changed -= ApplyLanguage;
-            if (OperatingSystem.IsAndroid()) OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested -= CancelFromNotification;
+            if (OperatingSystem.IsAndroid())
+            {
+                OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested -= CancelFromNotification;
+                OrbisExtract.App.Shared.AppNotificationHelper.PauseRequested -= PauseFromNotification;
+                OrbisExtract.App.Shared.AppNotificationHelper.ResumeRequested -= ResumeFromNotification;
+            }
         };
         AttachedToVisualTree += (_, _) =>
         {
