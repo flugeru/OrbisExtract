@@ -106,6 +106,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         var buffer = new byte[1024 * 1024];
         foreach (var item in files)
         {
+            if (request.PauseGate is not null) await request.PauseGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             var destination = request.Destination ?? new LocalExtractionDestination(request.DestinationDirectory, request.FailOnExistingFiles);
             Stream? target = null;
@@ -122,6 +123,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Count, bytes, totalBytes));
                 while (true)
                 {
+                    if (request.PauseGate is not null) await request.PauseGate.WaitAsync(cancellationToken).ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
                     var read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
                     if (read == 0) break;
