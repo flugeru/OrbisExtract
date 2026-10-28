@@ -40,6 +40,7 @@ public static class AppLanguage
         ["Não foi possível verificar atualizações:"] = "Could not check for updates:",
         ["Não foi possível abrir o link:"] = "Could not open the link:", ["Navegador indisponível."] = "Browser unavailable.",
         ["de"] = "of", ["arquivos"] = "files", ["Extraindo"] = "Extracting",
+        ["Pausar"] = "Pause", ["Retomar"] = "Resume", ["Pausado"] = "Paused",
         ["Extração concluída com sucesso em"] = "Extraction completed successfully in",
         ["Preparando extração"] = "Preparing extraction", ["Extraindo arquivos"] = "Extracting files",
         ["Extração concluída"] = "Extraction completed", ["Destino:"] = "Destination:",
