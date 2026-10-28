@@ -55,6 +55,8 @@ public sealed class MainView : UserControl
     private readonly Control _packageCard, _settingsCard, _monitorCard;
     private int _contentColumns;
     private readonly Border _aboutOverlay;
+    private readonly Border _historyOverlay;
+    private readonly StackPanel _historyList = new() { Spacing = 10 };
     private readonly Border _languageOverlay;
     private readonly Border _updateOverlay;
     private readonly TextBlock _updateMessage;
@@ -219,6 +221,7 @@ public sealed class MainView : UserControl
 
         var mainGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*") };
         _aboutOverlay = CreateAboutOverlay();
+        _historyOverlay = CreateHistoryOverlay();
         _updateOverlay = CreateUpdateOverlay(out _updateMessage, out _updateOpen);
         var isAndroid = OperatingSystem.IsAndroid();
         var heading = new StackPanel
@@ -270,6 +273,7 @@ public sealed class MainView : UserControl
         mainGrid.Children.Add(scroll);
         Grid.SetRow(scroll, 0);
         mainGrid.Children.Add(_aboutOverlay); // Add last so the modal overlay is rendered above the page.
+        mainGrid.Children.Add(_historyOverlay);
         _languageOverlay = CreateLanguageOverlay();
         mainGrid.Children.Add(_languageOverlay);
         mainGrid.Children.Add(_updateOverlay);
@@ -332,11 +336,13 @@ public sealed class MainView : UserControl
         settings.Click += (_, _) => _languageOverlay.IsVisible = true;
         var about = CreateRoundHeaderButton(false, "Sobre");
         about.Click += (_, _) => _aboutOverlay.IsVisible = true;
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { settings, about } };
+        var history = CreateRoundHeaderButton(false, "Histórico", true);
+        history.Click += (_, _) => { RefreshHistory(); _historyOverlay.IsVisible = true; };
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { history, settings, about } };
         return actions;
     }
 
-    private static Button CreateRoundHeaderButton(bool settings, string tip)
+    private static Button CreateRoundHeaderButton(bool settings, string tip, bool history = false)
     {
         // Both actions use the same outlined icon stroke, rather than mixing font glyphs.
         var icon = new Grid { Width = 24, Height = 24 };
@@ -345,7 +351,11 @@ public sealed class MainView : UserControl
             Data = Geometry.Parse(data), Stroke = UiTheme.Brush(UiTheme.Primary), StrokeThickness = 1.8,
             StrokeLineCap = PenLineCap.Round, StrokeJoin = PenLineJoin.Round
         });
-        if (settings)
+        if (history)
+        {
+            Line("M4 5 L4 10 L9 10 M4 10 A8 8 0 1 1 6 17 M12 7 L12 12 L16 14");
+        }
+        else if (settings)
         {
             // Sliders are used as a clear, lightweight settings symbol.
             Line("M4 7 L9 7 M15 7 L20 7 M4 17 L9 17 M15 17 L20 17");
@@ -375,6 +385,81 @@ public sealed class MainView : UserControl
         button.CornerRadius = new CornerRadius(22);
         ToolTip.SetTip(button, tip);
         return button;
+    }
+
+    private Border CreateHistoryOverlay()
+    {
+        var close = UiTheme.ActionButton("Fechar");
+        var body = new StackPanel
+        {
+            Spacing = 14,
+            Children =
+            {
+                UiTheme.Text("Histórico de extrações", 22, UiTheme.TextPrimary, FontWeight.SemiBold),
+                UiTheme.Text("Relatórios locais por pacote PKG", 13, UiTheme.TextSecondary),
+                _historyList,
+                close
+            }
+        };
+        var card = UiTheme.Card(new ScrollViewer
+        {
+            Content = body,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        });
+        card.Width = 540;
+        card.HorizontalAlignment = HorizontalAlignment.Center;
+        card.VerticalAlignment = VerticalAlignment.Center;
+        var overlay = new Border
+        {
+            IsVisible = false,
+            Background = new SolidColorBrush(Color.Parse("#CC000000")),
+            Child = card
+        };
+        close.Click += (_, _) => overlay.IsVisible = false;
+        overlay.SizeChanged += (_, e) =>
+        {
+            card.Width = Math.Min(540, Math.Max(0, e.NewSize.Width - 32));
+            card.MaxHeight = Math.Max(0, e.NewSize.Height - 32);
+        };
+        return overlay;
+    }
+
+    private void RefreshHistory()
+    {
+        _historyList.Children.Clear();
+        var entries = ExtractionHistory.Load();
+        if (entries.Count == 0)
+        {
+            _historyList.Children.Add(UiTheme.Text(AppLanguage.Text("Nenhuma extração registrada."), 14, UiTheme.TextSecondary));
+            return;
+        }
+        foreach (var entry in entries)
+        {
+            var title = UiTheme.Text(entry.PackageName, 15, UiTheme.TextPrimary, FontWeight.SemiBold);
+            title.TextWrapping = TextWrapping.Wrap;
+            var subtitle = UiTheme.Text(
+                $"{entry.StartedAt.ToLocalTime():dd/MM/yyyy HH:mm} · {AppLanguage.Text(entry.Result)} · {TimeSpan.FromSeconds(entry.ElapsedSeconds):hh\\:mm\\:ss}",
+                12, UiTheme.Primary);
+            var details = UiTheme.Text(
+                $"{AppLanguage.Text("Destino:")} {entry.Destination}\\n{entry.Files:N0} {AppLanguage.Text("arquivos")} · {entry.Bytes / 1024d / 1024d:N1} MiB",
+                12, UiTheme.TextSecondary);
+            details.TextWrapping = TextWrapping.Wrap;
+            var eventPanel = new StackPanel { Spacing = 4, IsVisible = false };
+            foreach (var item in entry.Events)
+            {
+                var line = UiTheme.Text(item, 11, UiTheme.TextSecondary);
+                line.TextWrapping = TextWrapping.Wrap;
+                eventPanel.Children.Add(line);
+            }
+            var toggle = UiTheme.OutlinedButton(AppLanguage.Text("Ver relatório"));
+            toggle.Click += (_, _) => eventPanel.IsVisible = !eventPanel.IsVisible;
+            _historyList.Children.Add(UiTheme.Card(new StackPanel
+            {
+                Spacing = 8,
+                Children = { title, subtitle, details, toggle, eventPanel }
+            }));
+        }
     }
 
     private Border CreateLanguageOverlay()
