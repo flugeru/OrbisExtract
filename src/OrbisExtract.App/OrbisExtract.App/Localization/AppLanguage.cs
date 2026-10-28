@@ -43,7 +43,7 @@ public static class AppLanguage
         ["Histórico"] = "History", ["Histórico de extrações"] = "Extraction history",
         ["Relatórios locais por pacote PKG"] = "Local reports for each PKG",
         ["Nenhuma extração registrada."] = "No extractions recorded.",
-        ["Ver relatório"] = "View report", ["Cancelado"] = "Cancelled", ["Concluído"] = "Completed",
+        ["Ver relatório"] = "View report",
         ["Pausar"] = "Pause", ["Retomar"] = "Resume", ["Pausado"] = "Paused",
         ["Extração concluída com sucesso em"] = "Extraction completed successfully in",
         ["Preparando extração"] = "Preparing extraction", ["Extraindo arquivos"] = "Extracting files",
