@@ -70,6 +70,7 @@ public sealed class MainView : UserControl
     private IStorageFolder? _destination;
     private CancellationTokenSource? _run;
     private ExtractionPauseGate? _pauseGate;
+    private bool _extractionPaused;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly Queue<Control> _logLines = new();
     private readonly List<string> _logMessages = new();
@@ -153,6 +154,7 @@ public sealed class MainView : UserControl
         {
             OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested += CancelFromNotification;
             OrbisExtract.App.Shared.AppNotificationHelper.PauseRequested += PauseFromNotification;
+            OrbisExtract.App.Shared.AppNotificationHelper.TogglePauseRequested += TogglePauseFromNotification;
             OrbisExtract.App.Shared.AppNotificationHelper.ResumeRequested += ResumeFromNotification;
         }
 
@@ -288,6 +290,7 @@ public sealed class MainView : UserControl
             {
                 OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested -= CancelFromNotification;
                 OrbisExtract.App.Shared.AppNotificationHelper.PauseRequested -= PauseFromNotification;
+                OrbisExtract.App.Shared.AppNotificationHelper.TogglePauseRequested -= TogglePauseFromNotification;
                 OrbisExtract.App.Shared.AppNotificationHelper.ResumeRequested -= ResumeFromNotification;
             }
         };
@@ -425,7 +428,7 @@ public sealed class MainView : UserControl
     {
         foreach (var (label, original) in _localizedLabels) label.Text = AppLanguage.Message(original);
         foreach (var (button, original) in _localizedButtons) button.Content = AppLanguage.Text(original);
-        if (_pauseGate is not null) _pause.Content = AppLanguage.Text(_pauseGate.IsPaused ? "Retomar" : "Pausar");
+        if (_pauseGate is not null) _pause.Content = AppLanguage.Text(_extractionPaused ? "Retomar" : "Pausar");
         foreach (var (button, (mode, label, name, check)) in _languageChoices)
         {
             var selected = AppLanguage.Mode == mode;
@@ -755,6 +758,8 @@ public sealed class MainView : UserControl
     private void PauseExtraction()
     {
         if (_run is null || _run.IsCancellationRequested || _pauseGate is null) return;
+        if (_extractionPaused) return;
+        _extractionPaused = true;
         _pauseGate.Pause();
         _clock.Stop();
         _pause.Content = AppLanguage.Text("Retomar");
@@ -766,7 +771,8 @@ public sealed class MainView : UserControl
 
     private void ResumeExtraction()
     {
-        if (_run is null || _pauseGate is null) return;
+        if (_run is null || _run.IsCancellationRequested || _pauseGate is null || !_extractionPaused) return;
+        _extractionPaused = false;
         _pauseGate.Resume();
         _clock.Start();
         _pause.Content = AppLanguage.Text("Pausar");
@@ -776,9 +782,11 @@ public sealed class MainView : UserControl
 
     private void TogglePause()
     {
-        if (_pauseGate?.IsPaused == true) ResumeExtraction();
+        if (_extractionPaused) ResumeExtraction();
         else PauseExtraction();
     }
+
+    private void TogglePauseFromNotification() => Dispatcher.UIThread.Post(TogglePause);
 
     private void CancelFromNotification() => Dispatcher.UIThread.Post(() => _run?.Cancel());
 
@@ -979,6 +987,7 @@ public sealed class MainView : UserControl
         _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _extract.IsEnabled = false;
         _run = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
         _pauseGate = new ExtractionPauseGate();
+        _extractionPaused = false;
         var token = _run.Token;
 
         ShowBanner(null);
@@ -1182,6 +1191,7 @@ public sealed class MainView : UserControl
             _cancel.IsVisible = _pause.IsVisible = false;
             _pauseGate?.Resume();
             _pauseGate = null;
+            _extractionPaused = false;
             _run?.Dispose();
             _run = null;
             if (packageStream is not null) try { await packageStream.DisposeAsync(); } catch { }
