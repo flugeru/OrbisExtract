@@ -26,19 +26,10 @@ The script prompts for both passwords without echoing them, passes them to the .
 
 The Play package ID is `com.tatsuya.orbisextract`, minimum SDK is API 24 and target SDK is API 36. This is a **different app** from the previously distributed `orbisextract.app` APK, so it cannot update that installation in place. Confirm the package ID with the Play Console owner before the first upload: a Play listing's package ID cannot be changed later. Each subsequent upload must have a higher `ApplicationVersion` (versionCode) than previous Play uploads; `ApplicationDisplayVersion` is the user-visible version.
 
-## GitHub Actions APK updates (important)
+## GitHub Actions APK signing (separate from Google Play)
 
-Android only allows an APK to update an installed app when the **application ID** and **signing certificate** match, and the new versionCode is higher. The Actions workflow now requires a persistent signing key rather than relying on a fresh runner's default/debug signing key.
+The Actions workflow uses a dedicated GitHub-distribution signing identity, **not** your Google Play upload key. The private keystore is deliberately NOT committed to this public repository. Add the generated base64 keystore as a single Actions repository secret named `ORBIS_APK_KEYSTORE_BASE64` in Settings > Secrets and variables > Actions > New repository secret. Keep a private backup of the keystore; never publish it in the repository or attach it to releases.
 
-Configure these repository Actions secrets before running the Android build:
+The workflow checks the signer certificate SHA-256 fingerprint: `064aa88f9483b842c8ae83185e53efcb3a70d4f1c1932c44297f54a0077e3c5b`. Future Actions APKs using this key and increasing versionCodes can update each other in place. The original 1.0.2 APK can only be updated if its signing certificate already matches; if it used an ephemeral runner key, reinstall once after backing up user data.
 
-- `ANDROID_KEYSTORE_BASE64`: base64 of the **same keystore used to sign the installed 1.0.2 APK** (not a newly generated keystore).
-- `ANDROID_KEYSTORE_PASSWORD`: keystore password.
-- `ANDROID_KEY_ALIAS`: alias of the original signing key.
-- `ANDROID_KEY_PASSWORD`: key password.
-
-For example, in PowerShell, generate the base64 secret from the original keystore with `[Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\\path\\to\\original.keystore'))`. Paste only into GitHub Actions secrets, never into source control or a chat. Keep an offline backup of the keystore and passwords. The workflow fails instead of publishing an APK signed by an unintended key when the secrets are missing.
-
-**Existing 1.0.2 installations:** If 1.0.2 was signed with an ephemeral GitHub Actions debug keystore and that exact key was not preserved, an in-place update is cryptographically impossible. Back up any user data before uninstalling and reinstalling once with the persistent-key build. Future releases signed with that same key can update in place. A different application ID (such as legacy `orbisextract.app`) also requires migration/reinstallation.
-
-Check installed and new APKs with `apksigner verify --print-certs path/to/app.apk` and compare the signer certificate SHA-256 digest. Check package name and versionCode with `aapt dump badging path/to/app.apk`.
+To inspect an APK: `apksigner verify --print-certs OrbisExtract.apk`; compare signer SHA-256. `aapt dump badging OrbisExtract.apk` shows the package name and versionCode.
