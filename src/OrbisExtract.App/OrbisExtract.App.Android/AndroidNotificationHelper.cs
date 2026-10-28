@@ -2,6 +2,7 @@ using System;
 using Android.App;
 using Android.Content;
 using Android.OS;
+using Android.Widget;
 using AndroidX.Core.App;
 using OrbisExtract.App.Localization;
 
@@ -119,7 +120,39 @@ public static class AndroidNotificationHelper
             var cancelPending = PendingIntent.GetService(context, 11, cancelIntent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
             builder.AddAction(global::Android.Resource.Drawable.IcMenuCloseClearCancel, AppLanguage.Text("Cancelar"), cancelPending);
         }
+        if (ongoing)
+        {
+            // MIUI/HyperOS Classic often hides standard notification actions.
+            // Place real PendingIntent controls inside the compact content itself.
+            var compact = BuildCompactControls(context, detail);
+            builder.SetCustomContentView(compact)
+                .SetCustomBigContentView(compact)
+                .SetStyle(new NotificationCompat.DecoratedCustomViewStyle());
+        }
         return builder.Build();
+    }
+
+    private static RemoteViews BuildCompactControls(Context context, string detail)
+    {
+        var views = new RemoteViews(context.PackageName, Resource.Layout.notification_extraction);
+        views.SetTextViewText(Resource.Id.extraction_title, $"OrbisExtract · {AppLanguage.Text(_lastState)}");
+        views.SetTextViewText(Resource.Id.extraction_detail, $"{_lastProgress}% · {detail}");
+        views.SetProgressBar(Resource.Id.extraction_progress, 100, _lastProgress, _lastTotal <= 0);
+        views.SetTextViewText(Resource.Id.extraction_pause, AppLanguage.Text(_paused ? "Retomar" : "Pausar"));
+        views.SetTextViewText(Resource.Id.extraction_cancel, AppLanguage.Text("Cancelar"));
+
+        var toggleIntent = new Intent(context, typeof(ExtractionForegroundService));
+        toggleIntent.SetAction(_paused ? ActionResume : ActionPause);
+        var togglePending = PendingIntent.GetService(context, _paused ? 13 : 12, toggleIntent,
+            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+        views.SetOnClickPendingIntent(Resource.Id.extraction_pause, togglePending);
+
+        var cancelIntent = new Intent(context, typeof(ExtractionForegroundService));
+        cancelIntent.SetAction(ActionCancel);
+        var cancelPending = PendingIntent.GetService(context, 11, cancelIntent,
+            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+        views.SetOnClickPendingIntent(Resource.Id.extraction_cancel, cancelPending);
+        return views;
     }
 
     private static PendingIntent PendingIntentForStatus(Context context)
