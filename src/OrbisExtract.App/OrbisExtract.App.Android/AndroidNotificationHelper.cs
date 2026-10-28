@@ -15,9 +15,12 @@ public static class AndroidNotificationHelper
     internal const int NotificationId = 1;
     internal const string ActionStart = "orbisextract.action.START";
     internal const string ActionFinish = "orbisextract.action.FINISH";
+    internal const string ActionTogglePause = "orbisextract.action.TOGGLE_PAUSE";
     internal const string ActionPause = "orbisextract.action.PAUSE";
     internal const string ActionResume = "orbisextract.action.RESUME";
     internal const string ActionCancel = "orbisextract.action.CANCEL";
+    public static event Action? TogglePauseRequested;
+    internal static void RequestTogglePause() => TogglePauseRequested?.Invoke();
     public static event Action? PauseRequested;
     public static event Action? ResumeRequested;
     internal static void RequestPause() => PauseRequested?.Invoke();
@@ -95,7 +98,7 @@ public static class AndroidNotificationHelper
     {
         _elapsed = elapsed;
         var context = _context;
-        if (context is not null)
+        if (context is not null && _lastState != "Extração concluída")
             NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, true));
     }
 
@@ -142,8 +145,8 @@ public static class AndroidNotificationHelper
         views.SetTextViewText(Resource.Id.extraction_cancel, AppLanguage.Text("Cancelar"));
 
         var toggleIntent = new Intent(context, typeof(ExtractionForegroundService));
-        toggleIntent.SetAction(_paused ? ActionResume : ActionPause);
-        var togglePending = PendingIntent.GetService(context, _paused ? 13 : 12, toggleIntent,
+        toggleIntent.SetAction(ActionTogglePause);
+        var togglePending = PendingIntent.GetService(context, 12, toggleIntent,
             PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
         views.SetOnClickPendingIntent(Resource.Id.extraction_pause, togglePending);
 
