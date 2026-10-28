@@ -143,6 +143,8 @@ public sealed class MainView : UserControl
         _cancel.Margin = new Thickness(8, 0, 0, 0);
         _cancel.Foreground = UiTheme.Brush(UiTheme.Primary);
         _cancel.Click += (_, _) => _run?.Cancel();
+        if (OperatingSystem.IsAndroid())
+            OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested += CancelFromNotification;
 
         _logPanel = new StackPanel { Spacing = 0 };
         _logScroll = new ScrollViewer
@@ -267,8 +269,21 @@ public sealed class MainView : UserControl
         foreach (var button in this.GetLogicalDescendants().OfType<Button>())
             if (button.Content is string text) _localizedButtons[button] = text;
         AppLanguage.Changed += ApplyLanguage;
-        DetachedFromVisualTree += (_, _) => AppLanguage.Changed -= ApplyLanguage;
-        AttachedToVisualTree += (_, _) => { AppLanguage.Changed -= ApplyLanguage; AppLanguage.Changed += ApplyLanguage; };
+        DetachedFromVisualTree += (_, _) =>
+        {
+            AppLanguage.Changed -= ApplyLanguage;
+            if (OperatingSystem.IsAndroid()) OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested -= CancelFromNotification;
+        };
+        AttachedToVisualTree += (_, _) =>
+        {
+            AppLanguage.Changed -= ApplyLanguage;
+            AppLanguage.Changed += ApplyLanguage;
+            if (OperatingSystem.IsAndroid())
+            {
+                OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested -= CancelFromNotification;
+                OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested += CancelFromNotification;
+            }
+        };
         ApplyLanguage();
         SetLocalized(_fileName, () => AppLanguage.Text("Nenhum pacote selecionado"));
         SetLocalized(_destinationName, () => AppLanguage.Text("Nenhuma pasta escolhida"));
@@ -712,6 +727,8 @@ public sealed class MainView : UserControl
             return message[..(prefixEnd + 3)] + AppLanguage.Message(message[(prefixEnd + 3)..]);
         return AppLanguage.Message(message);
     }
+
+    private void CancelFromNotification() => Dispatcher.UIThread.Post(() => _run?.Cancel());
 
     private void Log(string message)
     {
