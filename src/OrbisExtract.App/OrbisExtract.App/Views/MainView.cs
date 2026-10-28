@@ -43,7 +43,7 @@ public sealed class MainView : UserControl
     // Monitor
     private readonly TextBlock _stateTitle, _counter, _percent, _elapsed, _status;
     private readonly ProgressBar _progress;
-    private readonly Button _cancel;
+    private readonly Button _cancel, _pause;
     private readonly StackPanel _logPanel;
     private readonly ScrollViewer _logScroll;
     private readonly Border _banner;
@@ -137,6 +137,11 @@ public sealed class MainView : UserControl
             Foreground = UiTheme.Brush(UiTheme.Progress),
             Background = UiTheme.Brush(UiTheme.Outline)
         };
+        _pause = UiTheme.OutlinedButton("Pausar");
+        _pause.IsVisible = false;
+        _pause.VerticalAlignment = VerticalAlignment.Center;
+        _pause.Foreground = UiTheme.Brush(UiTheme.Primary);
+        _pause.Click += (_, _) => TogglePause();
         _cancel = UiTheme.OutlinedButton("Cancelar");
         _cancel.IsVisible = false;
         _cancel.HorizontalAlignment = HorizontalAlignment.Right;
@@ -189,11 +194,13 @@ public sealed class MainView : UserControl
         Grid.SetColumn(_percent, 1);
         header.Children.Add(_percent);
 
-        var metaRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        var metaRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto"), ColumnSpacing = 8, VerticalAlignment = VerticalAlignment.Center };
         metaRow.Children.Add(_counter);
         Grid.SetColumn(_elapsed, 1);
         metaRow.Children.Add(_elapsed);
-        Grid.SetColumn(_cancel, 2);
+        Grid.SetColumn(_pause, 2);
+        metaRow.Children.Add(_pause);
+        Grid.SetColumn(_cancel, 3);
         metaRow.Children.Add(_cancel);
 
         _monitorCard = UiTheme.Card(new StackPanel
@@ -418,6 +425,7 @@ public sealed class MainView : UserControl
     {
         foreach (var (label, original) in _localizedLabels) label.Text = AppLanguage.Message(original);
         foreach (var (button, original) in _localizedButtons) button.Content = AppLanguage.Text(original);
+        if (_pauseGate is not null) _pause.Content = AppLanguage.Text(_pauseGate.IsPaused ? "Retomar" : "Pausar");
         foreach (var (button, (mode, label, name, check)) in _languageChoices)
         {
             var selected = AppLanguage.Mode == mode;
@@ -742,20 +750,35 @@ public sealed class MainView : UserControl
         return AppLanguage.Message(message);
     }
 
-    private void PauseFromNotification() => Dispatcher.UIThread.Post(() =>
+    private void PauseFromNotification() => Dispatcher.UIThread.Post(PauseExtraction);
+
+    private void PauseExtraction()
     {
         if (_run is null || _run.IsCancellationRequested || _pauseGate is null) return;
         _pauseGate.Pause();
+        _clock.Stop();
+        _pause.Content = AppLanguage.Text("Retomar");
         OrbisExtract.App.Shared.AppNotificationHelper.SetPaused(true);
         SetLocalized(_stateTitle, () => AppLanguage.Text("Pausado"));
-    });
+    }
 
-    private void ResumeFromNotification() => Dispatcher.UIThread.Post(() =>
+    private void ResumeFromNotification() => Dispatcher.UIThread.Post(ResumeExtraction);
+
+    private void ResumeExtraction()
     {
         if (_run is null || _pauseGate is null) return;
         _pauseGate.Resume();
+        _clock.Start();
+        _pause.Content = AppLanguage.Text("Pausar");
         OrbisExtract.App.Shared.AppNotificationHelper.SetPaused(false);
-    });
+        SetLocalized(_stateTitle, () => AppLanguage.Text("Extraindo"));
+    }
+
+    private void TogglePause()
+    {
+        if (_pauseGate?.IsPaused == true) ResumeExtraction();
+        else PauseExtraction();
+    }
 
     private void CancelFromNotification() => Dispatcher.UIThread.Post(() => _run?.Cancel());
 
@@ -959,7 +982,8 @@ public sealed class MainView : UserControl
         var token = _run.Token;
 
         ShowBanner(null);
-        _cancel.IsVisible = _elapsed.IsVisible = _status.IsVisible = true;
+        _cancel.IsVisible = _pause.IsVisible = _elapsed.IsVisible = _status.IsVisible = true;
+        _pause.Content = AppLanguage.Text("Pausar");
         SetLocalized(_stateTitle, () => AppLanguage.Text("Preparando"));
         SetLocalized(_counter, () => AppLanguage.Text("Preparando a extração…"));
         _status.Text = "";
@@ -976,6 +1000,7 @@ public sealed class MainView : UserControl
         string? tempPath = null;
         Stream? packageStream = null;
         System.Timers.Timer? timer = null;
+        long lastNotificationSecond = -1;
 
         try
         {
@@ -1009,8 +1034,16 @@ public sealed class MainView : UserControl
             timer = new System.Timers.Timer(200);
             timer.Elapsed += (s, e) => Dispatcher.UIThread.Post(() =>
             {
-                if (_clock.IsRunning)
+                if (_run is not null)
+                {
                     _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
+                    var second = (long)_clock.Elapsed.TotalSeconds;
+                    if (second != lastNotificationSecond)
+                    {
+                        lastNotificationSecond = second;
+                        OrbisExtract.App.Shared.AppNotificationHelper.UpdateElapsed(_clock.Elapsed);
+                    }
+                }
             });
             timer.AutoReset = true;
             timer.Start();
@@ -1146,7 +1179,7 @@ public sealed class MainView : UserControl
             timer?.Dispose();
             _clock.Stop();
             _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
-            _cancel.IsVisible = false;
+            _cancel.IsVisible = _pause.IsVisible = false;
             _pauseGate?.Resume();
             _pauseGate = null;
             _run?.Dispose();
