@@ -17,7 +17,7 @@ public sealed class App : Application
 {
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
-    // Desktop-only custom title bar. The OS keeps the resizable window border.
+    // Desktop-only custom title bar without the native gray Windows border.
     private static Window CreateDesktopWindow(Control content)
     {
         var window = new Window
@@ -28,7 +28,7 @@ public sealed class App : Application
             MinWidth = 360,
             MinHeight = 520,
             Background = UiTheme.Brush(UiTheme.Background),
-            WindowDecorations = WindowDecorations.BorderOnly
+            WindowDecorations = WindowDecorations.None
         };
 
         var minimize = TitleButton("─", "Minimizar");
