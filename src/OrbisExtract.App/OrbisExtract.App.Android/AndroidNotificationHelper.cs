@@ -56,7 +56,8 @@ public static class AndroidNotificationHelper
     public static void Initialize(Context context)
     {
         _context = context.ApplicationContext;
-        CreateNotificationChannel();
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+            CreateNotificationChannel();
     }
 
     public static void StartExtraction(string packageName, string destinationName, long totalFiles, long totalBytes)

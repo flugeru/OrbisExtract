@@ -28,7 +28,8 @@ public class MainActivity : AvaloniaMainActivity
         base.OnCreate(savedInstanceState);
 
         // Cria o canal de notificação imediatamente para evitar erros em versões recentes do Android
-        CreateNotificationChannel();
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+            CreateNotificationChannel();
 
         // Inicializa o helper de notificações
         AppNotificationHelper.Initialize();
@@ -38,17 +39,22 @@ public class MainActivity : AvaloniaMainActivity
             RequestNotificationPermission();
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("android30.0")]
+    private bool IsPlayInstall30(string packageName) =>
+        PackageManager?.GetInstallSourceInfo(packageName)?.InstallingPackageName == "com.android.vending";
+
     private bool IsInstalledFromPlayStore()
     {
         var packageName = PackageName;
         if (string.IsNullOrEmpty(packageName) || PackageManager is null) return false;
         if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
-            return PackageManager.GetInstallSourceInfo(packageName)?.InstallingPackageName == "com.android.vending";
+            return IsPlayInstall30(packageName);
 #pragma warning disable CA1422 // Only reached on Android 29 or earlier.
         return PackageManager.GetInstallerPackageName(packageName) == "com.android.vending";
 #pragma warning restore CA1422
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("android33.0")]
     private void RequestNotificationPermission()
     {
         RequestPermissions(new[] { global::Android.Manifest.Permission.PostNotifications }, 1001);

@@ -18,7 +18,7 @@ public sealed class ExtractionForegroundService : Service
     public override IBinder? OnBind(Intent? intent) => null;
 
     [System.Runtime.Versioning.UnsupportedOSPlatform("android33.0")]
-    private void StopForegroundLegacy() => StopForeground(true);
+    private void StopForegroundCompat() => StopForeground(true);
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {

@@ -32,7 +32,6 @@ public sealed class App : Application
             // while drawing the client area and title bar ourselves.
             WindowDecorations = WindowDecorations.Full,
             ExtendClientAreaToDecorationsHint = true,
-            ExtendClientAreaChromeHints = Avalonia.Platform.ExtendClientAreaChromeHints.NoChrome,
             ExtendClientAreaTitleBarHeightHint = 0
         };
 
