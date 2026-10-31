@@ -39,9 +39,12 @@ public class MainActivity : AvaloniaMainActivity
             RequestNotificationPermission();
     }
 
-    [System.Runtime.Versioning.SupportedOSPlatform("android30.0")]
-    private bool IsPlayInstall30(string packageName) =>
-        PackageManager?.GetInstallSourceInfo(packageName)?.InstallingPackageName == "com.android.vending";
+    private bool IsPlayInstall30(string packageName)
+    {
+#pragma warning disable CA1416 // Called only when SDK >= 30.
+        return PackageManager?.GetInstallSourceInfo(packageName)?.InstallingPackageName == "com.android.vending";
+#pragma warning restore CA1416
+    }
 
     private bool IsInstalledFromPlayStore()
     {
@@ -54,10 +57,11 @@ public class MainActivity : AvaloniaMainActivity
 #pragma warning restore CA1422
     }
 
-    [System.Runtime.Versioning.SupportedOSPlatform("android33.0")]
     private void RequestNotificationPermission()
     {
+#pragma warning disable CA1416 // Called only when SDK >= 33.
         RequestPermissions(new[] { global::Android.Manifest.Permission.PostNotifications }, 1001);
+#pragma warning restore CA1416
     }
 
     protected override void OnDestroy()
@@ -65,9 +69,9 @@ public class MainActivity : AvaloniaMainActivity
         base.OnDestroy();
     }
 
-    [System.Runtime.Versioning.SupportedOSPlatform("android26.0")]
     private void CreateNotificationChannel()
     {
+#pragma warning disable CA1416 // Called only when SDK >= 26.
         if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
         {
             var channel = new NotificationChannel(
@@ -81,6 +85,7 @@ public class MainActivity : AvaloniaMainActivity
             var nm = GetNotificationManager();
             nm.CreateNotificationChannel(channel);
         }
+#pragma warning restore CA1416
     }
 
     private NotificationManagerCompat GetNotificationManager() => 

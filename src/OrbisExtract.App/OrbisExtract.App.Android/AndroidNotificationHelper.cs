@@ -74,7 +74,8 @@ public static class AndroidNotificationHelper
         _lastTotal = totalFiles;
         _lastState = "Preparando extração";
         _lastCurrentFile = null;
-        CreateNotificationChannel();
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+            CreateNotificationChannel();
 
         var intent = new Intent(context, typeof(ExtractionForegroundService));
         intent.SetAction(ActionStart);
@@ -225,13 +226,15 @@ public static class AndroidNotificationHelper
         context.StartService(intent);
     }
 
-    [System.Runtime.Versioning.SupportedOSPlatform("android26.0")]
     private static void StartForegroundService26(Context context, Intent intent) =>
+#pragma warning disable CA1416 // Called only when SDK >= 26.
         context.StartForegroundService(intent);
+#pragma warning restore CA1416
 
     [System.Runtime.Versioning.SupportedOSPlatform("android26.0")]
     private static void CreateNotificationChannel()
     {
+#pragma warning disable CA1416 // Called only when SDK >= 26.
         var context = _context;
         if (context is null || Build.VERSION.SdkInt < BuildVersionCodes.O) return;
         var channel = new NotificationChannel(ChannelId, AppLanguage.Text("OrbisExtract · Extração"), NotificationImportance.Low)
@@ -241,5 +244,6 @@ public static class AndroidNotificationHelper
         channel.EnableVibration(false);
         channel.SetSound(null, null);
         NotificationManagerCompat.From(context)?.CreateNotificationChannel(channel);
+#pragma warning restore CA1416
     }
 }
