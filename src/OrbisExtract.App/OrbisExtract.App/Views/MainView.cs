@@ -407,39 +407,64 @@ public sealed class MainView : UserControl
     private Border CreateHistoryOverlay()
     {
         var close = UiTheme.ActionButton("Fechar");
-        var body = new StackPanel
+        var heading = new StackPanel
         {
-            Spacing = 14,
+            Spacing = 6,
             Children =
             {
                 UiTheme.Text("Histórico de extrações", 22, UiTheme.TextPrimary, FontWeight.SemiBold),
-                UiTheme.Text("Relatórios locais por pacote PKG", 13, UiTheme.TextSecondary),
-                _historyList,
-                close
+                UiTheme.Text("Relatórios locais por pacote PKG", 13, UiTheme.TextSecondary)
             }
         };
-        var card = UiTheme.Card(new ScrollViewer
+        var listContent = new StackPanel
         {
-            Content = body,
+            Spacing = 16,
+            Children = { heading, _historyList }
+        };
+        // Match the About dialog: one padded card, a scrollable body and a
+        // separate fixed footer. Do not let the report cards touch the frame.
+        var scroll = new ScrollViewer
+        {
+            Content = listContent,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
-        });
-        card.Width = 540;
-        card.Padding = new Thickness(0);
-        card.HorizontalAlignment = HorizontalAlignment.Center;
-        card.VerticalAlignment = VerticalAlignment.Center;
+        };
+        var layout = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), RowSpacing = 14 };
+        layout.Children.Add(scroll);
+        Grid.SetRow(close, 1);
+        layout.Children.Add(close);
+
+        var dialogCard = new Border
+        {
+            MaxWidth = 560,
+            MaxHeight = 600,
+            Margin = new Thickness(12),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            CornerRadius = new CornerRadius(UiTheme.CardRadius),
+            ClipToBounds = true,
+            Child = UiTheme.Card(layout, 20)
+        };
+        var overlayGrid = new Grid
+        {
+            RowDefinitions = new RowDefinitions("*"),
+            ColumnDefinitions = new ColumnDefinitions("*")
+        };
+        overlayGrid.Children.Add(dialogCard);
+        overlayGrid.SizeChanged += (_, e) =>
+        {
+            dialogCard.MaxWidth = Math.Min(560, Math.Max(0, e.NewSize.Width - 24));
+            dialogCard.MaxHeight = Math.Min(600, Math.Max(0, e.NewSize.Height - 24));
+        };
         var overlay = new Border
         {
             IsVisible = false,
             Background = new SolidColorBrush(Color.Parse("#CC000000")),
-            Child = card
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Child = overlayGrid
         };
         close.Click += (_, _) => overlay.IsVisible = false;
-        overlay.SizeChanged += (_, e) =>
-        {
-            card.Width = Math.Min(540, Math.Max(0, e.NewSize.Width - 32));
-            card.MaxHeight = Math.Max(0, e.NewSize.Height - 32);
-        };
         return overlay;
     }
 
@@ -459,6 +484,7 @@ public sealed class MainView : UserControl
             var subtitle = UiTheme.Text(
                 $"{entry.StartedAt.ToLocalTime():dd/MM/yyyy HH:mm} · {AppLanguage.Text(entry.Result)} · {TimeSpan.FromSeconds(entry.ElapsedSeconds):hh\\:mm\\:ss}",
                 12, UiTheme.Primary);
+            subtitle.TextWrapping = TextWrapping.Wrap;
             var details = UiTheme.Text(
                 $"{AppLanguage.Text("Destino:")} {entry.Destination}\n{entry.Files:N0} {AppLanguage.Text("arquivos")} · {entry.Bytes / 1024d / 1024d:N1} MiB",
                 12, UiTheme.TextSecondary);
@@ -471,6 +497,7 @@ public sealed class MainView : UserControl
                 eventPanel.Children.Add(line);
             }
             var toggle = UiTheme.OutlinedButton(AppLanguage.Text("Ver relatório"));
+            toggle.HorizontalAlignment = HorizontalAlignment.Stretch;
             toggle.Click += (_, _) => eventPanel.IsVisible = !eventPanel.IsVisible;
             _historyList.Children.Add(UiTheme.Card(new StackPanel
             {
