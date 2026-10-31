@@ -22,6 +22,28 @@ public sealed class App : Application
     private static extern int DwmSetWindowAttribute(
         IntPtr hwnd, int attribute, ref uint value, int valueSize);
 
+    // Keep the native resize/snap window styles while removing the non-client
+    // top strip. The callback must stay rooted for the lifetime of the window.
+    private delegate IntPtr SubclassProc(IntPtr hwnd, uint message, IntPtr wParam,
+        IntPtr lParam, UIntPtr subclassId, IntPtr referenceData);
+
+    [DllImport("comctl32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowSubclass(IntPtr hwnd, SubclassProc callback,
+        UIntPtr subclassId, IntPtr referenceData);
+
+    [DllImport("comctl32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool RemoveWindowSubclass(IntPtr hwnd, SubclassProc callback,
+        UIntPtr subclassId);
+
+    [DllImport("comctl32.dll")]
+    private static extern IntPtr DefSubclassProc(IntPtr hwnd, uint message,
+        IntPtr wParam, IntPtr lParam);
+
+    private static readonly System.Collections.Generic.Dictionary<IntPtr, SubclassProc>
+        ActiveSubclasses = new();
+
     // Desktop-only custom title bar without the native gray Windows border.
     private static Window CreateDesktopWindow(Control content)
     {
@@ -53,6 +75,28 @@ public sealed class App : Application
             const uint dwmColorNone = 0xFFFFFFFE;
             uint color = dwmColorNone;
             _ = DwmSetWindowAttribute(handle, dwmwaBorderColor, ref color, sizeof(uint));
+
+            // WM_NCCALCSIZE: remove the native top caption area while keeping
+            // WS_THICKFRAME / maximize styles required by Windows Snap.
+            // When maximized, use the OS calculation to respect the work area.
+            SubclassProc callback = (hwnd, message, wParam, lParam, id, data) =>
+            {
+                if (message == 0x0083 && wParam != IntPtr.Zero &&
+                    window.WindowState == WindowState.Normal)
+                    return IntPtr.Zero;
+                return DefSubclassProc(hwnd, message, wParam, lParam);
+            };
+            if (SetWindowSubclass(handle, callback, UIntPtr.Zero, IntPtr.Zero))
+                ActiveSubclasses[handle] = callback;
+        };
+        window.Closed += (_, _) =>
+        {
+            var handle = window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+            if (handle != IntPtr.Zero && ActiveSubclasses.TryGetValue(handle, out var callback))
+            {
+                RemoveWindowSubclass(handle, callback, UIntPtr.Zero);
+                ActiveSubclasses.Remove(handle);
+            }
         };
 
         var minimize = TitleButton("─", "Minimizar");
