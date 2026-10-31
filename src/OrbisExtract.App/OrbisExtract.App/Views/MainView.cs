@@ -571,19 +571,16 @@ public sealed class MainView : UserControl
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(UiTheme.CardRadius),
             Padding = new Thickness(14),
-            Child = new ScrollViewer
+            // The About dialog already has a parent ScrollViewer. A second,
+            // fixed-height viewer here clips glyphs against the rounded border
+            // whenever its content scrolls. Let the parent scroll the whole
+            // license card instead, so text never passes behind its corners.
+            Child = new TextBlock
             {
-                MaxHeight = 120,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
-                // Keep breathing room inside the scrolling content itself.
-                // Border padding alone does not prevent the first/last line from
-                // being clipped by the ScrollViewer viewport at its endpoints.
-                Content = new Border
-                {
-                    Padding = new Thickness(0, 10, 0, 12),
-                    Child = UiTheme.Text(license, 12, UiTheme.TextSecondary)
-                }
+                Text = license,
+                FontSize = 12,
+                Foreground = UiTheme.Brush(UiTheme.TextSecondary),
+                TextWrapping = TextWrapping.Wrap
             }
         };
         _aboutChangelog = UiTheme.Text("• Configurações de idioma: automático, português ou inglês.\n• Idioma inicial de acordo com o sistema; escolha manual salva no aparelho.", 13, UiTheme.TextSecondary);
