@@ -200,7 +200,22 @@ public sealed class MainView : UserControl
         Grid.SetColumn(_percent, 1);
         header.Children.Add(_percent);
 
+        // Wrap the extraction controls on narrow phones rather than compressing the
+        // file counter and elapsed time into an unreadable single row.
         var metaRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto"), ColumnSpacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        metaRow.SizeChanged += (_, e) =>
+        {
+            var compact = e.NewSize.Width < 380;
+            metaRow.RowDefinitions = new RowDefinitions(compact ? "Auto,Auto" : "Auto");
+            metaRow.ColumnDefinitions = new ColumnDefinitions(compact ? "*,Auto,Auto" : "*,Auto,Auto,Auto");
+            Grid.SetRow(_counter, 0);
+            Grid.SetRow(_elapsed, compact ? 1 : 0);
+            Grid.SetRow(_pause, compact ? 1 : 0);
+            Grid.SetRow(_cancel, compact ? 1 : 0);
+            Grid.SetColumn(_elapsed, compact ? 0 : 1);
+            Grid.SetColumn(_pause, compact ? 1 : 2);
+            Grid.SetColumn(_cancel, compact ? 2 : 3);
+        };
         metaRow.Children.Add(_counter);
         Grid.SetColumn(_elapsed, 1);
         metaRow.Children.Add(_elapsed);
@@ -260,7 +275,7 @@ public sealed class MainView : UserControl
         {
             ApplyContentLayout(e.NewSize.Width);
             // On narrow phones keep the subtitle full-width below the action icons.
-            var narrow = e.NewSize.Width < 390;
+            var narrow = e.NewSize.Width < 520;
             pageHeader.ColumnDefinitions = new ColumnDefinitions(narrow ? "*" : "*,Auto");
             pageHeader.RowDefinitions = new RowDefinitions(narrow ? "Auto,Auto" : "Auto");
             Grid.SetRow(headerActions, 0);
@@ -410,6 +425,7 @@ public sealed class MainView : UserControl
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
         });
         card.Width = 540;
+        card.Padding = new Thickness(0);
         card.HorizontalAlignment = HorizontalAlignment.Center;
         card.VerticalAlignment = VerticalAlignment.Center;
         var overlay = new Border
@@ -779,6 +795,7 @@ public sealed class MainView : UserControl
         Place(_packageCard, 0, 0, 1);
         Place(_settingsCard, columns == 3 ? 0 : 1, columns == 3 ? 1 : 0, 1);
         Place(_monitorCard, columns == 1 ? 2 : 0, columns == 1 ? 0 : columns == 2 ? 1 : 2, 1);
+        if (columns == 2) Grid.SetRowSpan(_monitorCard, 2);
         _packageCard.IsVisible = true;
         _settingsCard.IsVisible = true;
         _monitorCard.IsVisible = true;
@@ -789,6 +806,7 @@ public sealed class MainView : UserControl
         Grid.SetRow(c, row);
         Grid.SetColumn(c, col);
         Grid.SetColumnSpan(c, colSpan);
+        Grid.SetRowSpan(c, 1);
     }
 
     // ===================== Helpers de UI =====================
