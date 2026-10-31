@@ -37,9 +37,15 @@ UninstallDisplayIcon={app}\{#AppExeName}
 UninstallDisplayName={#AppName}
 Compression=lzma2
 SolidCompression=yes
-WizardStyle=modern
-WizardImageBackColor=$00171310
-WizardSmallImageBackColor=$00171310
+WizardStyle=modern dark windows11 includetitlebar hidebevels
+; Inno Setup 6.6+ styles the entire wizard, including the license memo,
+; radio buttons, action buttons and uninstaller, instead of only the header.
+; Match OrbisExtract's dark charcoal/purple surfaces.
+WizardBackColor=#17131D
+WizardImageBackColor=#17131D
+WizardSmallImageBackColor=#17131D
+WizardImageFile=
+WizardSmallImageFile=
 ; Comportamento de atualização: com o mesmo AppId, o instalador lê as
 ; configurações da versão anterior do registro e instala por cima.
 UsePreviousAppDir=yes
@@ -51,17 +57,8 @@ CloseApplications=yes
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"; LicenseFile: "license.pt-BR.txt"
 Name: "english"; MessagesFile: "compiler:Default.isl"; LicenseFile: "license.en.txt"
 
-; Installer language is selected automatically from Windows UI language by Inno Setup.
-; Users can choose another language in the installer's language dialog.
-; Purple/charcoal palette to match the OrbisExtract desktop application.
-[Code]
-procedure InitializeWizard;
-begin
-  WizardForm.Color := $00171310;
-  WizardForm.MainPanel.Color := $00171310;
-  WizardForm.PageNameLabel.Font.Color := $00E9DEFF;
-  WizardForm.PageDescriptionLabel.Font.Color := $00B7A8D0;
-end;
+; The Inno Setup language selection follows Windows, with manual override.
+; Built-in dark styling preserves high contrast accessibility and native controls.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
