@@ -28,9 +28,9 @@ public sealed class App : Application
             MinWidth = 360,
             MinHeight = 520,
             Background = UiTheme.Brush(UiTheme.Background),
-            // A fully decorated window draws a second Windows caption over the
-            // Avalonia title bar. Keep only the border, not native caption buttons.
-            WindowDecorations = WindowDecorations.BorderOnly
+            // The Avalonia title bar and invisible resize handles replace all
+            // native Windows chrome, including the remaining gray top border.
+            WindowDecorations = WindowDecorations.None
         };
 
         var minimize = TitleButton("─", "Minimizar");
