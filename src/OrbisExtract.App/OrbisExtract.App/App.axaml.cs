@@ -28,7 +28,7 @@ public sealed class App : Application
             MinWidth = 360,
             MinHeight = 520,
             Background = UiTheme.Brush(UiTheme.Background),
-            SystemDecorations = SystemDecorations.BorderOnly
+            WindowDecorations = WindowDecorations.BorderOnly
         };
 
         var minimize = TitleButton("─", "Minimizar");

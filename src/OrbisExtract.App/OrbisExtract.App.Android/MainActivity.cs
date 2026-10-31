@@ -22,7 +22,7 @@ public class MainActivity : AvaloniaMainActivity
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        UpdateChecker.IsPlayInstall = () => PackageManager?.GetInstallerPackageName(PackageName ?? "") == "com.android.vending";
+        UpdateChecker.IsPlayInstall = IsInstalledFromPlayStore;
         UpdateChecker.GetInstalledVersion = () => PackageManager?.GetPackageInfo(PackageName ?? "", 0)?.VersionName ?? "1.0.4";
         UpdateChecker.OpenAndroidUrl = url => StartActivity(new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(url)));
         base.OnCreate(savedInstanceState);
@@ -38,7 +38,17 @@ public class MainActivity : AvaloniaMainActivity
             RequestNotificationPermission();
     }
 
-    [System.Runtime.Versioning.SupportedOSPlatform("android33.0")]
+    private bool IsInstalledFromPlayStore()
+    {
+        var packageName = PackageName;
+        if (string.IsNullOrEmpty(packageName) || PackageManager is null) return false;
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
+            return PackageManager.GetInstallSourceInfo(packageName)?.InstallingPackageName == "com.android.vending";
+#pragma warning disable CA1422 // Only reached on Android 29 or earlier.
+        return PackageManager.GetInstallerPackageName(packageName) == "com.android.vending";
+#pragma warning restore CA1422
+    }
+
     private void RequestNotificationPermission()
     {
         RequestPermissions(new[] { global::Android.Manifest.Permission.PostNotifications }, 1001);
@@ -49,6 +59,7 @@ public class MainActivity : AvaloniaMainActivity
         base.OnDestroy();
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("android26.0")]
     private void CreateNotificationChannel()
     {
         if (Build.VERSION.SdkInt >= BuildVersionCodes.O)

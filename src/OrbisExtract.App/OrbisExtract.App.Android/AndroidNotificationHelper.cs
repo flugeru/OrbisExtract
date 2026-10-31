@@ -80,7 +80,7 @@ public static class AndroidNotificationHelper
         intent.PutExtra("packageName", packageName);
         intent.PutExtra("destinationName", destinationName);
         if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-            context.StartForegroundService(intent);
+            StartForegroundService26(context, intent);
         else
             context.StartService(intent);
 
@@ -204,7 +204,7 @@ public static class AndroidNotificationHelper
         var context = _context;
         if (context is null) return;
         FinishService(context, ActionFinish);
-        NotificationManagerCompat.From(context).Cancel(NotificationId);
+        NotificationManagerCompat.From(context)?.Cancel(NotificationId);
     }
 
     public static void ShowError(string message)
@@ -224,6 +224,11 @@ public static class AndroidNotificationHelper
         context.StartService(intent);
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("android26.0")]
+    private static void StartForegroundService26(Context context, Intent intent) =>
+        context.StartForegroundService(intent);
+
+    [System.Runtime.Versioning.SupportedOSPlatform("android26.0")]
     private static void CreateNotificationChannel()
     {
         var context = _context;
