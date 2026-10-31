@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -17,6 +18,10 @@ public sealed class App : Application
 {
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
+    [DllImport("dwmapi.dll", ExactSpelling = true)]
+    private static extern int DwmSetWindowAttribute(
+        IntPtr hwnd, int attribute, ref uint value, int valueSize);
+
     // Desktop-only custom title bar without the native gray Windows border.
     private static Window CreateDesktopWindow(Control content)
     {
@@ -28,9 +33,26 @@ public sealed class App : Application
             MinWidth = 360,
             MinHeight = 520,
             Background = UiTheme.Brush(UiTheme.Background),
-            // The Avalonia title bar and invisible resize handles replace all
-            // native Windows chrome, including the remaining gray top border.
-            WindowDecorations = WindowDecorations.None
+            // Preserve native Win32 window styles needed for Windows Snap.
+            // The custom Avalonia title bar stays in place.
+            WindowDecorations = WindowDecorations.BorderOnly
+        };
+
+        // Windows 11: suppress the DWM accent/border without removing the
+        // native window styles used by Win+Arrow and snap arrangements.
+        window.Opened += (_, _) =>
+        {
+            if (!OperatingSystem.IsWindows())
+                return;
+
+            var handle = window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+            if (handle == IntPtr.Zero)
+                return;
+
+            const int dwmwaBorderColor = 34;
+            const uint dwmColorNone = 0xFFFFFFFE;
+            uint color = dwmColorNone;
+            _ = DwmSetWindowAttribute(handle, dwmwaBorderColor, ref color, sizeof(uint));
         };
 
         var minimize = TitleButton("─", "Minimizar");
