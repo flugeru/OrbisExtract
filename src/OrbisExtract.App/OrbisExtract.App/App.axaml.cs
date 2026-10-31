@@ -90,7 +90,7 @@ public sealed class App : Application
         Grid.SetColumn(buttons, 1);
         titleBar.Children.Add(buttons);
 
-        var layout = new Grid { RowDefinitions = new RowDefinitions("40,*") };
+        var layout = new Grid { RowDefinitions = new RowDefinitions("40,*"), Background = UiTheme.Brush(UiTheme.Background) };
         layout.Children.Add(titleBar);
         Grid.SetRow(content, 1);
         layout.Children.Add(content);
