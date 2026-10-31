@@ -28,11 +28,9 @@ public sealed class App : Application
             MinWidth = 360,
             MinHeight = 520,
             Background = UiTheme.Brush(UiTheme.Background),
-            // Keep native Windows window styles for Snap Layouts / Win+Arrow
-            // while drawing the client area and title bar ourselves.
-            WindowDecorations = WindowDecorations.Full,
-            ExtendClientAreaToDecorationsHint = true,
-            ExtendClientAreaTitleBarHeightHint = 0
+            // A fully decorated window draws a second Windows caption over the
+            // Avalonia title bar. Keep only the border, not native caption buttons.
+            WindowDecorations = WindowDecorations.BorderOnly
         };
 
         var minimize = TitleButton("─", "Minimizar");
