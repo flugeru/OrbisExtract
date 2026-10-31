@@ -40,12 +40,12 @@ UninstallDisplayName={#AppName}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern dark windows11 includetitlebar hidebevels
-; Exact background token from UiTheme.Background (#0B0F14).
+; Neutral charcoal background matching the requested #252525 reference.
 ; Native dark controls are styled by Inno Setup; its built-in accent
 ; is not independently configurable without a custom VCL style file.
-WizardBackColor=#0B0F14
-WizardImageBackColor=#0B0F14
-WizardSmallImageBackColor=#0B0F14
+WizardBackColor=#252525
+WizardImageBackColor=#252525
+WizardSmallImageBackColor=#252525
 WizardImageFile=
 WizardSmallImageFile=
 ; Comportamento de atualização: com o mesmo AppId, o instalador lê as
@@ -54,6 +54,10 @@ UsePreviousAppDir=yes
 UsePreviousGroup=yes
 ; Fecha o programa se estiver rodando durante a instalação
 CloseApplications=yes
+
+; Avoid the native Windows blue highlight in the language dropdown.
+; Inno Setup still detects the Windows UI language automatically.
+ShowLanguageDialog=no
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"; LicenseFile: "license.pt-BR.txt"
