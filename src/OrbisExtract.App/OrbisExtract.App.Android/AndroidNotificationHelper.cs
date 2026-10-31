@@ -114,19 +114,22 @@ public static class AndroidNotificationHelper
         var detail = _lastCurrentFile is not null
             ? _lastCurrentFile
             : (_lastTotal > 0 ? $"{_lastFiles:N0} {AppLanguage.Text("de")} {_lastTotal:N0} {AppLanguage.Text("arquivos")} · {_lastProgress}%" : $"{_lastFiles:N0} {AppLanguage.Text("arquivos processados")}");
-        var builder = new NotificationCompat.Builder(context, ChannelId)
-            .SetSmallIcon(SmallIcon(context))
-            .SetContentTitle(ongoing ? $"OrbisExtract · {AppLanguage.Text(_lastState)}" : AppLanguage.Text(_lastState))
-            .SetContentText($"{_packageName} · {detail}")
-            .SetSubText(_destinationName)
-            .SetOnlyAlertOnce(true)
-            .SetOngoing(ongoing)
-            .SetCategory(NotificationCompat.CategoryProgress)
-            .SetPriority((int)NotificationPriority.Default)
-            .SetVisibility(NotificationCompat.VisibilityPublic)
-            .SetWhen(Java.Lang.JavaSystem.CurrentTimeMillis())
-            .SetShowWhen(true)
-            .SetContentIntent(PendingIntentForStatus(context));
+        // The AndroidX bindings annotate fluent Builder calls as nullable.
+        // Keep a single checked builder instead of chaining potentially-null
+        // return values, which also makes platform interop failures explicit.
+        var builder = new NotificationCompat.Builder(context, ChannelId);
+        builder.SetSmallIcon(SmallIcon(context));
+        builder.SetContentTitle(ongoing ? $"OrbisExtract · {AppLanguage.Text(_lastState)}" : AppLanguage.Text(_lastState));
+        builder.SetContentText($"{_packageName} · {detail}");
+        builder.SetSubText(_destinationName);
+        builder.SetOnlyAlertOnce(true);
+        builder.SetOngoing(ongoing);
+        builder.SetCategory(NotificationCompat.CategoryProgress);
+        builder.SetPriority((int)NotificationPriority.Default);
+        builder.SetVisibility(NotificationCompat.VisibilityPublic);
+        builder.SetWhen(Java.Lang.JavaSystem.CurrentTimeMillis());
+        builder.SetShowWhen(true);
+        builder.SetContentIntent(PendingIntentForStatus(context));
 
         if (ongoing)
         {
