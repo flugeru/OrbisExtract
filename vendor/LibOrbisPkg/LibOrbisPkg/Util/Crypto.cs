@@ -67,7 +67,7 @@ namespace LibOrbisPkg.Util
       {
         rsa.KeySize = 2048;
         rsa.ImportParameters(@params);
-        return rsa.DecryptValue(eekpfs);
+        return rsa.Decrypt(eekpfs, RSAEncryptionPadding.Pkcs1);
       }
     }
 

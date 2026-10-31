@@ -26,10 +26,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET 10 SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
@@ -124,7 +124,7 @@ jobs:
           ls -lh artifacts/release/OrbisExtract.apk
 
       - name: Upload installable APK only
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: OrbisExtract-Android-APK
           path: artifacts/release/OrbisExtract.apk
@@ -138,10 +138,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET 8 SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 8.0.x
 
@@ -188,7 +188,7 @@ jobs:
           if ($setup.Length -lt 1MB) { throw "Instalador suspeito (pequeno demais)" }
 
       - name: Upload Windows installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: orbisextract-windows-setup
           path: artifacts/installer/*.exe
@@ -196,7 +196,7 @@ jobs:
           retention-days: 14
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: orbisextract-windows-exe
           path: artifacts/windows/**
@@ -210,12 +210,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Setup .NET 8 SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 8.0.x
 
@@ -257,7 +257,7 @@ jobs:
           rm -rf squashfs-root
 
       - name: Upload AppImage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: orbisextract-linux-appimage
           path: artifacts/OrbisExtract-x86_64.AppImage
