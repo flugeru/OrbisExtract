@@ -100,9 +100,6 @@ public sealed class App : Application
 
             HideNativeCaption(handle);
         };
-            if (SetWindowSubclass(handle, callback, UIntPtr.Zero, IntPtr.Zero))
-                ActiveSubclasses[handle] = callback;
-        };
         var minimize = TitleButton("─", "Minimizar");
         var maximize = TitleButton("□", "Maximizar ou restaurar");
         var close = TitleButton("×", "Fechar", true);
