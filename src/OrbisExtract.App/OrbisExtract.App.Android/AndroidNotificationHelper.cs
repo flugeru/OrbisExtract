@@ -98,7 +98,7 @@ public static class AndroidNotificationHelper
         _lastProgress = totalFiles > 0 ? (int)Math.Clamp(currentFiles * 100.0 / totalFiles, 0, 100) : 0;
         _lastState = string.IsNullOrWhiteSpace(state) ? "Extraindo arquivos" : state;
         _lastCurrentFile = currentFile;
-        NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, true));
+        NotificationManagerCompat.From(context)?.Notify(NotificationId, BuildNotification(context, true));
     }
 
     public static void UpdateElapsed(TimeSpan elapsed)
@@ -106,7 +106,7 @@ public static class AndroidNotificationHelper
         _elapsed = elapsed;
         var context = _context;
         if (context is not null && _lastState != "Extração concluída")
-            NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, true));
+            NotificationManagerCompat.From(context)?.Notify(NotificationId, BuildNotification(context, true));
     }
 
     internal static Notification BuildNotification(Context context, bool ongoing)
@@ -136,9 +136,9 @@ public static class AndroidNotificationHelper
             // MIUI/HyperOS Classic often hides standard notification actions.
             // Place real PendingIntent controls inside the compact content itself.
             var compact = BuildCompactControls(context, detail);
-            builder.SetCustomContentView(compact)
-                .SetCustomBigContentView(compact)
-                .SetStyle(new NotificationCompat.DecoratedCustomViewStyle());
+            builder.SetCustomContentView(compact);
+            builder.SetCustomBigContentView(compact);
+            builder.SetStyle(new NotificationCompat.DecoratedCustomViewStyle());
         }
         if (!ongoing)
             builder.SetProgress(0, 0, false);
@@ -170,7 +170,7 @@ public static class AndroidNotificationHelper
 
     private static PendingIntent PendingIntentForStatus(Context context)
     {
-        var intent = context.PackageManager?.GetLaunchIntentForPackage(context.PackageName);
+        var intent = context.PackageName is { } packageName ? context.PackageManager?.GetLaunchIntentForPackage(packageName) : null;
         intent ??= new Intent(context, typeof(MainActivity));
         return PendingIntent.GetActivity(context, 10, intent, PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable)!;
     }
@@ -181,7 +181,7 @@ public static class AndroidNotificationHelper
         var context = _context;
         if (context is null) return;
         _lastState = paused ? "Pausado" : "Extraindo";
-        NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, true));
+        NotificationManagerCompat.From(context)?.Notify(NotificationId, BuildNotification(context, true));
     }
 
     public static void CompleteExtraction(long filesExtracted, long bytesExtracted)
@@ -196,7 +196,7 @@ public static class AndroidNotificationHelper
         _lastCurrentFile = $"{filesExtracted:N0} {AppLanguage.Text("arquivos")} · {bytesExtracted / 1024d / 1024d:N1} MiB";
         var notification = BuildNotification(context, false);
         FinishService(context, ActionFinish);
-        NotificationManagerCompat.From(context).Notify(NotificationId, notification);
+        NotificationManagerCompat.From(context)?.Notify(NotificationId, notification);
     }
 
     public static void CancelExtraction()
@@ -213,7 +213,7 @@ public static class AndroidNotificationHelper
         if (context is null) return;
         _lastState = "Falha na extração";
         _lastCurrentFile = message;
-        NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, false));
+        NotificationManagerCompat.From(context)?.Notify(NotificationId, BuildNotification(context, false));
         FinishService(context, ActionFinish);
     }
 

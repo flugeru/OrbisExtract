@@ -114,7 +114,7 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs "$SIGNED"
           "$AAPT" dump badging "$SIGNED" | tee artifacts/android/package-info.txt
           grep -q "package: name='com.tatsuya.orbisextract'" artifacts/android/package-info.txt
-          grep -q "versionCode='1030005'" artifacts/android/package-info.txt
+          grep -q "versionCode='1040000'" artifacts/android/package-info.txt
           grep -q "sdkVersion:'24'" artifacts/android/package-info.txt
           grep -q "targetSdkVersion:'36'" artifacts/android/package-info.txt
           mkdir -p artifacts/release
@@ -241,7 +241,7 @@ jobs:
           mv squashfs-root "$HOME/appimagetool"
 
       - name: Build AppImage
-        run: APPIMAGETOOL="$HOME/appimagetool/AppRun" VERSION=1.0.3 bash scripts/build-appimage.sh
+        run: APPIMAGETOOL="$HOME/appimagetool/AppRun" VERSION=1.0.4 bash scripts/build-appimage.sh
 
       - name: Verify AppImage
         run: |

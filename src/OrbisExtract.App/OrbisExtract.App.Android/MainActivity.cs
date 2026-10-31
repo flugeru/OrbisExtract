@@ -23,7 +23,7 @@ public class MainActivity : AvaloniaMainActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         UpdateChecker.IsPlayInstall = () => PackageManager?.GetInstallerPackageName(PackageName ?? "") == "com.android.vending";
-        UpdateChecker.GetInstalledVersion = () => PackageManager?.GetPackageInfo(PackageName ?? "", 0)?.VersionName ?? "1.0.3";
+        UpdateChecker.GetInstalledVersion = () => PackageManager?.GetPackageInfo(PackageName ?? "", 0)?.VersionName ?? "1.0.4";
         UpdateChecker.OpenAndroidUrl = url => StartActivity(new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(url)));
         base.OnCreate(savedInstanceState);
 
@@ -35,7 +35,13 @@ public class MainActivity : AvaloniaMainActivity
 
         // Android 13+ exige consentimento em tempo de execução para exibir notificações
         if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
-            RequestPermissions(new[] { global::Android.Manifest.Permission.PostNotifications }, 1001);
+            RequestNotificationPermission();
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("android33.0")]
+    private void RequestNotificationPermission()
+    {
+        RequestPermissions(new[] { global::Android.Manifest.Permission.PostNotifications }, 1001);
     }
 
     protected override void OnDestroy()

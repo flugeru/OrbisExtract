@@ -19,7 +19,7 @@ public static class UpdateChecker
     public static Action<string>? OpenAndroidUrl { get; set; }
 
     public static Func<string>? GetInstalledVersion { get; set; }
-    public static string CurrentVersion => GetInstalledVersion?.Invoke() ?? (Assembly.GetEntryAssembly() ?? typeof(UpdateChecker).Assembly).GetName().Version?.ToString(3) ?? "1.0.3";
+    public static string CurrentVersion => GetInstalledVersion?.Invoke() ?? (Assembly.GetEntryAssembly() ?? typeof(UpdateChecker).Assembly).GetName().Version?.ToString(3) ?? "1.0.4";
 
     public static async Task<UpdateResult?> CheckAsync(CancellationToken cancellationToken = default)
     {
