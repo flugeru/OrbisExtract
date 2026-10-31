@@ -38,7 +38,8 @@ UninstallDisplayName={#AppName}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-LicenseFile=..\..\LICENSE
+WizardImageBackColor=$00171310
+WizardSmallImageBackColor=$00171310
 ; Comportamento de atualização: com o mesmo AppId, o instalador lê as
 ; configurações da versão anterior do registro e instala por cima.
 UsePreviousAppDir=yes
@@ -47,11 +48,23 @@ UsePreviousGroup=yes
 CloseApplications=yes
 
 [Languages]
-Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
-Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"; LicenseFile: "license.pt-BR.txt"
+Name: "english"; MessagesFile: "compiler:Default.isl"; LicenseFile: "license.en.txt"
+
+; Installer language is selected automatically from Windows UI language by Inno Setup.
+; Users can choose another language in the installer's language dialog.
+; Purple/charcoal palette to match the OrbisExtract desktop application.
+[Code]
+procedure InitializeWizard;
+begin
+  WizardForm.Color := $00171310;
+  WizardForm.MainPanel.Color := $00171310;
+  WizardForm.PageNameLabel.Font.Color := $00E9DEFF;
+  WizardForm.PageDescriptionLabel.Font.Color := $00B7A8D0;
+end;
 
 [Tasks]
-Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; GroupDescription: "Atalhos:"
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 ; Programa publicado (self-contained): exe + dlls + runtimes

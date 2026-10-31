@@ -589,7 +589,9 @@ public sealed class MainView : UserControl
 
     private Border CreateAboutOverlay()
     {
-        const string license = "MIT License\n\nCopyright (c) 2026 flugeru\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the Software), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.";
+        var licenseText = UiTheme.Text(AppLicense.Current, 12, UiTheme.TextSecondary);
+        licenseText.TextWrapping = TextWrapping.Wrap;
+        _dynamicLabels[licenseText] = () => AppLicense.Current;
         var close = UiTheme.ActionButton("Fechar");
         var licenseBox = new Border
         {
@@ -602,13 +604,7 @@ public sealed class MainView : UserControl
             // fixed-height viewer here clips glyphs against the rounded border
             // whenever its content scrolls. Let the parent scroll the whole
             // license card instead, so text never passes behind its corners.
-            Child = new TextBlock
-            {
-                Text = license,
-                FontSize = 12,
-                Foreground = UiTheme.Brush(UiTheme.TextSecondary),
-                TextWrapping = TextWrapping.Wrap
-            }
+            Child = licenseText
         };
         _aboutChangelog = UiTheme.Text("• Configurações de idioma: automático, português ou inglês.\n• Idioma inicial de acordo com o sistema; escolha manual salva no aparelho.", 13, UiTheme.TextSecondary);
         _aboutChangelog.TextWrapping = TextWrapping.Wrap;

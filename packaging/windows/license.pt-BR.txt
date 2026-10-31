@@ -1,0 +1,25 @@
+Licença MIT
+
+Copyright (c) 2026 flugeru
+
+É concedida permissão, gratuitamente, a qualquer pessoa que obtenha uma cópia
+deste software e dos arquivos de documentação associados (o "Software"), para
+utilizar o Software sem restrições, incluindo, sem limitação, os direitos de
+usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e/ou vender
+cópias do Software, e permitir que as pessoas a quem o Software é fornecido
+façam o mesmo, sujeito às seguintes condições:
+
+O aviso de direitos autorais acima e este aviso de permissão devem ser incluídos
+em todas as cópias ou partes substanciais do Software.
+
+O SOFTWARE É FORNECIDO "NO ESTADO EM QUE SE ENCONTRA", SEM GARANTIA DE QUALQUER
+TIPO, EXPRESSA OU IMPLÍCITA, INCLUINDO, ENTRE OUTRAS, AS GARANTIAS DE
+COMERCIALIZAÇÃO, ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA E NÃO VIOLAÇÃO. EM
+NENHUMA HIPÓTESE OS AUTORES OU DETENTORES DOS DIREITOS AUTORAIS SERÃO
+RESPONSÁVEIS POR QUAISQUER REIVINDICAÇÕES, DANOS OU OUTRAS RESPONSABILIDADES,
+SEJA EM AÇÃO CONTRATUAL, ILÍCITO CIVIL OU OUTRA FORMA, DECORRENTES DE,
+RELACIONADAS A OU EM CONEXÃO COM O SOFTWARE OU SEU USO OU OUTRAS OPERAÇÕES
+COM O SOFTWARE.
+
+Esta tradução é fornecida para conveniência. Em caso de divergência,
+prevalece o texto original em inglês da licença MIT.
