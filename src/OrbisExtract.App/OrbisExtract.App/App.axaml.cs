@@ -22,27 +22,49 @@ public sealed class App : Application
     private static extern int DwmSetWindowAttribute(
         IntPtr hwnd, int attribute, ref uint value, int valueSize);
 
-    // Keep the native resize/snap window styles while removing the non-client
-    // top strip. The callback must stay rooted for the lifetime of the window.
-    private delegate IntPtr SubclassProc(IntPtr hwnd, uint message, IntPtr wParam,
-        IntPtr lParam, UIntPtr subclassId, IntPtr referenceData);
+    // Windows keeps Snap when WS_THICKFRAME and the minimize/maximize styles
+    // remain enabled. Remove only the native caption, not the window frame.
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr GetWindowLongPtr64(IntPtr hwnd, int index);
 
-    [DllImport("comctl32.dll", SetLastError = true)]
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
+    private static extern int GetWindowLong32(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr SetWindowLongPtr64(IntPtr hwnd, int index, IntPtr value);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
+    private static extern int SetWindowLong32(IntPtr hwnd, int index, int value);
+
+    [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowSubclass(IntPtr hwnd, SubclassProc callback,
-        UIntPtr subclassId, IntPtr referenceData);
+    private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter,
+        int x, int y, int width, int height, uint flags);
 
-    [DllImport("comctl32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool RemoveWindowSubclass(IntPtr hwnd, SubclassProc callback,
-        UIntPtr subclassId);
+    private static void HideNativeCaption(IntPtr hwnd)
+    {
+        const int gwlStyle = -16;
+        const long wsCaption = 0x00C00000L;
+        const long wsThickFrame = 0x00040000L;
+        const long wsMaximizeBox = 0x00010000L;
+        const long wsMinimizeBox = 0x00020000L;
+        const uint swpNoSize = 0x0001, swpNoMove = 0x0002;
+        const uint swpNoZOrder = 0x0004, swpFrameChanged = 0x0020;
 
-    [DllImport("comctl32.dll")]
-    private static extern IntPtr DefSubclassProc(IntPtr hwnd, uint message,
-        IntPtr wParam, IntPtr lParam);
-
-    private static readonly System.Collections.Generic.Dictionary<IntPtr, SubclassProc>
-        ActiveSubclasses = new();
+        long style = IntPtr.Size == 8
+            ? GetWindowLongPtr64(hwnd, gwlStyle).ToInt64()
+            : GetWindowLong32(hwnd, gwlStyle);
+        long updated = (style & ~wsCaption) |
+            wsThickFrame | wsMaximizeBox | wsMinimizeBox;
+        if (updated == style)
+            return;
+        if (IntPtr.Size == 8)
+            SetWindowLongPtr64(hwnd, gwlStyle, new IntPtr(updated));
+        else
+            SetWindowLong32(hwnd, gwlStyle, unchecked((int)updated));
+        SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
+            swpNoSize | swpNoMove | swpNoZOrder | swpFrameChanged);
+    }
 
     // Desktop-only custom title bar without the native gray Windows border.
     private static Window CreateDesktopWindow(Control content)
@@ -76,29 +98,11 @@ public sealed class App : Application
             uint color = dwmColorNone;
             _ = DwmSetWindowAttribute(handle, dwmwaBorderColor, ref color, sizeof(uint));
 
-            // WM_NCCALCSIZE: remove the native top caption area while keeping
-            // WS_THICKFRAME / maximize styles required by Windows Snap.
-            // When maximized, use the OS calculation to respect the work area.
-            SubclassProc callback = (hwnd, message, wParam, lParam, id, data) =>
-            {
-                if (message == 0x0083 && wParam != IntPtr.Zero &&
-                    window.WindowState == WindowState.Normal)
-                    return IntPtr.Zero;
-                return DefSubclassProc(hwnd, message, wParam, lParam);
-            };
+            HideNativeCaption(handle);
+        };
             if (SetWindowSubclass(handle, callback, UIntPtr.Zero, IntPtr.Zero))
                 ActiveSubclasses[handle] = callback;
         };
-        window.Closed += (_, _) =>
-        {
-            var handle = window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-            if (handle != IntPtr.Zero && ActiveSubclasses.TryGetValue(handle, out var callback))
-            {
-                RemoveWindowSubclass(handle, callback, UIntPtr.Zero);
-                ActiveSubclasses.Remove(handle);
-            }
-        };
-
         var minimize = TitleButton("─", "Minimizar");
         var maximize = TitleButton("□", "Maximizar ou restaurar");
         var close = TitleButton("×", "Fechar", true);
