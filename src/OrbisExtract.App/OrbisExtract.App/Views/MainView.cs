@@ -576,7 +576,14 @@ public sealed class MainView : UserControl
                 MaxHeight = 120,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
-                Content = UiTheme.Text(license, 12, UiTheme.TextSecondary)
+                // Keep breathing room inside the scrolling content itself.
+                // Border padding alone does not prevent the first/last line from
+                // being clipped by the ScrollViewer viewport at its endpoints.
+                Content = new Border
+                {
+                    Padding = new Thickness(0, 10, 0, 12),
+                    Child = UiTheme.Text(license, 12, UiTheme.TextSecondary)
+                }
             }
         };
         _aboutChangelog = UiTheme.Text("• Configurações de idioma: automático, português ou inglês.\n• Idioma inicial de acordo com o sistema; escolha manual salva no aparelho.", 13, UiTheme.TextSecondary);
