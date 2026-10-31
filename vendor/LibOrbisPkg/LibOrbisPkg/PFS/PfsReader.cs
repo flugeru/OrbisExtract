@@ -105,7 +105,7 @@ namespace LibOrbisPkg.PFS
     // Private state for the PfsReader class
     private IMemoryReader reader;
     private PfsHeader hdr;
-    private inode[] dinodes;
+    private Inode[] dinodes;
     private Dir root;
     private Dir uroot;
     private byte[] sectorBuf;
@@ -125,7 +125,7 @@ namespace LibOrbisPkg.PFS
         hdr = PfsHeader.ReadFromStream(ms);
       }
       int dinodeSize;
-      Func<Stream, inode> dinodeReader;
+      Func<Stream, Inode> dinodeReader;
       if (hdr.Mode.HasFlag(PfsMode.Signed))
       {
         dinodes = new DinodeS32[hdr.DinodeCount];
@@ -208,7 +208,7 @@ namespace LibOrbisPkg.PFS
       var blocks = (int)ino.Blocks;
       if (blocks < 1 || ino.StartBlock < 1 || ino.StartBlock > MAX_BLOCKS || blocks > MAX_BLOCKS)
       {
-        throw new Exception($"inode {dinode} is corrupt. ");
+        throw new Exception($"Inode {dinode} is corrupt. ");
       }
       foreach (var x in Enumerable.Range(ino.StartBlock, blocks))
       {

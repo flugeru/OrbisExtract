@@ -21,9 +21,9 @@ namespace LibOrbisPkg.PFS
     public string name;
 
     /// <summary>
-    /// The inode describing this node.
+    /// The Inode describing this node.
     /// </summary>
-    public inode ino;
+    public Inode ino;
 
     /// <summary>
     /// The actual size on disk of this node (i.e. the filesize or size of the dirent block)
@@ -136,7 +136,7 @@ namespace LibOrbisPkg.PFS
   {
     /// <summary>
     /// Creates an FSFile from a real on-disk file.
-    /// You need to set the name, inode, and parent.
+    /// You need to set the name, Inode, and parent.
     /// </summary>
     /// <param name="origFileName">Real path to the file.</param>
     public FSFile(string origFileName)
@@ -149,7 +149,7 @@ namespace LibOrbisPkg.PFS
     /// <summary>
     /// Creates an FSFile that represents the PFS image that will be created by the given PfsBuilder.
     /// Useful for creating the pfs_image.dat file within an outer PFS.
-    /// You need to set the inode and parent.
+    /// You need to set the Inode and parent.
     /// </summary>
     /// <param name="b">the PfsBuilder that this file represents</param>
     public FSFile(PfsBuilder b)
@@ -168,7 +168,7 @@ namespace LibOrbisPkg.PFS
 
     /// <summary>
     /// A generic constructor for anything that can be written to a stream.
-    /// Don't forget to set the inode and parent.
+    /// Don't forget to set the Inode and parent.
     /// </summary>
     /// <param name="writer">A function that takes a Stream and writes this file's data to it.</param>
     /// <param name="name">This file's name</param>
