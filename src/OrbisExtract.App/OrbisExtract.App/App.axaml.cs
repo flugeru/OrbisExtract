@@ -94,7 +94,55 @@ public sealed class App : Application
         layout.Children.Add(titleBar);
         Grid.SetRow(content, 1);
         layout.Children.Add(content);
-        window.Content = layout;
+        // With WindowDecorations.None, Windows no longer supplies resize hit targets.
+        // Add transparent 6px edge / 12px corner hit zones, preserving the clean theme.
+        var resizeLayer = new Grid
+        {
+            RowDefinitions = new RowDefinitions("12,*,12"),
+            ColumnDefinitions = new ColumnDefinitions("12,*,12"),
+            IsHitTestVisible = true
+        };
+        void AddResizeHandle(int row, int column, WindowEdge edge, StandardCursorType cursorType,
+            bool horizontal)
+        {
+            var handle = new Border
+            {
+                Background = Brushes.Transparent,
+                Cursor = new Cursor(cursorType),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                Margin = horizontal ? new Thickness(0, 0, 0, 6) : new Thickness(0, 0, 6, 0)
+            };
+            handle.PointerPressed += (_, e) =>
+            {
+                if (window.WindowState != WindowState.Normal ||
+                    !e.GetCurrentPoint(handle).Properties.IsLeftButtonPressed)
+                    return;
+                window.BeginResizeDrag(edge, e);
+                e.Handled = true;
+            };
+            Grid.SetRow(handle, row);
+            Grid.SetColumn(handle, column);
+            resizeLayer.Children.Add(handle);
+        }
+        AddResizeHandle(0, 0, WindowEdge.NorthWest, StandardCursorType.TopLeftCorner, true);
+        AddResizeHandle(0, 1, WindowEdge.North, StandardCursorType.TopSide, true);
+        AddResizeHandle(0, 2, WindowEdge.NorthEast, StandardCursorType.TopRightCorner, true);
+        AddResizeHandle(1, 0, WindowEdge.West, StandardCursorType.LeftSide, false);
+        AddResizeHandle(1, 2, WindowEdge.East, StandardCursorType.RightSide, false);
+        AddResizeHandle(2, 0, WindowEdge.SouthWest, StandardCursorType.BottomLeftCorner, true);
+        AddResizeHandle(2, 1, WindowEdge.South, StandardCursorType.BottomSide, true);
+        AddResizeHandle(2, 2, WindowEdge.SouthEast, StandardCursorType.BottomRightCorner, true);
+        resizeLayer.IsVisible = window.WindowState == WindowState.Normal;
+        window.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == Window.WindowStateProperty)
+                resizeLayer.IsVisible = window.WindowState == WindowState.Normal;
+        };
+        var root = new Grid();
+        root.Children.Add(layout);
+        root.Children.Add(resizeLayer);
+        window.Content = root;
         return window;
     }
 
