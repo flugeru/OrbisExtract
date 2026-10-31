@@ -27,6 +27,8 @@ AppSupportURL=https://github.com/flugeru/OrbisExtract/issues
 AppUpdatesURL=https://github.com/flugeru/OrbisExtract/actions
 DefaultDirName={autopf}\{#AppName}
 DisableProgramGroupPage=yes
+; Avoid the oversized empty summary panel shown on the Ready page.
+DisableReadyMemo=yes
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -38,12 +40,12 @@ UninstallDisplayName={#AppName}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern dark windows11 includetitlebar hidebevels
-; Inno Setup 6.6+ styles the entire wizard, including the license memo,
-; radio buttons, action buttons and uninstaller, instead of only the header.
-; Match OrbisExtract's dark charcoal/purple surfaces.
-WizardBackColor=#17131D
-WizardImageBackColor=#17131D
-WizardSmallImageBackColor=#17131D
+; Exact background token from UiTheme.Background (#0B0F14).
+; Native dark controls are styled by Inno Setup; its built-in accent
+; is not independently configurable without a custom VCL style file.
+WizardBackColor=#0B0F14
+WizardImageBackColor=#0B0F14
+WizardSmallImageBackColor=#0B0F14
 WizardImageFile=
 WizardSmallImageFile=
 ; Comportamento de atualização: com o mesmo AppId, o instalador lê as
