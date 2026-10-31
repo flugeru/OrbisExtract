@@ -426,7 +426,7 @@ public sealed class MainView : UserControl
         var scroll = new ScrollViewer
         {
             Content = listContent,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
         };
         var layout = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), RowSpacing = 14 };
