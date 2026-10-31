@@ -51,7 +51,7 @@ public sealed class ExtractionForegroundService : Service
         {
             // Android exige que o serviço entre em foreground imediatamente.
             StartForeground(AndroidNotificationHelper.NotificationId,
-                AndroidNotificationHelper.BuildNotification(ApplicationContext, true));
+                AndroidNotificationHelper.BuildNotification(ApplicationContext ?? this, true));
         }
         return StartCommandResult.Sticky;
     }

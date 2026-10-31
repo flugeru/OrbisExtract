@@ -61,5 +61,5 @@ public class MainActivity : AvaloniaMainActivity
     }
 
     private NotificationManagerCompat GetNotificationManager() => 
-        NotificationManagerCompat.From(this);
+        NotificationManagerCompat.From(this) ?? throw new InvalidOperationException("Notification manager unavailable.");
 }

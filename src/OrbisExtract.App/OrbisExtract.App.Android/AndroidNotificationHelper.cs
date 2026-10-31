@@ -49,8 +49,8 @@ public static class AndroidNotificationHelper
     private static int SmallIcon(Context context)
     {
         if (_smallIcon == 0)
-            _smallIcon = context.Resources.GetIdentifier("icon", "drawable", context.PackageName);
-        return _smallIcon != 0 ? _smallIcon : context.ApplicationInfo!.Icon;
+            _smallIcon = context.Resources?.GetIdentifier("icon", "drawable", context.PackageName) ?? 0;
+        return _smallIcon != 0 ? _smallIcon : (context.ApplicationInfo?.Icon ?? global::Android.Resource.Drawable.IcDialogInfo);
     }
 
     public static void Initialize(Context context)
@@ -84,7 +84,7 @@ public static class AndroidNotificationHelper
         else
             context.StartService(intent);
 
-        NotificationManagerCompat.From(context).Notify(NotificationId, BuildNotification(context, true));
+        NotificationManagerCompat.From(context)?.Notify(NotificationId, BuildNotification(context, true));
     }
 
     public static void UpdateProgress(long currentFiles, long totalFiles, string state, string? currentFile = null)
@@ -139,7 +139,7 @@ public static class AndroidNotificationHelper
         }
         if (!ongoing)
             builder.SetProgress(0, 0, false);
-        return builder.Build();
+        return builder.Build() ?? throw new InvalidOperationException("Android notification could not be built.");
     }
 
     private static RemoteViews BuildCompactControls(Context context, string detail)
@@ -155,13 +155,13 @@ public static class AndroidNotificationHelper
         toggleIntent.SetAction(ActionTogglePause);
         var togglePending = PendingIntent.GetService(context, 12, toggleIntent,
             PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
-        views.SetOnClickPendingIntent(Resource.Id.extraction_pause, togglePending);
+        if (togglePending is not null) views.SetOnClickPendingIntent(Resource.Id.extraction_pause, togglePending);
 
         var cancelIntent = new Intent(context, typeof(ExtractionForegroundService));
         cancelIntent.SetAction(ActionCancel);
         var cancelPending = PendingIntent.GetService(context, 11, cancelIntent,
             PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
-        views.SetOnClickPendingIntent(Resource.Id.extraction_cancel, cancelPending);
+        if (cancelPending is not null) views.SetOnClickPendingIntent(Resource.Id.extraction_cancel, cancelPending);
         return views;
     }
 
@@ -231,6 +231,6 @@ public static class AndroidNotificationHelper
         };
         channel.EnableVibration(false);
         channel.SetSound(null, null);
-        NotificationManagerCompat.From(context).CreateNotificationChannel(channel);
+        NotificationManagerCompat.From(context)?.CreateNotificationChannel(channel);
     }
 }
