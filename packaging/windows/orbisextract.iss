@@ -26,6 +26,8 @@ AppPublisherURL=https://github.com/flugeru/OrbisExtract
 AppSupportURL=https://github.com/flugeru/OrbisExtract/issues
 AppUpdatesURL=https://github.com/flugeru/OrbisExtract/actions
 DefaultDirName={autopf}\{#AppName}
+; Always show folder selection, including when updating an existing install.
+DisableDirPage=no
 DisableProgramGroupPage=yes
 ; Avoid the oversized empty summary panel shown on the Ready page.
 DisableReadyMemo=yes
@@ -46,11 +48,11 @@ WizardStyle=modern dark windows11 includetitlebar hidebevels
 WizardBackColor=#252525
 WizardImageBackColor=#252525
 WizardSmallImageBackColor=#252525
-WizardImageFile=
+WizardImageFile=wizard-brand.png
 WizardSmallImageFile=
 ; Comportamento de atualização: com o mesmo AppId, o instalador lê as
 ; configurações da versão anterior do registro e instala por cima.
-UsePreviousAppDir=yes
+UsePreviousAppDir=no
 UsePreviousGroup=yes
 ; Fecha o programa se estiver rodando durante a instalação
 CloseApplications=yes

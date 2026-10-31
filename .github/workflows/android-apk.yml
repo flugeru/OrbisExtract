@@ -170,6 +170,11 @@ jobs:
           --no-restore
           -o artifacts/windows
 
+      - name: Generate branded installer image
+        shell: pwsh
+        run: |
+          & "packaging/windows/generate-wizard-image.ps1"
+
       - name: Build installer (Inno Setup)
         shell: pwsh
         run: |
