@@ -23,6 +23,9 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    concurrency:
+      group: orbisextract-development-apk-${{ github.ref }}
+      cancel-in-progress: false
 
     steps:
       - name: Checkout
@@ -80,12 +83,35 @@ jobs:
           dotnet restore src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
 
       - name: Run automated tests
-        run: dotnet test OrbisExtract.sln --no-restore --configuration Release
+        run: |
+          python3 tests/check_android_updates.py
+          dotnet test OrbisExtract.sln --no-restore --configuration Release
 
       - name: Verify Android assets
         run: test -f src/OrbisExtract.App/OrbisExtract.App.Android/obj/project.assets.json
 
-      - name: Publish APK
+      # Development builds only. Cache eviction changes the signing identity;
+      # production releases need a backed-up private key stored in secrets.
+      - name: Restore development signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/orbisextract-signing
+          key: orbisextract-development-signing-v1
+
+      - name: Prepare development signing key and increasing version code
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/share/orbisextract-signing"
+          if [ ! -f "$HOME/.local/share/orbisextract-signing/development.jks" ]; then
+            keytool -genkeypair -keystore "$HOME/.local/share/orbisextract-signing/development.jks" \
+              -alias androiddebugkey -storepass android -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=OrbisExtract Development, O=Flugel, C=BR" -noprompt
+          fi
+          echo "APK_VERSION_CODE=$((1040000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+
+      - name: Publish signed development APK
         run: >-
           dotnet publish
           src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj
@@ -93,6 +119,12 @@ jobs:
           -c Release
           --no-restore
           -p:AndroidPackageFormat=apk
+          -p:ApplicationVersion=${{ env.APK_VERSION_CODE }}
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore="$HOME/.local/share/orbisextract-signing/development.jks"
+          -p:AndroidSigningKeyAlias=androiddebugkey
+          -p:AndroidSigningKeyPass=android
+          -p:AndroidSigningStorePass=android
           -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
           -p:AndroidUseLatestPlatformSdk=true
           -p:AndroidUseLatestBuildTools=true
@@ -111,14 +143,20 @@ jobs:
           AAPT="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name aapt | sort -V | tail -n 1)"
           test -x "$APKSIGNER"
           test -x "$AAPT"
-          "$APKSIGNER" verify --verbose --print-certs "$SIGNED"
+          "$APKSIGNER" verify --verbose --print-certs "$SIGNED" | tee artifacts/android/signing-certificate.txt
+          keytool -exportcert -keystore "$HOME/.local/share/orbisextract-signing/development.jks" \
+            -alias androiddebugkey -storepass android -file artifacts/android/signing-certificate.der
+          fingerprint="$(sha256sum artifacts/android/signing-certificate.der | cut -d ' ' -f 1)"
+          grep -Fqi "certificate SHA-256 digest: $fingerprint" artifacts/android/signing-certificate.txt
           "$AAPT" dump badging "$SIGNED" | tee artifacts/android/package-info.txt
           grep -q "package: name='com.tatsuya.orbisextract'" artifacts/android/package-info.txt
-          grep -q "versionCode='1040000'" artifacts/android/package-info.txt
+          grep -q "versionCode='$APK_VERSION_CODE'" artifacts/android/package-info.txt
           grep -q "sdkVersion:'24'" artifacts/android/package-info.txt
           grep -q "targetSdkVersion:'36'" artifacts/android/package-info.txt
           mkdir -p artifacts/release
           cp "$SIGNED" artifacts/release/OrbisExtract.apk
+          cp artifacts/android/signing-certificate.txt artifacts/release/signing-certificate.txt
+          cp artifacts/android/package-info.txt artifacts/release/package-info.txt
           "$APKSIGNER" verify artifacts/release/OrbisExtract.apk
           "$AAPT" dump badging artifacts/release/OrbisExtract.apk >/dev/null
           ls -lh artifacts/release/OrbisExtract.apk
@@ -127,7 +165,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: OrbisExtract-Android-APK
-          path: artifacts/release/OrbisExtract.apk
+          path: artifacts/release/*
           if-no-files-found: error
           retention-days: 14
 
