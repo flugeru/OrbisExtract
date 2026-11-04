@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using LibOrbisPkg.Util;
 
@@ -57,8 +58,9 @@ namespace LibOrbisPkg.PFS
       // Reset tweak to sector number
       Buffer.BlockCopy(BitConverter.GetBytes(sectorNum), 0, tweak, 0, 8);
       Buffer.BlockCopy(zeroes, 0, tweak, 8, 8);
-      using (var tweakEncryptor = context.tweakCipher.CreateEncryptor())
-      using (var decryptor = context.cipher.CreateDecryptor())
+      // Reuse native crypto handles across sectors in this read operation.
+      var tweakEncryptor = context.TweakEncryptor;
+      var decryptor = context.Decryptor;
       {
         tweakEncryptor.TransformBlock(tweak, 0, 16, encryptedTweak, 0);
         for (int plaintextOffset = 0; plaintextOffset < sector.Length; plaintextOffset += 16)
@@ -73,15 +75,12 @@ namespace LibOrbisPkg.PFS
           Buffer.BlockCopy(xor, 0, sector, plaintextOffset, 16);
           Buffer.BlockCopy(encryptedTweak, 0, context.sectorTweaks, plaintextOffset, 16);
           // GF-Multiply Tweak
-          int feedback = 0;
-          for (int k = 0; k < 16; k++)
-          {
-            byte tmp = encryptedTweak[k];
-            encryptedTweak[k] = (byte)(2 * encryptedTweak[k] | feedback);
-            feedback = (tmp & 0x80) >> 7;
-          }
-           if (feedback != 0)
-             encryptedTweak[0] ^= 0x87;
+          ulong low = BinaryPrimitives.ReadUInt64LittleEndian(encryptedTweak);
+          ulong high = BinaryPrimitives.ReadUInt64LittleEndian(encryptedTweak.AsSpan(8));
+          BinaryPrimitives.WriteUInt64LittleEndian(encryptedTweak,
+            (low << 1) ^ ((high >> 63) != 0 ? 0x87UL : 0UL));
+          BinaryPrimitives.WriteUInt64LittleEndian(encryptedTweak.AsSpan(8),
+            (high << 1) | (low >> 63));
         }
         // One native AES call per sector, not one interop call per 16-byte block.
         decryptor.TransformBlock(sector, 0, sector.Length, xor, 0);
@@ -98,9 +97,15 @@ namespace LibOrbisPkg.PFS
       public byte[] xor;
       public byte[] encryptedTweak;
       public byte[] sectorTweaks = Array.Empty<byte>();
+      private ICryptoTransform decryptor;
+      private ICryptoTransform tweakEncryptor;
+      internal ICryptoTransform Decryptor => decryptor ??= cipher.CreateDecryptor();
+      internal ICryptoTransform TweakEncryptor => tweakEncryptor ??= tweakCipher.CreateEncryptor();
 
       public void Dispose()
       {
+        decryptor?.Dispose();
+        tweakEncryptor?.Dispose();
         cipher.Dispose();
         tweakCipher.Dispose();
       }
