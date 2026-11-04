@@ -12,11 +12,11 @@ public class XtsDecryptReaderTests
     {
         var dataKey = Enumerable.Range(0, 16).Select(i => (byte)i).ToArray();
         var tweakKey = Enumerable.Range(16, 16).Select(i => (byte)i).ToArray();
-        var plaintext = new byte[sectorSize * 4];
+        var plaintext = new byte[sectorSize * 40];
         new Random(42).NextBytes(plaintext);
         var ciphertext = (byte[])plaintext.Clone();
         var reference = new XtsBlockTransform(dataKey, tweakKey);
-        for (int i = 1; i < 4; i++)
+        for (int i = 1; i < 40; i++)
         {
             var sector = plaintext.AsSpan(i * sectorSize, sectorSize).ToArray();
             reference.EncryptSector(sector, (ulong)i);
@@ -25,7 +25,7 @@ public class XtsDecryptReaderTests
 
         var timings = new ReadTimings();
         using var reader = new XtsDecryptReader(new BytesReader(ciphertext), dataKey, tweakKey, 1, (uint)sectorSize, timings);
-        foreach (var (position, count) in new[] { (0, plaintext.Length), (17, 9000), (sectorSize, sectorSize), (sectorSize * 2 - 1, 33), (sectorSize * 3, sectorSize) })
+        foreach (var (position, count) in new[] { (0, plaintext.Length), (17, 9000), (sectorSize, sectorSize), (sectorSize, sectorSize * 38 + 17), (sectorSize * 2 - 1, 33), (sectorSize * 3, sectorSize) })
         {
             var actual = new byte[count + 14];
             reader.Read(position, actual, 7, count);

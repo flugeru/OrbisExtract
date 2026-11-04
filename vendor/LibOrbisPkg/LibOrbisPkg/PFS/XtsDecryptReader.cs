@@ -45,6 +45,9 @@ namespace LibOrbisPkg.PFS
       Ctx context,
       byte[] sector,
       ulong sectorNum)
+      => DecryptSectors(context, sector, sectorNum, sector.Length);
+
+    private static unsafe void DecryptSectors(Ctx context, byte[] sector, ulong sectorNum, int blockSize)
     {
       byte[] tweak = context.tweak,
         encryptedTweak = context.encryptedTweak,
@@ -64,30 +67,34 @@ namespace LibOrbisPkg.PFS
       var tweakEncryptor = context.TweakEncryptor;
       var decryptor = context.Decryptor;
       {
-        tweakEncryptor.TransformBlock(tweak, 0, 16, encryptedTweak, 0);
-        ulong low = BinaryPrimitives.ReadUInt64LittleEndian(encryptedTweak);
-        ulong high = BinaryPrimitives.ReadUInt64LittleEndian(encryptedTweak.AsSpan(8));
         fixed (byte* sectorBytes = sector)
         fixed (byte* tweakBytes = context.sectorTweaks)
         {
-          for (int plaintextOffset = 0; plaintextOffset < sector.Length; plaintextOffset += 16)
+          for (int blockOffset = 0; blockOffset < sector.Length; blockOffset += blockSize)
           {
-            // XTS tweaks are little-endian; preserve that on other architectures.
-            ulong first = BitConverter.IsLittleEndian ? low : BinaryPrimitives.ReverseEndianness(low);
-            ulong second = BitConverter.IsLittleEndian ? high : BinaryPrimitives.ReverseEndianness(high);
-            var data = (ulong*)(sectorBytes + plaintextOffset);
-            var saved = (ulong*)(tweakBytes + plaintextOffset);
-            data[0] ^= first;
-            data[1] ^= second;
-            saved[0] = first;
-            saved[1] = second;
-            // Multiply the 128-bit tweak by x in GF(2^128).
-            ulong carry = low >> 63;
-            low = (low << 1) ^ ((high >> 63) != 0 ? 0x87UL : 0UL);
-            high = (high << 1) | carry;
+            BinaryPrimitives.WriteUInt64LittleEndian(tweak, sectorNum + (ulong)(blockOffset / blockSize));
+            tweakEncryptor.TransformBlock(tweak, 0, 16, encryptedTweak, 0);
+            ulong low = BinaryPrimitives.ReadUInt64LittleEndian(encryptedTweak);
+            ulong high = BinaryPrimitives.ReadUInt64LittleEndian(encryptedTweak.AsSpan(8));
+            for (int plaintextOffset = blockOffset; plaintextOffset < blockOffset + blockSize; plaintextOffset += 16)
+            {
+              // XTS tweaks are little-endian; preserve that on other architectures.
+              ulong first = BitConverter.IsLittleEndian ? low : BinaryPrimitives.ReverseEndianness(low);
+              ulong second = BitConverter.IsLittleEndian ? high : BinaryPrimitives.ReverseEndianness(high);
+              var data = (ulong*)(sectorBytes + plaintextOffset);
+              var saved = (ulong*)(tweakBytes + plaintextOffset);
+              data[0] ^= first;
+              data[1] ^= second;
+              saved[0] = first;
+              saved[1] = second;
+              // Multiply the 128-bit tweak by x in GF(2^128).
+              ulong carry = low >> 63;
+              low = (low << 1) ^ ((high >> 63) != 0 ? 0x87UL : 0UL);
+              high = (high << 1) | carry;
+            }
           }
         }
-        // One native AES call per sector, not one interop call per 16-byte block.
+        // ECB permits batching independent XTS sectors in one native data call.
         decryptor.TransformBlock(sector, 0, sector.Length, xor, 0);
         fixed (byte* sectorBytes = sector)
         fixed (byte* xorBytes = xor)
@@ -130,11 +137,11 @@ namespace LibOrbisPkg.PFS
     /// </summary>
     private void ReadSectorBuffer(Ctx ctx, int currentSector, byte[] sectorBuf)
     {
-      reader.Read(currentSector * sectorSize, sectorBuf, 0, (int)sectorSize);
+      reader.Read((long)currentSector * sectorSize, sectorBuf, 0, sectorBuf.Length);
       if (currentSector >= cryptStartSector)
       {
         long started = timings == null ? 0 : System.Diagnostics.Stopwatch.GetTimestamp();
-        DecryptSector(ctx, sectorBuf, (ulong)currentSector);
+        DecryptSectors(ctx, sectorBuf, (ulong)currentSector, (int)sectorSize);
         if (timings != null)
           timings.DecryptionTicks += System.Diagnostics.Stopwatch.GetTimestamp() - started;
       }
@@ -166,6 +173,25 @@ namespace LibOrbisPkg.PFS
     public void Read(long position, byte[] buffer, int offset, int count)
     {
       using var ctx = MakeCtx();
+      // Batch only complete encrypted sectors. Partial reads retain sector
+      // boundaries and never read beyond the caller's requested full sectors.
+      if (position % sectorSize == 0 && position / sectorSize >= cryptStartSector && count >= sectorSize)
+      {
+        int batchSize = (int)Math.Min(64 * 1024 / sectorSize, count / sectorSize) * (int)sectorSize;
+        if (batchSize > 0)
+        {
+          var batch = new byte[batchSize];
+          while (count >= batchSize)
+          {
+            ReadSectorBuffer(ctx, checked((int)(position / sectorSize)), batch);
+            Buffer.BlockCopy(batch, 0, buffer, offset, batchSize);
+            position += batchSize;
+            offset += batchSize;
+            count -= batchSize;
+          }
+          if (count == 0) return;
+        }
+      }
       var sectorBuf = new byte[sectorSize];
       var currentSector = (int)(position / sectorSize);
       var offsetIntoSector = (int)(position - (sectorSize * currentSector));
