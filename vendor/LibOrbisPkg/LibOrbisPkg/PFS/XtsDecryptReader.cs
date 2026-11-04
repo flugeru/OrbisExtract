@@ -47,6 +47,13 @@ namespace LibOrbisPkg.PFS
         encryptedTweak = context.encryptedTweak,
         xor = context.xor;
 
+      if (sector.Length % 16 != 0)
+        throw new ArgumentException("XTS sector must contain complete AES blocks.", nameof(sector));
+      if (xor.Length < sector.Length)
+        xor = context.xor = new byte[sector.Length];
+      if (context.sectorTweaks.Length < sector.Length)
+        context.sectorTweaks = new byte[sector.Length];
+
       // Reset tweak to sector number
       Buffer.BlockCopy(BitConverter.GetBytes(sectorNum), 0, tweak, 0, 8);
       Buffer.BlockCopy(zeroes, 0, tweak, 8, 8);
@@ -63,14 +70,8 @@ namespace LibOrbisPkg.PFS
             *((ulong*)xor_) = *((ulong*)sector_) ^ *((ulong*)encryptedTweak_);
             *((ulong*)xor_+1) = *((ulong*)sector_+1) ^ *((ulong*)encryptedTweak_+1);
           }
-          decryptor.TransformBlock(xor, 0, 16, xor, 0);
-          fixed (byte* xor_ = xor)
-          fixed (byte* encryptedTweak_ = encryptedTweak)
-          fixed (byte* sector_ = &sector[plaintextOffset])
-          {
-            *((ulong*)sector_) = *((ulong*)xor_) ^ *((ulong*)encryptedTweak_);
-            *((ulong*)sector_ + 1) = *((ulong*)xor_ + 1) ^ *((ulong*)encryptedTweak_ + 1);
-          }
+          Buffer.BlockCopy(xor, 0, sector, plaintextOffset, 16);
+          Buffer.BlockCopy(encryptedTweak, 0, context.sectorTweaks, plaintextOffset, 16);
           // GF-Multiply Tweak
           int feedback = 0;
           for (int k = 0; k < 16; k++)
@@ -79,19 +80,30 @@ namespace LibOrbisPkg.PFS
             encryptedTweak[k] = (byte)(2 * encryptedTweak[k] | feedback);
             feedback = (tmp & 0x80) >> 7;
           }
-          if (feedback != 0)
-            encryptedTweak[0] ^= 0x87;
+           if (feedback != 0)
+             encryptedTweak[0] ^= 0x87;
         }
+        // One native AES call per sector, not one interop call per 16-byte block.
+        decryptor.TransformBlock(sector, 0, sector.Length, xor, 0);
+        for (int i = 0; i < sector.Length; i++)
+          sector[i] = (byte)(xor[i] ^ context.sectorTweaks[i]);
       }
     }
 
-    public class Ctx
+    public class Ctx : IDisposable
     {
       public SymmetricAlgorithm cipher;
       public SymmetricAlgorithm tweakCipher;
       public byte[] tweak;
       public byte[] xor;
       public byte[] encryptedTweak;
+      public byte[] sectorTweaks = Array.Empty<byte>();
+
+      public void Dispose()
+      {
+        cipher.Dispose();
+        tweakCipher.Dispose();
+      }
     }
 
     /// <summary>
@@ -133,7 +145,7 @@ namespace LibOrbisPkg.PFS
 
     public void Read(long position, byte[] buffer, int offset, int count)
     {
-      var ctx = MakeCtx();
+      using var ctx = MakeCtx();
       var sectorBuf = new byte[sectorSize];
       var currentSector = (int)(position / sectorSize);
       var offsetIntoSector = (int)(position - (sectorSize * currentSector));

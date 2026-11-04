@@ -238,7 +238,9 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         public void Read(long position, byte[] buffer, int offset, int count)
         {
             if (position < 0 || count < 0 || position > length - count) throw new EndOfStreamException("Leitura fora dos limites do PKG.");
-            stream.Position = start + position;
+            // Do not invalidate BufferedStream's read-ahead for sequential sectors.
+            if (stream.Position != start + position)
+                stream.Seek(start + position, SeekOrigin.Begin);
             var read = 0;
             while (read < count)
             {

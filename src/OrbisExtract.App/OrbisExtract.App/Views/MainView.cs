@@ -1176,7 +1176,11 @@ public sealed class MainView : UserControl
             var source = await _package.OpenReadAsync();
             if (source.CanSeek)
             {
-                packageStream = source;
+                // PFS reads small sectors. Buffer SAF/JNI reads instead of crossing
+                // into the Android document provider for every sector.
+                packageStream = OperatingSystem.IsAndroid()
+                    ? new BufferedStream(source, 256 * 1024)
+                    : source;
                 Log("Lendo o PKG selecionado diretamente, sem copiá-lo.");
             }
             else
@@ -1398,6 +1402,7 @@ public sealed class MainView : UserControl
         private readonly IStorageFolder _root;
         private readonly Action<string> _log;
         private readonly Dictionary<Stream, IStorageFile> _files = new();
+        private readonly Dictionary<string, IStorageFolder> _folders = new(StringComparer.Ordinal);
 
         public StorageFolderExtractionDestination(IStorageFolder root, Action<string> log)
         {
@@ -1416,9 +1421,16 @@ public sealed class MainView : UserControl
             if (folder is null)
                 throw new PkgExtractionException("O provedor de armazenamento não forneceu a pasta de destino.");
 
+            var folderPath = "";
             foreach (var segment in segments[..^1])
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                folderPath = folderPath.Length == 0 ? segment : folderPath + "/" + segment;
+                if (_folders.TryGetValue(folderPath, out var cached))
+                {
+                    folder = cached;
+                    continue;
+                }
                 var parent = folder ?? throw new PkgExtractionException($"Pasta pai inválida ao criar '{segment}'.");
                 IStorageFolder? child = null;
                 try { child = await parent.GetFolderAsync(segment); }
@@ -1434,6 +1446,7 @@ public sealed class MainView : UserControl
                 }
 
                 folder = child ?? throw new PkgExtractionException($"O provedor de armazenamento não conseguiu abrir nem criar o diretório '{segment}'.");
+                _folders[folderPath] = folder;
             }
 
             var targetFolder = folder ?? throw new PkgExtractionException($"Pasta de destino inválida para '{relativePath}'.");
