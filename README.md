@@ -1,7 +1,13 @@
+<div align="center">
+
+<img src="OrbisExtract-transparent.png" alt="Logo do OrbisExtract" width="128" />
+
 # OrbisExtract
 
 [![Release](https://img.shields.io/github/v/release/flugeru/OrbisExtract)](https://github.com/flugeru/OrbisExtract/releases/latest)
 [![Build](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml/badge.svg?branch=main)](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml)
+
+</div>
 
 **[Português (Brasil)](#português-brasil)** · **[English](#english)**
 
