@@ -17,6 +17,7 @@ namespace LibOrbisPkg.PFS
     private IMemoryAccessor _accessor;
     private PFSCHdr hdr;
     private long[] sectorMap;
+    public ReadTimings Timings { get; set; }
 
     /// <summary>
     /// Creates a PFSCReader
@@ -81,6 +82,7 @@ namespace LibOrbisPkg.PFS
         // slow case: compressed sector
         var sectorBuf = new byte[(int)sectorSize - 2];
         _accessor.Read(sectorOffset + 2, sectorBuf, 0, (int)sectorSize - 2);
+        long started = Timings == null ? 0 : System.Diagnostics.Stopwatch.GetTimestamp();
         using (var bufStream = new MemoryStream(sectorBuf))
         using (var ds = new DeflateStream(bufStream, CompressionMode.Decompress))
         {
@@ -90,6 +92,8 @@ namespace LibOrbisPkg.PFS
           // large files at compression boundaries.
           ds.ReadExactly(output, 0, hdr.BlockSz);
         }
+        if (Timings != null)
+          Timings.DecompressionTicks += System.Diagnostics.Stopwatch.GetTimestamp() - started;
       }
     }
     

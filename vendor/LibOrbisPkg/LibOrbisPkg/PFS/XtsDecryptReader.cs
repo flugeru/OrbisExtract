@@ -22,6 +22,7 @@ namespace LibOrbisPkg.PFS
     private uint cryptStartSector;
     private IMemoryReader reader;
     private static byte[] zeroes = new byte[16];
+    private readonly ReadTimings timings;
 
     /// <summary>
     /// Creates an AES-XTS-128 stream.
@@ -30,13 +31,14 @@ namespace LibOrbisPkg.PFS
     public XtsDecryptReader(
       IMemoryReader r,
       byte[] dataKey,
-      byte[] tweakKey, uint startSector = 16, uint sectorSize = 0x1000)
+      byte[] tweakKey, uint startSector = 16, uint sectorSize = 0x1000, ReadTimings timings = null)
     {
       cryptStartSector = startSector;
       this.sectorSize = sectorSize;
       this.dataKey = dataKey;
       this.tweakKey = tweakKey;
       reader = r;
+      this.timings = timings;
     }
 
     public static unsafe void DecryptSector(
@@ -130,7 +132,12 @@ namespace LibOrbisPkg.PFS
     {
       reader.Read(currentSector * sectorSize, sectorBuf, 0, (int)sectorSize);
       if (currentSector >= cryptStartSector)
+      {
+        long started = timings == null ? 0 : System.Diagnostics.Stopwatch.GetTimestamp();
         DecryptSector(ctx, sectorBuf, (ulong)currentSector);
+        if (timings != null)
+          timings.DecryptionTicks += System.Diagnostics.Stopwatch.GetTimestamp() - started;
+      }
     }
 
     private Ctx MakeCtx()

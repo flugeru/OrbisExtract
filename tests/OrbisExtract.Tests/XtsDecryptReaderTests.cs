@@ -23,7 +23,8 @@ public class XtsDecryptReaderTests
             sector.CopyTo(ciphertext, i * sectorSize);
         }
 
-        using var reader = new XtsDecryptReader(new BytesReader(ciphertext), dataKey, tweakKey, 1, (uint)sectorSize);
+        var timings = new ReadTimings();
+        using var reader = new XtsDecryptReader(new BytesReader(ciphertext), dataKey, tweakKey, 1, (uint)sectorSize, timings);
         foreach (var (position, count) in new[] { (0, plaintext.Length), (17, 9000), (sectorSize, sectorSize), (sectorSize * 2 - 1, 33), (sectorSize * 3, sectorSize) })
         {
             var actual = new byte[count + 14];
@@ -31,6 +32,9 @@ public class XtsDecryptReaderTests
             Assert.Equal(plaintext.AsSpan(position, count).ToArray(), actual.AsSpan(7, count).ToArray());
             Assert.All(actual.Take(7).Concat(actual.Skip(count + 7)), b => Assert.Equal((byte)0, b));
         }
+        Assert.True(timings.DecryptionTicks > 0);
+        Assert.Equal(0L, timings.PackageReadTicks);
+        Assert.Equal(0L, timings.DecompressionTicks);
     }
 
     private sealed class BytesReader(byte[] bytes) : IMemoryReader

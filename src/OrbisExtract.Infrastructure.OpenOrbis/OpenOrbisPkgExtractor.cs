@@ -37,9 +37,10 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
 
         cancellationToken.ThrowIfCancellationRequested();
         request.Package.Position = 0;
-        using var accessor = new PkgMemoryReader(request.Package, (long)package.Header.pfs_image_offset, (long)package.Header.pfs_image_size);
-        var outer = new PfsReader(accessor, package.Header.pfs_flags, ekpfs);
-        var inner = new PfsReader(new PFSCReader(outer.GetFile("pfs_image.dat").GetView()));
+        var timings = new ReadTimings();
+        using var accessor = new PkgMemoryReader(request.Package, (long)package.Header.pfs_image_offset, (long)package.Header.pfs_image_size, timings);
+        var outer = new PfsReader(accessor, package.Header.pfs_flags, ekpfs, timings: timings);
+        var inner = new PfsReader(new PFSCReader(outer.GetFile("pfs_image.dat").GetView()) { Timings = timings }, timings: timings);
         // The game payload is in the inner PFS. Some packages also carry Sc0
         // files in the outer PFS; most system assets are PKG table entries.
         var files = new List<(string RelativePath, long Size, Func<Stream> Open)>();
@@ -183,7 +184,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             // Reading includes PKG I/O, AES-XTS and PFSC decompression; this is
             // wall time, not a claim that all read time was spent on storage.
             PerformanceSummary = FormattableString.Invariant(
-                $"Performance: preparation={preparationTime.TotalSeconds:F2}s; read+decrypt+decompress={(double)readTicks / Stopwatch.Frequency:F2}s; write={(double)writeTicks / Stopwatch.Frequency:F2}s; create+commit={(double)destinationTicks / Stopwatch.Frequency:F2}s")
+                $"Performance: preparation={preparationTime.TotalSeconds:F2}s; read+decrypt+decompress={(double)readTicks / Stopwatch.Frequency:F2}s; write={(double)writeTicks / Stopwatch.Frequency:F2}s; create+commit={(double)destinationTicks / Stopwatch.Frequency:F2}s; PKG-read={(double)timings.PackageReadTicks / Stopwatch.Frequency:F2}s; AES-XTS={(double)timings.DecryptionTicks / Stopwatch.Frequency:F2}s; deflate={(double)timings.DecompressionTicks / Stopwatch.Frequency:F2}s")
         };
     }
 
@@ -252,10 +253,12 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
     private sealed class PkgMemoryReader : IMemoryReader
     {
         private readonly Stream stream; private readonly long start, length;
-        public PkgMemoryReader(Stream stream, long start, long length) { this.stream = stream; this.start = start; this.length = length; }
+        private readonly ReadTimings timings;
+        public PkgMemoryReader(Stream stream, long start, long length, ReadTimings timings) { this.stream = stream; this.start = start; this.length = length; this.timings = timings; }
         public void Read(long position, byte[] buffer, int offset, int count)
         {
             if (position < 0 || count < 0 || position > length - count) throw new EndOfStreamException("Leitura fora dos limites do PKG.");
+            var started = Stopwatch.GetTimestamp();
             // Do not invalidate BufferedStream's read-ahead for sequential sectors.
             if (stream.Position != start + position)
                 stream.Seek(start + position, SeekOrigin.Begin);
@@ -266,6 +269,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 if (n == 0) throw new EndOfStreamException("PKG truncado.");
                 read += n;
             }
+            timings.PackageReadTicks += Stopwatch.GetTimestamp() - started;
         }
         public void Dispose() { }
     }

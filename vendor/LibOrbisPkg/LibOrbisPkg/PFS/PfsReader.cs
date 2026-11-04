@@ -114,7 +114,7 @@ namespace LibOrbisPkg.PFS
     public PfsReader(MemoryMappedViewAccessor r, ulong pfs_flags = 0, byte[] ekpfs = null, byte[] tweak = null, byte[] data = null)
     : this(new MemoryMappedViewAccessor_(r), pfs_flags, ekpfs, tweak, data)
     { }
-    public PfsReader(IMemoryReader r, ulong pfs_flags = 0, byte[] ekpfs = null, byte[] tweak = null, byte[] data = null)
+    public PfsReader(IMemoryReader r, ulong pfs_flags = 0, byte[] ekpfs = null, byte[] tweak = null, byte[] data = null, ReadTimings timings = null)
     {
       reader = r;
       var buf = new byte[0x400];
@@ -147,11 +147,11 @@ namespace LibOrbisPkg.PFS
         if (ekpfs != null)
         {
           var (tweakKey, dataKey) = Crypto.PfsGenEncKey(ekpfs, hdr.Seed, (pfs_flags & 0x2000000000000000UL) != 0);
-          reader = new XtsDecryptReader(reader, dataKey, tweakKey, XtsStartSector, XtsSectorSize);
+          reader = new XtsDecryptReader(reader, dataKey, tweakKey, XtsStartSector, XtsSectorSize, timings);
         }
         else
         {
-          reader = new XtsDecryptReader(reader, data, tweak, XtsStartSector, XtsSectorSize);
+          reader = new XtsDecryptReader(reader, data, tweak, XtsStartSector, XtsSectorSize, timings);
         }
       }
       var total = 0;
