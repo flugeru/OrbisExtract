@@ -1,21 +1,21 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "releaseNotes": [
-    "Novo botão de Configurações: idioma automático (sistema), português ou inglês, com escolha manual salva no dispositivo.",
-    "Interface e principais mensagens disponíveis em português e inglês.",
-    "Layout reorganizado: três cartões lado a lado em desktops largos e disposição vertical no Android.",
-    "Janela Sobre mais compacta, com botão Fechar fixo e link clicável para o repositório.",
-    "Avisos de atualização com notas em português e inglês; quando não há atualização, o botão mostra Fechar."
+    "Extração otimizada com AES-XTS em lotes e leitura Android com buffer.",
+    "Pausar, retomar e cancelar, inclusive na notificação Android, com melhorias para HyperOS.",
+    "Histórico local com resultado, duração e relatório detalhado por extração.",
+    "Barra personalizada no desktop mantendo Snap e redimensionamento; instalador Windows escuro com licença bilíngue.",
+    "Assinatura Android persistente e código de versão crescente. APKs antigos com assinatura diferente podem exigir reinstalação; preserve dados importantes antes de desinstalar."
   ],
   "releaseNotesEn": [
-    "New Settings button: automatic (system), Portuguese or English language, with manual selection saved on the device.",
-    "Interface and main messages available in Portuguese and English.",
-    "Refined layout: three side-by-side cards on wide desktops and a vertical layout on Android.",
-    "More compact About dialog with a fixed Close button and a clickable repository link.",
-    "Update prompts with notes in Portuguese and English; when no update is available, the button reads Close."
+    "Faster extraction with batched AES-XTS and buffered Android input.",
+    "Pause, resume and cancel, including Android notification controls and HyperOS improvements.",
+    "Local extraction history with outcomes, durations and detailed reports.",
+    "Custom desktop title bar retaining Snap and resizing; dark Windows installer with bilingual license.",
+    "Persistent Android signing and increasing version codes. Older APKs with different signatures may require reinstallation; preserve important data before uninstalling."
   ],
   "androidPlayUrl": "https://play.google.com/store/apps/details?id=com.tatsuya.orbisextract",
-  "androidGithubUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3",
-  "windowsUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3",
-  "linuxUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3"
+  "androidGithubUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.4",
+  "windowsUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.4",
+  "linuxUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.4"
 }

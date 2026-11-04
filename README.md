@@ -21,7 +21,9 @@ Use com seus próprios dumps. O aplicativo não baixa, instala, cria nem convert
 
 **[Última versão publicada](https://github.com/flugeru/OrbisExtract/releases/latest)** · **[Releases](https://github.com/flugeru/OrbisExtract/releases)**
 
-**1.0.4 em preparação.** Enquanto o release não for publicado, builds de teste ficam nos [Artifacts do Actions](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml), disponíveis por 14 dias. É necessário entrar no GitHub para baixá-los.
+**[Versão 1.0.4 disponível](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.4):** [Windows instalador](https://github.com/flugeru/OrbisExtract/releases/download/1.0.4/OrbisExtract-1.0.4-windows-x64-setup.exe) · [Windows portátil](https://github.com/flugeru/OrbisExtract/releases/download/1.0.4/OrbisExtract-1.0.4-windows-x64-portable.zip) · [Linux AppImage](https://github.com/flugeru/OrbisExtract/releases/download/1.0.4/OrbisExtract-1.0.4-x86_64.AppImage) · [Android APK](https://github.com/flugeru/OrbisExtract/releases/download/1.0.4/OrbisExtract-1.0.4-signed.apk).
+
+Builds de teste ficam nos [Artifacts do Actions](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml), disponíveis por 14 dias. É necessário entrar no GitHub para baixá-los.
 
 | Plataforma | Formato | Artefato de teste |
 |---|---|---|
@@ -84,7 +86,7 @@ Use your own dumps. The app does not download, install, create or convert packag
 
 **[Latest published release](https://github.com/flugeru/OrbisExtract/releases/latest)** · **[All releases](https://github.com/flugeru/OrbisExtract/releases)**
 
-**1.0.4 is being prepared.** Until publication, test builds are available as [Actions artifacts](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml) for 14 days. GitHub sign-in is required to download them.
+**[Version 1.0.4 is available](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.4).** Download the Windows installer/portable, Linux AppImage or Android APK using the links above. Test builds remain available as [Actions artifacts](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml) for 14 days; GitHub sign-in is required for artifacts, not release downloads.
 
 Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and Android 7.0+ APK. See the artifact names in the table above. macOS, iOS and browser distributions are not validated. The app is not published on Google Play yet.
 
