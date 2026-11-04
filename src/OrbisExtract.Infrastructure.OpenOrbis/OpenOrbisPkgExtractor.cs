@@ -2,6 +2,7 @@ using LibOrbisPkg.PFS;
 using LibOrbisPkg.PKG;
 using LibOrbisPkg.Util;
 using OrbisExtract.Core;
+using System.Diagnostics;
 
 namespace OrbisExtract.Infrastructure.OpenOrbis;
 
@@ -13,6 +14,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request.Package);
+        var preparationStarted = Stopwatch.GetTimestamp();
         if (request.Destination is null)
             Directory.CreateDirectory(request.DestinationDirectory);
         if (!request.Package.CanSeek)
@@ -104,6 +106,8 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         long count = 0, bytes = 0;
         var totalBytes = files.Sum(item => item.Size);
         var buffer = new byte[1024 * 1024];
+        var preparationTime = Stopwatch.GetElapsedTime(preparationStarted);
+        long readTicks = 0, writeTicks = 0, destinationTicks = 0;
         foreach (var item in files)
         {
             if (request.PauseGate is not null) await request.PauseGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -116,7 +120,9 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 if (string.IsNullOrWhiteSpace(relativePath))
                     throw new PkgExtractionException("O pacote contém um caminho interno vazio.");
 
+                var operationStarted = Stopwatch.GetTimestamp();
                 target = await destination.CreateTemporaryFileAsync(relativePath, cancellationToken).ConfigureAwait(false);
+                destinationTicks += Stopwatch.GetTimestamp() - operationStarted;
                 using var source = item.Open();
                 long fileBytes = 0;
                 var lastReport = System.Diagnostics.Stopwatch.StartNew();
@@ -125,9 +131,13 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 {
                     if (request.PauseGate is not null) await request.PauseGate.WaitAsync(cancellationToken).ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
+                    operationStarted = Stopwatch.GetTimestamp();
                     var read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
+                    readTicks += Stopwatch.GetTimestamp() - operationStarted;
                     if (read == 0) break;
+                    operationStarted = Stopwatch.GetTimestamp();
                     await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                    writeTicks += Stopwatch.GetTimestamp() - operationStarted;
                     fileBytes += read;
                     if (lastReport.ElapsedMilliseconds >= 150 || fileBytes == item.Size)
                     {
@@ -139,8 +149,10 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 if (fileBytes != item.Size)
                     throw new PkgExtractionException($"Arquivo truncado: {relativePath} ({fileBytes}/{item.Size} bytes).");
 
+                operationStarted = Stopwatch.GetTimestamp();
                 await target.FlushAsync(cancellationToken).ConfigureAwait(false);
                 await destination.CommitAsync(target, relativePath, cancellationToken).ConfigureAwait(false);
+                destinationTicks += Stopwatch.GetTimestamp() - operationStarted;
                 target = null;
                 count++;
                 bytes += fileBytes;
@@ -166,7 +178,13 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             }
         }
         progress?.Report(new ExtractionProgress("Concluído", null, count, files.Count, bytes, null));
-        return new ExtractionResult(count, bytes);
+        return new ExtractionResult(count, bytes)
+        {
+            // Reading includes PKG I/O, AES-XTS and PFSC decompression; this is
+            // wall time, not a claim that all read time was spent on storage.
+            PerformanceSummary = FormattableString.Invariant(
+                $"Performance: preparation={preparationTime.TotalSeconds:F2}s; read+decrypt+decompress={(double)readTicks / Stopwatch.Frequency:F2}s; write={(double)writeTicks / Stopwatch.Frequency:F2}s; create+commit={(double)destinationTicks / Stopwatch.Frequency:F2}s")
+        };
     }
 
     private static string NormalizePfsPath(string path)

@@ -42,7 +42,10 @@ public sealed record ExtractionProgress(
     long BytesCompleted,
     long? BytesTotal);
 
-public sealed record ExtractionResult(long FilesExtracted, long BytesExtracted);
+public sealed record ExtractionResult(long FilesExtracted, long BytesExtracted)
+{
+    public string? PerformanceSummary { get; init; }
+}
 
 public interface IExtractionDestination
 {

@@ -1281,6 +1281,8 @@ public sealed class MainView : UserControl
             historyResult = "Concluído";
             historyFiles = result.FilesExtracted;
             historyBytes = result.BytesExtracted;
+            if (result.PerformanceSummary is not null)
+                Log(result.PerformanceSummary);
             timer?.Stop();
             timer?.Dispose();
 
