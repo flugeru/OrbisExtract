@@ -1,215 +1,114 @@
 # OrbisExtract
 
 [![Release](https://img.shields.io/github/v/release/flugeru/OrbisExtract)](https://github.com/flugeru/OrbisExtract/releases/latest)
+[![Build](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml/badge.svg?branch=main)](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml)
 
-**English** · **[Português (Brasil)](#português-brasil)**
-
----
-
-## English
-
-Cross-platform **PlayStation 4 PKG extractor** for dumps made by the user themselves.
-
-The app opens a `.pkg` file, shows its metadata and extracts the files inside to a folder of your choice — nothing more. It does not download, install, create or convert packages, and it contains no keys, passcodes or any protection bypass. It is an extraction tool for your own dumps.
-
-Built in C#/.NET with an [Avalonia](https://avaloniaui.net) UI, using the [OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg) library for package reading.
-
-### Downloads
-
-Download **1.0.3** from the **[release page](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)**:
-
-| Platform | Release asset |
-|---|---|
-| Windows x64 — installer | [`OrbisExtract-1.0.3-windows-x64-setup.exe`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-setup.exe) |
-| Windows x64 — portable | [`OrbisExtract-1.0.3-windows-x64-portable.zip`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-portable.zip) |
-| Linux x64 — AppImage | [`OrbisExtract-1.0.3-x86_64.appimage`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-x86_64.appimage) |
-| Android — APK | [`OrbisExtract-1.0.3-signed.apk`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk) |
-
-### Google Play
-
-The Play Store listing is **not published yet**. When it is available, the app will be published as `com.tatsuya.orbisextract` on Google Play. For now, use the GitHub APK and check the [releases page](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3).
-
-![Google Play](https://img.shields.io/badge/Google_Play-Coming_Soon-lightgrey?logo=google-play&logoColor=white)
-
-### Version 1.0.3 changes
-
-- Settings beside About: follow the system language or choose Portuguese or English; manual selection is saved locally.
-- Portuguese and English interface, including the main extraction messages and Android notifications.
-- Responsive layout with three side-by-side cards on wide desktops; Android keeps a vertical layout.
-- More compact About dialog with a persistent Close button and a clickable repository link.
-- Bilingual update notes; the no-update prompt now says Close instead of Not now.
-
-
-### What it does
-
-- Opens a PS4 `.pkg` file from your device/storage
-- Shows package info (title, content, structure)
-- Extracts the package contents to a chosen folder, with progress
-- Automatically uses the system language (Portuguese or English), with a saved manual language choice in Settings
-- Shows update information in About, with release notes when provided by the update manifest; updates are never installed automatically
-- Available for **Windows/Linux** (desktop) and **Android** (APK)
-
-### Platform support
-
-| Platform | Status | Release format |
-|---|---|---|
-| **Windows** (x64) | ✅ Supported and tested | Installer or portable ZIP |
-| **Linux** (x64) | ✅ Supported and tested | AppImage |
-| **Android** (APK) | ✅ Supported and tested | APK |
-| macOS, iOS, Web (Browser) | ❌ Not available | project files exist, but they are not built or validated |
-
-Downloads: **[1.0.3 release](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)**. CI builds of every push are also available as artifacts on the [Actions](https://github.com/flugeru/OrbisExtract/actions) page (kept for 14 days).
-
-### Installing on Windows
-
-Download the [1.0.3 Windows installer](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-setup.exe) and run it:
-
-- Installs to `C:\Program Files\OrbisExtract` (Start Menu + desktop shortcut, entry in *Apps and features*)
-- **To update an older version:** just run the new installer. It detects the previous installation and installs right over it — same location, no need to uninstall first
-- The [1.0.3 portable ZIP](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-portable.zip) is available without installation
-
-### How to build
-
-**Requirements**
-
-- [.NET SDK 8](https://dotnet.microsoft.com/download) (core, desktop and tests)
-- For Android: .NET 10 SDK + `android` workload, Java and Android SDK
-
-**Desktop (Windows/Linux)**
-
-```bash
-dotnet restore OrbisExtract.sln
-dotnet build OrbisExtract.sln
-dotnet test OrbisExtract.sln --no-restore
-```
-
-To produce a releasable build:
-
-- Windows: `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1`
-- Windows installer: after publishing, run `ISCC packaging\windows\orbisextract.iss` (requires [Inno Setup 6](https://jrsoftware.org/isinfo.php))
-- Linux: `bash scripts/publish-linux.sh`
-- Linux AppImage: `bash scripts/publish-linux.sh && bash scripts/build-appimage.sh` (requires [`appimagetool`](https://github.com/AppImage/AppImageKit))
-
-**Android**
-
-```bash
-bash scripts/publish-android.sh
-```
-
-Or download the [1.0.3 Android APK](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk). CI also builds an APK on every push as an [Actions](https://github.com/flugeru/OrbisExtract/actions) artifact.
-
-### Credits
-
-- **[OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg)** — library that reads and extracts PKG packages. Source included in `vendor/LibOrbisPkg/` under the **LGPL-3.0** license. Thanks to the OpenOrbis project and the LibOrbisPkg contributors.
-- **[Avalonia UI](https://avaloniaui.net)** — cross-platform UI framework (MIT).
-
-Full third-party license notices in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
-
-### License
-
-This project is licensed under the **MIT License** — see [LICENSE](LICENSE).
-
----
+**[Português (Brasil)](#português-brasil)** · **[English](#english)**
 
 ## Português (Brasil)
 
-Aplicativo multiplataforma para **extrair o conteúdo de arquivos `.pkg` de PlayStation 4** a partir de dumps feitos pelo próprio usuário.
+Extrator de arquivos **PKG de PlayStation 4** para Windows, Linux e Android, feito em C#/.NET com Avalonia e OpenOrbis/LibOrbisPkg. Abre o pacote, mostra metadados e extrai seu conteúdo para uma pasta escolhida.
 
-Ele abre o pacote, mostra os metadados e extrai os arquivos internos para uma pasta escolhida — nada além disso. Não baixa, não instala, não cria nem converte pacotes, e não contém chaves, passcodes ou qualquer mecanismo de burlar proteção. É uma ferramenta de extração para uso com os seus próprios dumps.
-
-Feito em C#/.NET com interface [Avalonia](https://avaloniaui.net), usando a biblioteca [OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg) para a leitura dos pacotes.
+Use com seus próprios dumps. O aplicativo não baixa, instala, cria nem converte pacotes. Pacotes protegidos podem não ser compatíveis; não há campo de passcode na interface.
 
 ### Downloads
 
-Baixe a versão **1.0.3** na **[página do release](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)**:
+**[Última versão publicada](https://github.com/flugeru/OrbisExtract/releases/latest)** · **[Releases](https://github.com/flugeru/OrbisExtract/releases)**
 
-| Plataforma | Arquivo do release |
-|---|---|
-| Windows x64 — instalador | [`OrbisExtract-1.0.3-windows-x64-setup.exe`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-setup.exe) |
-| Windows x64 — portátil | [`OrbisExtract-1.0.3-windows-x64-portable.zip`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-portable.zip) |
-| Linux x64 — AppImage | [`OrbisExtract-1.0.3-x86_64.appimage`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-x86_64.appimage) |
-| Android — APK | [`OrbisExtract-1.0.3-signed.apk`](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk) |
+**1.0.4 em preparação.** Enquanto o release não for publicado, builds de teste ficam nos [Artifacts do Actions](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml), disponíveis por 14 dias. É necessário entrar no GitHub para baixá-los.
 
-### Google Play
-
-O app **ainda não foi publicado** na Play Store. Quando disponível, será publicado como `com.tatsuya.orbisextract`. Por enquanto, use o APK do GitHub na [página de releases](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3).
-
-![Google Play](https://img.shields.io/badge/Google_Play-Em_Breve-lightgrey?logo=google-play&logoColor=white)
-
-### Mudanças da versão 1.0.3
-
-- Configurações ao lado de Sobre: seguir o idioma do sistema ou escolher português ou inglês; a escolha manual é salva localmente.
-- Interface em português e inglês, incluindo as principais mensagens de extração e notificações Android.
-- Layout responsivo com três cartões lado a lado em desktops largos; no Android, a disposição continua vertical.
-- Janela Sobre mais compacta, com botão Fechar fixo e link clicável para o repositório.
-- Notas de atualização bilíngues; o aviso de que não há atualização agora mostra Fechar em vez de Agora não.
-
-
-### O que ele faz
-
-- Abre um arquivo `.pkg` de PS4 do seu dispositivo/armazenamento
-- Exibe as informações do pacote (título, conteúdo, estrutura)
-- Extrai os arquivos do pacote para uma pasta de destino, com progresso
-- Detecta o idioma do sistema (português ou inglês) e permite salvar uma escolha manual em Configurações
-- Exibe informações de atualização em Sobre, com notas quando disponíveis; não instala atualizações automaticamente
-- Disponível para **Windows/Linux** (desktop) e **Android** (APK)
-
-### Suporte a plataformas
-
-| Plataforma | Status | Formato do release |
+| Plataforma | Formato | Artefato de teste |
 |---|---|---|
-| **Windows** (x64) | ✅ Suportado e testado | Instalador ou ZIP portátil |
-| **Linux** (x64) | ✅ Suportado e testado | AppImage |
-| **Android** (APK) | ✅ Suportado e testado | APK |
-| macOS, iOS, Web (Browser) | ❌ Não disponível | os arquivos de projeto existem, mas não são compilados nem validados |
+| Windows x64 | Instalador / portátil | `orbisextract-windows-setup` / `orbisextract-windows-exe` |
+| Linux x64 | AppImage | `orbisextract-linux-appimage` |
+| Android 7.0+ | APK | `OrbisExtract-Android-APK` |
 
-Downloads: **[release 1.0.3](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.3)**. Os builds de cada push também ficam disponíveis como artefatos na página de [Actions](https://github.com/flugeru/OrbisExtract/actions) (por 14 dias).
+macOS, iOS e navegador não têm distribuição validada. A versão Android ainda não foi publicada na Google Play.
 
-### Instalação no Windows
+### Novidades da 1.0.4
 
-Baixe o [instalador Windows 1.0.3](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-setup.exe) e execute:
+- Extração otimizada: menos chamadas AES, processamento XTS em lotes, leitura Android com buffer e reutilização de pastas do provedor de armazenamento.
+- Pausar, retomar e cancelar a extração; controles também na notificação Android, com ajustes para HyperOS.
+- Histórico local de extrações com resultado, duração e relatório detalhado.
+- Barra de título personalizada no desktop, sem faixa cinza superior no Windows, mantendo estilos usados pelo Snap e redimensionamento.
+- Instalador Windows escuro, com identidade visual e licença bilíngue.
+- Ajustes de layout, traduções e diagnósticos de desempenho no log.
+- APKs do Actions com chave persistente em GitHub Actions Secrets e código de versão crescente.
 
-- Instala em `C:\Program Files\OrbisExtract` (atalhos no Menu Iniciar e na área de trabalho, entrada em *Programas e Recursos*)
-- **Para atualizar uma versão antiga:** basta rodar o instalador novo. Ele detecta a instalação anterior e instala por cima — mesma pasta, sem precisar desinstalar antes
-- O [ZIP portátil 1.0.3](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-windows-x64-portable.zip) pode ser usado sem instalação
+No teste informado pelo usuário, o mesmo PKG passou de **03:29 para cerca de 44 s no POCO X6 Pro**, usando memória interna. É uma medição desse aparelho e pacote, não uma garantia para outros dispositivos.
 
-### Como compilar
+### Atualização e uso
 
-**Requisitos**
+1. Instale a versão correspondente à plataforma. No Windows, execute o instalador novo sobre a instalação anterior; o portátil dispensa instalação.
+2. Selecione o PKG e uma pasta de destino vazia. Confira espaço livre: o conteúdo extraído pode ser maior que o pacote.
+3. Inicie a extração. Use os controles de pausa/cancelamento e consulte o histórico ou o log em caso de erro.
 
-- [.NET SDK 8](https://dotnet.microsoft.com/download) (núcleo, desktop e testes)
-- Para Android: .NET 10 SDK + workload `android`, Java e Android SDK
+**Android:** instalar por cima exige o mesmo identificador e assinatura compatível, sem reduzir o código de versão. Builds novos usam a chave persistente do projeto; APKs antigos assinados com outras chaves podem exigir reinstalação. Preserve os dados importantes antes de desinstalar. A chave privada não fica no repositório nem nos artefatos; os dados do certificado público acompanham o APK do Actions.
 
-**Desktop (Windows/Linux)**
+Português e inglês disponíveis em Configurações, com detecção automática do sistema ou escolha manual salva. Atualizações são consultadas pelo aplicativo, mas nunca instaladas automaticamente.
 
-```bash
+### Compilar
+
+Desktop e testes: **.NET SDK 8**. Android: **.NET SDK 10**, workload `android`, Java 17 e Android SDK 36.
+
+```sh
 dotnet restore OrbisExtract.sln
-dotnet build OrbisExtract.sln
-dotnet test OrbisExtract.sln --no-restore
+dotnet build OrbisExtract.sln -c Release
+dotnet test OrbisExtract.sln -c Release --no-restore
+python tests/check_android_updates.py
 ```
 
-Para gerar a versão publicável:
+| Saída | Comando |
+|---|---|
+| Windows | `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1` |
+| Instalador, após publicar Windows | `ISCC packaging\windows\orbisextract.iss` — Inno Setup 6 atualizado |
+| Linux | `bash scripts/publish-linux.sh` |
+| AppImage, após publicar Linux | `bash scripts/build-appimage.sh` — requer `appimagetool` |
+| Android local | `bash scripts/publish-android.sh` |
 
-- Windows: `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1`
-- Instalador Windows: após o publish, rode `ISCC packaging\windows\orbisextract.iss` (requer o [Inno Setup 6](https://jrsoftware.org/isinfo.php))
-- Linux: `bash scripts/publish-linux.sh`
-- Linux AppImage: `bash scripts/publish-linux.sh && bash scripts/build-appimage.sh` (requer o [`appimagetool`](https://github.com/AppImage/AppImageKit))
+O workflow [Build all platforms](.github/workflows/android-apk.yml) gera os artefatos de distribuição. No CI, `ANDROID_SIGNING_KEYSTORE_BASE64` deve conter o keystore existente em Base64; o build falha se o Secret estiver ausente, em vez de gerar outra chave. Não use uma chave diferente se precisar manter compatibilidade com instalações anteriores. A assinatura local precisa ser configurada com a mesma chave para produzir APKs compatíveis com os do CI.
 
-**Android**
+## English
 
-```bash
-bash scripts/publish-android.sh
-```
+Cross-platform **PlayStation 4 PKG extractor**, built with C#/.NET, Avalonia and OpenOrbis/LibOrbisPkg. Open a package, inspect its metadata and extract its contents to a selected folder.
 
-Ou baixe o [APK Android 1.0.3](https://github.com/flugeru/OrbisExtract/releases/download/1.0.3/OrbisExtract-1.0.3-signed.apk). O CI também gera um APK a cada push como artefato de [Actions](https://github.com/flugeru/OrbisExtract/actions).
+Use your own dumps. The app does not download, install, create or convert packages. Protected packages may not be supported; the UI has no passcode field.
 
-### Créditos
+### Downloads
 
-- **[OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg)** — biblioteca que faz a leitura/extração dos pacotes PKG. A fonte está incluída em `vendor/LibOrbisPkg/` sob licença **LGPL-3.0**. Obrigado ao projeto OpenOrbis e aos contribuintes do LibOrbisPkg.
-- **[Avalonia UI](https://avaloniaui.net)** — interface gráfica multiplataforma (MIT).
+**[Latest published release](https://github.com/flugeru/OrbisExtract/releases/latest)** · **[All releases](https://github.com/flugeru/OrbisExtract/releases)**
 
-Avisos completos de licenças de terceiros em [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+**1.0.4 is being prepared.** Until publication, test builds are available as [Actions artifacts](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml) for 14 days. GitHub sign-in is required to download them.
 
-### Licença
+Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and Android 7.0+ APK. See the artifact names in the table above. macOS, iOS and browser distributions are not validated. The app is not published on Google Play yet.
 
-Este projeto está sob a licença **MIT** — veja [LICENSE](LICENSE).
+### What's new in 1.0.4
+
+- Faster extraction through batched AES-XTS processing, buffered Android input and reused storage-provider folders.
+- Pause, resume and cancel, including Android notification controls with HyperOS layout fixes.
+- Local extraction history with outcomes, durations and detailed reports.
+- Custom desktop title bar without the gray Windows top strip, retaining native styles used for Snap and resizing.
+- Dark branded Windows installer and bilingual license.
+- Layout and translation fixes, plus extraction performance diagnostics.
+- Actions APKs signed with a persistent GitHub Actions Secret and an increasing version code.
+
+A user-reported test of the same PKG improved from **03:29 to about 44 seconds on a POCO X6 Pro**, using internal storage. Results depend on the device, package and storage; this is not a general benchmark guarantee.
+
+### Updating and extracting
+
+Run the new Windows installer over the previous installation, or use the portable build. Select a PKG and an empty destination folder with enough free space; extracted contents can exceed the package size. Use pause/cancel controls as needed and inspect the history or log for errors.
+
+**Android updates require a compatible signing identity, the same package ID and no version-code downgrade.** New CI builds reuse the project signing key; older APKs with different signatures may require reinstallation. Preserve important app data before uninstalling. Private signing material is never included in the repository or download artifacts; public certificate details accompany the Actions APK.
+
+Settings support system language detection or a saved Portuguese/English selection. The app checks for updates but never installs them automatically.
+
+### Building
+
+Use .NET SDK 8 for desktop/tests; Android requires .NET SDK 10, the `android` workload, Java 17 and Android SDK 36. Build/test commands and platform publishing scripts are listed above. CI requires the existing Base64 keystore in `ANDROID_SIGNING_KEYSTORE_BASE64`; missing signing material fails the build rather than silently replacing the key. Local builds need the same signing key to update CI installations.
+
+## Credits / Créditos
+
+- [OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg): package-reading library, included with local changes in `vendor/LibOrbisPkg/`, LGPL-3.0.
+- [Avalonia UI](https://avaloniaui.net): cross-platform UI, MIT.
+
+[Third-party notices](THIRD-PARTY-NOTICES.md) · [Project license: MIT](LICENSE)

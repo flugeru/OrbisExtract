@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     paths:
+      - 'README.md'
+      - 'docs/release-*.md'
       - 'src/**'
       - 'vendor/LibOrbisPkg/**'
       - 'scripts/publish-android.sh'
