@@ -5,10 +5,11 @@ namespace OrbisExtract.Tests;
 
 public class XtsDecryptReaderTests
 {
-    [Fact]
-    public void BatchedDecryptionMatchesBlockTransformAcrossSectorsAndPartialReads()
+    [Theory]
+    [InlineData(4096)]
+    [InlineData(16384)]
+    public void BatchedDecryptionMatchesBlockTransformAcrossSectorsAndPartialReads(int sectorSize)
     {
-        const int sectorSize = 4096;
         var dataKey = Enumerable.Range(0, 16).Select(i => (byte)i).ToArray();
         var tweakKey = Enumerable.Range(16, 16).Select(i => (byte)i).ToArray();
         var plaintext = new byte[sectorSize * 4];
@@ -22,8 +23,8 @@ public class XtsDecryptReaderTests
             sector.CopyTo(ciphertext, i * sectorSize);
         }
 
-        using var reader = new XtsDecryptReader(new BytesReader(ciphertext), dataKey, tweakKey, 1, sectorSize);
-        foreach (var (position, count) in new[] { (0, plaintext.Length), (17, 9000), (4096, 4096), (8191, 33), (12288, 4096) })
+        using var reader = new XtsDecryptReader(new BytesReader(ciphertext), dataKey, tweakKey, 1, (uint)sectorSize);
+        foreach (var (position, count) in new[] { (0, plaintext.Length), (17, 9000), (sectorSize, sectorSize), (sectorSize * 2 - 1, 33), (sectorSize * 3, sectorSize) })
         {
             var actual = new byte[count + 14];
             reader.Read(position, actual, 7, count);

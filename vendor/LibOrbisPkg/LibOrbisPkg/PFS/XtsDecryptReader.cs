@@ -63,29 +63,37 @@ namespace LibOrbisPkg.PFS
       var decryptor = context.Decryptor;
       {
         tweakEncryptor.TransformBlock(tweak, 0, 16, encryptedTweak, 0);
-        for (int plaintextOffset = 0; plaintextOffset < sector.Length; plaintextOffset += 16)
+        ulong low = BinaryPrimitives.ReadUInt64LittleEndian(encryptedTweak);
+        ulong high = BinaryPrimitives.ReadUInt64LittleEndian(encryptedTweak.AsSpan(8));
+        fixed (byte* sectorBytes = sector)
+        fixed (byte* tweakBytes = context.sectorTweaks)
         {
-          fixed(byte* xor_ = xor)
-          fixed(byte* encryptedTweak_ = encryptedTweak)
-          fixed(byte* sector_ = &sector[plaintextOffset])
+          for (int plaintextOffset = 0; plaintextOffset < sector.Length; plaintextOffset += 16)
           {
-            *((ulong*)xor_) = *((ulong*)sector_) ^ *((ulong*)encryptedTweak_);
-            *((ulong*)xor_+1) = *((ulong*)sector_+1) ^ *((ulong*)encryptedTweak_+1);
+            // XTS tweaks are little-endian; preserve that on other architectures.
+            ulong first = BitConverter.IsLittleEndian ? low : BinaryPrimitives.ReverseEndianness(low);
+            ulong second = BitConverter.IsLittleEndian ? high : BinaryPrimitives.ReverseEndianness(high);
+            var data = (ulong*)(sectorBytes + plaintextOffset);
+            var saved = (ulong*)(tweakBytes + plaintextOffset);
+            data[0] ^= first;
+            data[1] ^= second;
+            saved[0] = first;
+            saved[1] = second;
+            // Multiply the 128-bit tweak by x in GF(2^128).
+            ulong carry = low >> 63;
+            low = (low << 1) ^ ((high >> 63) != 0 ? 0x87UL : 0UL);
+            high = (high << 1) | carry;
           }
-          Buffer.BlockCopy(xor, 0, sector, plaintextOffset, 16);
-          Buffer.BlockCopy(encryptedTweak, 0, context.sectorTweaks, plaintextOffset, 16);
-          // GF-Multiply Tweak
-          ulong low = BinaryPrimitives.ReadUInt64LittleEndian(encryptedTweak);
-          ulong high = BinaryPrimitives.ReadUInt64LittleEndian(encryptedTweak.AsSpan(8));
-          BinaryPrimitives.WriteUInt64LittleEndian(encryptedTweak,
-            (low << 1) ^ ((high >> 63) != 0 ? 0x87UL : 0UL));
-          BinaryPrimitives.WriteUInt64LittleEndian(encryptedTweak.AsSpan(8),
-            (high << 1) | (low >> 63));
         }
         // One native AES call per sector, not one interop call per 16-byte block.
         decryptor.TransformBlock(sector, 0, sector.Length, xor, 0);
-        for (int i = 0; i < sector.Length; i++)
-          sector[i] = (byte)(xor[i] ^ context.sectorTweaks[i]);
+        fixed (byte* sectorBytes = sector)
+        fixed (byte* xorBytes = xor)
+        fixed (byte* tweakBytes = context.sectorTweaks)
+        {
+          for (int i = 0; i < sector.Length; i += sizeof(ulong))
+            *(ulong*)(sectorBytes + i) = *(ulong*)(xorBytes + i) ^ *(ulong*)(tweakBytes + i);
+        }
       }
     }
 
