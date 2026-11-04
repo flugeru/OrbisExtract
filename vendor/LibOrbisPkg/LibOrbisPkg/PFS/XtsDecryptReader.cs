@@ -172,46 +172,29 @@ namespace LibOrbisPkg.PFS
 
     public void Read(long position, byte[] buffer, int offset, int count)
     {
+      if (position < 0 || count < 0 || offset < 0 || offset > buffer.Length - count)
+        throw new ArgumentOutOfRangeException();
+      if (count == 0) return;
       using var ctx = MakeCtx();
-      // Batch only complete encrypted sectors. Partial reads retain sector
-      // boundaries and never read beyond the caller's requested full sectors.
-      if (position % sectorSize == 0 && position / sectorSize >= cryptStartSector && count >= sectorSize)
-      {
-        int batchSize = (int)Math.Min(64 * 1024 / sectorSize, count / sectorSize) * (int)sectorSize;
-        if (batchSize > 0)
-        {
-          var batch = new byte[batchSize];
-          while (count >= batchSize)
-          {
-            ReadSectorBuffer(ctx, checked((int)(position / sectorSize)), batch);
-            Buffer.BlockCopy(batch, 0, buffer, offset, batchSize);
-            position += batchSize;
-            offset += batchSize;
-            count -= batchSize;
-          }
-          if (count == 0) return;
-        }
-      }
-      var sectorBuf = new byte[sectorSize];
-      var currentSector = (int)(position / sectorSize);
-      var offsetIntoSector = (int)(position - (sectorSize * currentSector));
-      ReadSectorBuffer(ctx, currentSector, sectorBuf);
-      int totalRead = 0;
+      byte[] batch = Array.Empty<byte>();
       while (count > 0)
       {
-        if (offsetIntoSector >= sectorSize)
-        {
-          currentSector++;
-          ReadSectorBuffer(ctx, currentSector, sectorBuf);
-          offsetIntoSector = 0;
-        }
-        int bufferedRead = Math.Min((int)sectorSize - offsetIntoSector, count);
-        Buffer.BlockCopy(sectorBuf, offsetIntoSector, buffer, offset, bufferedRead);
-        count -= bufferedRead;
-        offset += bufferedRead;
-        totalRead += bufferedRead;
-        offsetIntoSector += bufferedRead;
-        position += bufferedRead;
+        var currentSector = checked((int)(position / sectorSize));
+        int offsetIntoSector = (int)(position % sectorSize);
+        long sectorsNeeded = ((long)offsetIntoSector + count + sectorSize - 1) / sectorSize;
+        long sectors = Math.Min(Math.Max(1, 64 * 1024 / sectorSize), sectorsNeeded);
+        // A batch must never mix plaintext header sectors and encrypted sectors.
+        if (currentSector < cryptStartSector)
+          sectors = Math.Min(sectors, (long)cryptStartSector - currentSector);
+        int batchSize = checked((int)(sectors * sectorSize));
+        if (batch.Length != batchSize) batch = new byte[batchSize];
+        // Read only sectors intersecting the request, including partial ends.
+        ReadSectorBuffer(ctx, currentSector, batch);
+        int copied = Math.Min(batchSize - offsetIntoSector, count);
+        Buffer.BlockCopy(batch, offsetIntoSector, buffer, offset, copied);
+        position += copied;
+        offset += copied;
+        count -= copied;
       }
     }
 

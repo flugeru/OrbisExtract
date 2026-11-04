@@ -24,13 +24,17 @@ public class XtsDecryptReaderTests
         }
 
         var timings = new ReadTimings();
-        using var reader = new XtsDecryptReader(new BytesReader(ciphertext), dataKey, tweakKey, 1, (uint)sectorSize, timings);
-        foreach (var (position, count) in new[] { (0, plaintext.Length), (17, 9000), (sectorSize, sectorSize), (sectorSize, sectorSize * 38 + 17), (sectorSize * 2 - 1, 33), (sectorSize * 3, sectorSize) })
+        var source = new BytesReader(ciphertext);
+        using var reader = new XtsDecryptReader(source, dataKey, tweakKey, 1, (uint)sectorSize, timings);
+        foreach (var (position, count) in new[] { (0, plaintext.Length), (17, 9000), (sectorSize, sectorSize), (sectorSize + 2, sectorSize * 38 + 17), (sectorSize * 2 - 1, 33), (sectorSize * 3, sectorSize), (plaintext.Length, 0) })
         {
             var actual = new byte[count + 14];
+            int callsBefore = source.ReadCalls;
             reader.Read(position, actual, 7, count);
             Assert.Equal(plaintext.AsSpan(position, count).ToArray(), actual.AsSpan(7, count).ToArray());
             Assert.All(actual.Take(7).Concat(actual.Skip(count + 7)), b => Assert.Equal((byte)0, b));
+            if (position == sectorSize + 2)
+                Assert.True(source.ReadCalls - callsBefore < count / sectorSize);
         }
         Assert.True(timings.DecryptionTicks > 0);
         Assert.Equal(0L, timings.PackageReadTicks);
@@ -39,8 +43,12 @@ public class XtsDecryptReaderTests
 
     private sealed class BytesReader(byte[] bytes) : IMemoryReader
     {
-        public void Read(long pos, byte[] buf, int offset, int count) =>
+        public int ReadCalls { get; private set; }
+        public void Read(long pos, byte[] buf, int offset, int count)
+        {
+            ReadCalls++;
             Array.Copy(bytes, pos, buf, offset, count);
+        }
         public void Dispose() { }
     }
 }
