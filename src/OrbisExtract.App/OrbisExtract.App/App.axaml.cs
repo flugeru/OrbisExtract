@@ -22,50 +22,6 @@ public sealed class App : Application
     private static extern int DwmSetWindowAttribute(
         IntPtr hwnd, int attribute, ref uint value, int valueSize);
 
-    // Windows keeps Snap when WS_THICKFRAME and the minimize/maximize styles
-    // remain enabled. Remove only the native caption, not the window frame.
-    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
-    private static extern IntPtr GetWindowLongPtr64(IntPtr hwnd, int index);
-
-    [DllImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
-    private static extern int GetWindowLong32(IntPtr hwnd, int index);
-
-    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
-    private static extern IntPtr SetWindowLongPtr64(IntPtr hwnd, int index, IntPtr value);
-
-    [DllImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
-    private static extern int SetWindowLong32(IntPtr hwnd, int index, int value);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter,
-        int x, int y, int width, int height, uint flags);
-
-    private static void HideNativeCaption(IntPtr hwnd)
-    {
-        const int gwlStyle = -16;
-        const long wsCaption = 0x00C00000L;
-        const long wsThickFrame = 0x00040000L;
-        const long wsMaximizeBox = 0x00010000L;
-        const long wsMinimizeBox = 0x00020000L;
-        const uint swpNoSize = 0x0001, swpNoMove = 0x0002;
-        const uint swpNoZOrder = 0x0004, swpFrameChanged = 0x0020;
-
-        long style = IntPtr.Size == 8
-            ? GetWindowLongPtr64(hwnd, gwlStyle).ToInt64()
-            : GetWindowLong32(hwnd, gwlStyle);
-        long updated = (style & ~wsCaption) |
-            wsThickFrame | wsMaximizeBox | wsMinimizeBox;
-        if (updated == style)
-            return;
-        if (IntPtr.Size == 8)
-            SetWindowLongPtr64(hwnd, gwlStyle, new IntPtr(updated));
-        else
-            SetWindowLong32(hwnd, gwlStyle, unchecked((int)updated));
-        SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
-            swpNoSize | swpNoMove | swpNoZOrder | swpFrameChanged);
-    }
-
     // Desktop-only custom title bar without the native gray Windows border.
     private static Window CreateDesktopWindow(Control content)
     {
@@ -77,9 +33,10 @@ public sealed class App : Application
             MinWidth = 360,
             MinHeight = 520,
             Background = UiTheme.Brush(UiTheme.Background),
-            // Preserve native Win32 window styles needed for Windows Snap.
-            // The custom Avalonia title bar stays in place.
-            WindowDecorations = WindowDecorations.BorderOnly
+            // Keep native resize/Snap styles, but draw into the top frame instead
+            // of leaving its gray non-client strip above our custom title bar.
+            WindowDecorations = WindowDecorations.BorderOnly,
+            ExtendClientAreaToDecorationsHint = OperatingSystem.IsWindows()
         };
 
         // Windows 11: suppress the DWM accent/border without removing the
@@ -97,8 +54,6 @@ public sealed class App : Application
             const uint dwmColorNone = 0xFFFFFFFE;
             uint color = dwmColorNone;
             _ = DwmSetWindowAttribute(handle, dwmwaBorderColor, ref color, sizeof(uint));
-
-            HideNativeCaption(handle);
         };
         var minimize = TitleButton("─", "Minimizar");
         var maximize = TitleButton("□", "Maximizar ou restaurar");
@@ -163,8 +118,7 @@ public sealed class App : Application
         layout.Children.Add(titleBar);
         Grid.SetRow(content, 1);
         layout.Children.Add(content);
-        // With WindowDecorations.None, Windows no longer supplies resize hit targets.
-        // Add transparent 6px edge / 12px corner hit zones, preserving the clean theme.
+        // Keep explicit resize targets inside the custom client area.
         var resizeLayer = new Grid
         {
             RowDefinitions = new RowDefinitions("12,*,12"),
