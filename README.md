@@ -5,7 +5,6 @@
 # OrbisExtract
 
 [![Release](https://img.shields.io/github/v/release/flugeru/OrbisExtract)](https://github.com/flugeru/OrbisExtract/releases/latest)
-[![Build](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml/badge.svg?branch=main)](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml)
 
 </div>
 
@@ -74,7 +73,7 @@ python tests/check_android_updates.py
 | AppImage, após publicar Linux | `bash scripts/build-appimage.sh` — requer `appimagetool` |
 | Android local | `bash scripts/publish-android.sh` |
 
-O workflow [Build all platforms](.github/workflows/android-apk.yml) gera os artefatos de distribuição. No CI, `ANDROID_SIGNING_KEYSTORE_BASE64` deve conter o keystore existente em Base64; o build falha se o Secret estiver ausente, em vez de gerar outra chave. Não use uma chave diferente se precisar manter compatibilidade com instalações anteriores. A assinatura local precisa ser configurada com a mesma chave para produzir APKs compatíveis com os do CI.
+No CI, `ANDROID_SIGNING_KEYSTORE_BASE64` deve conter o keystore existente em Base64; o build falha se o Secret estiver ausente, em vez de gerar outra chave. Não use uma chave diferente se precisar manter compatibilidade com instalações anteriores. A assinatura local precisa ser configurada com a mesma chave para produzir APKs compatíveis com os do CI.
 
 ## English
 
