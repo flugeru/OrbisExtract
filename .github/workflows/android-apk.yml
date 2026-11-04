@@ -90,25 +90,21 @@ jobs:
       - name: Verify Android assets
         run: test -f src/OrbisExtract.App/OrbisExtract.App.Android/obj/project.assets.json
 
-      # Development builds only. Cache eviction changes the signing identity;
-      # production releases need a backed-up private key stored in secrets.
-      - name: Restore development signing key
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/orbisextract-signing
-          key: orbisextract-development-signing-v1
-
-      - name: Prepare development signing key and increasing version code
+      - name: Restore signing key from repository Secret
         shell: bash
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}
         run: |
           set -euo pipefail
-          mkdir -p "$HOME/.local/share/orbisextract-signing"
-          if [ ! -f "$HOME/.local/share/orbisextract-signing/development.jks" ]; then
-            keytool -genkeypair -keystore "$HOME/.local/share/orbisextract-signing/development.jks" \
-              -alias androiddebugkey -storepass android -keypass android \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=OrbisExtract Development, O=Flugel, C=BR" -noprompt
+          if [ -z "$SIGNING_KEYSTORE_BASE64" ]; then
+            echo "Missing ANDROID_SIGNING_KEYSTORE_BASE64; refusing to generate a different signing key."
+            exit 1
           fi
+          umask 077
+          mkdir -p "$HOME/.local/share/orbisextract-signing"
+          printf '%s' "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$HOME/.local/share/orbisextract-signing/development.jks"
+          keytool -list -keystore "$HOME/.local/share/orbisextract-signing/development.jks" \
+            -alias androiddebugkey -storepass android >/dev/null
           echo "APK_VERSION_CODE=$((1040000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
 
       - name: Publish signed development APK
@@ -168,6 +164,11 @@ jobs:
           path: artifacts/release/*
           if-no-files-found: error
           retention-days: 14
+
+      - name: Remove runner signing key
+        if: always()
+        shell: bash
+        run: rm -f "$HOME/.local/share/orbisextract-signing/development.jks"
 
   build-windows:
     name: Build Windows EXE

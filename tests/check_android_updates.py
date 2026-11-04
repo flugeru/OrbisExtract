@@ -7,7 +7,7 @@ workflow = (root / ".github/workflows/android-apk.yml").read_text(encoding="utf-
 project = ET.parse(root / "src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj")
 assert project.findtext(".//ApplicationId") == "com.tatsuya.orbisextract"
 for required in (
-    "key: orbisextract-development-signing-v1",
+    "${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}",
     "1040000 + GITHUB_RUN_NUMBER",
     "-p:ApplicationVersion=${{ env.APK_VERSION_CODE }}",
     "-p:AndroidKeyStore=true",
@@ -17,4 +17,6 @@ for required in (
 ):
     assert required in workflow, required
 assert "versionCode='1040000'" not in workflow
+assert "keytool -genkeypair" not in workflow
+assert "uses: actions/cache@" not in workflow
 print("Android update signing/version configuration checks passed")
