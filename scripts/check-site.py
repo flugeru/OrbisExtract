@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / 'docs'
-FILES = ['index.html', 'en.html', 'privacy-policy.html', 'terms.html', 'support.html',
+FILES = ['privacy-policy-en.html', 'terms-en.html', 'support-en.html', 'index.html', 'en.html', 'privacy-policy.html', 'terms.html', 'support.html',
          '404.html', 'robots.txt', 'sitemap.xml', '.nojekyll', 'assets/site.css', 'assets/icon.png']
 BASE = '/OrbisExtract/'
 
@@ -60,6 +60,15 @@ for name, doc in docs.items():
 for name in ('privacy-policy.html', 'terms.html', 'support.html'):
     text = (SITE / name).read_text()
     assert 'mailto:fluugell@gmail.com' in text and 'id="english"' in text, name
+for name in ('en.html', 'privacy-policy-en.html', 'terms-en.html', 'support-en.html'):
+    text = (SITE / name).read_text()
+    assert '<html lang="en">' in text, name
+    for link in docs[name].links:
+        u = urlsplit(link)
+        if u.scheme or not u.path: continue
+        if u.path in ('index.html', 'privacy-policy.html', 'terms.html', 'support.html'):
+            # Only a deliberate PT language switch may point to a Portuguese page.
+            assert f'href="{u.path}" lang="pt-BR"' in text, (name, link)
 ET.parse(SITE / 'sitemap.xml')
 if args.output:
     args.output.mkdir(parents=True, exist_ok=True)

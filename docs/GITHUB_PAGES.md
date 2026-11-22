@@ -1,7 +1,10 @@
 # OrbisExtract website
 
 The public site lives in `docs/`. It is plain HTML/CSS, with no scripts, analytics,
-external fonts, accounts or upload form. PT-BR and English are available.
+external fonts, accounts or upload form. PT-BR and English are available. Each language has its own complete pages;
+English navigation uses `en.html`, `privacy-policy-en.html`, `terms-en.html`
+and `support-en.html`. Language switches link to the equivalent page.
+The old `#english` anchors remain as links for old bookmarks.
 Contact published with the owner's authorization: `fluugell@gmail.com`.
 
 Stable URLs after activation:

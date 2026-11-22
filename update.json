@@ -1,21 +1,31 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "releaseNotes": [
-    "Extração otimizada com AES-XTS em lotes e leitura Android com buffer.",
-    "Pausar, retomar e cancelar, inclusive na notificação Android, com melhorias para HyperOS.",
-    "Histórico local com resultado, duração e relatório detalhado por extração.",
-    "Barra personalizada no desktop mantendo Snap e redimensionamento; instalador Windows escuro com licença bilíngue.",
-    "Assinatura Android persistente e código de versão crescente. APKs antigos com assinatura diferente podem exigir reinstalação; preserve dados importantes antes de desinstalar."
+    "Extração paralela de PKGs e aplicação de updates em ordem de versão.",
+    "Leitura em blocos com buffers reutilizáveis e prévia de capas.",
+    "Novo seletor de pacotes, moldura da capa e melhorias no progresso e no log.",
+    "Licença GPL-3.0-only."
   ],
   "releaseNotesEn": [
-    "Faster extraction with batched AES-XTS and buffered Android input.",
-    "Pause, resume and cancel, including Android notification controls and HyperOS improvements.",
-    "Local extraction history with outcomes, durations and detailed reports.",
-    "Custom desktop title bar retaining Snap and resizing; dark Windows installer with bilingual license.",
-    "Persistent Android signing and increasing version codes. Older APKs with different signatures may require reinstallation; preserve important data before uninstalling."
+    "Parallel PKG extraction and updates applied in version order.",
+    "Buffered reads and game artwork previews.",
+    "Redesigned package picker, framed artwork, and improved progress and log layout.",
+    "GPL-3.0-only license."
   ],
   "androidPlayUrl": "https://play.google.com/store/apps/details?id=com.tatsuya.orbisextract",
-  "androidGithubUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.4",
-  "windowsUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.4",
-  "linuxUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.4"
+  "androidGithubUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5",
+  "windowsUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5",
+  "linuxUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5",
+  "androidGithub": {
+    "published": true,
+    "version": "1.0.5",
+    "versionCode": 1050370,
+    "url": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5"
+  },
+  "androidPlay": {
+    "published": false,
+    "version": "1.0.5",
+    "versionCode": 1051000,
+    "url": "https://play.google.com/store/apps/details?id=com.tatsuya.orbisextract"
+  }
 }
