@@ -38,7 +38,7 @@ macOS, iOS e navegador não têm distribuição validada. A versão Android aind
 - Pausar, retomar e cancelar a extração; controles também na notificação Android, com ajustes para HyperOS.
 - Histórico local de extrações com resultado, duração e relatório detalhado.
 - Barra de título personalizada no desktop, sem faixa cinza superior no Windows, mantendo estilos usados pelo Snap e redimensionamento.
-- Instalador Windows escuro, com identidade visual e licença bilíngue.
+- Instalador Windows escuro, com identidade visual e licença GPL-3.0.
 - Ajustes de layout, traduções e diagnósticos de desempenho no log.
 - APKs do Actions com chave persistente em GitHub Actions Secrets e código de versão crescente.
 
@@ -101,7 +101,7 @@ Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and 
 - Pause, resume and cancel, including Android notification controls with HyperOS layout fixes.
 - Local extraction history with outcomes, durations and detailed reports.
 - Custom desktop title bar without the gray Windows top strip, retaining native styles used for Snap and resizing.
-- Dark branded Windows installer and bilingual license.
+- Dark branded Windows installer with the GPL-3.0 license.
 - Layout and translation fixes, plus extraction performance diagnostics.
 - Actions APKs signed with a persistent GitHub Actions Secret and an increasing version code.
 
@@ -124,4 +124,4 @@ Use .NET SDK 8 for desktop/tests; Android requires .NET SDK 10, the `android` wo
 - [OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg): package-reading library, included with local changes in `vendor/LibOrbisPkg/`, LGPL-3.0.
 - [Avalonia UI](https://avaloniaui.net): cross-platform UI, MIT.
 
-[Third-party notices](THIRD-PARTY-NOTICES.md) · [Project license: MIT](LICENSE)
+[Third-party notices](THIRD-PARTY-NOTICES.md) · [Project license: GPL-3.0-only](LICENSE) · [Prior MIT notice](PRIOR-MIT-LICENSE-NOTICE.md)

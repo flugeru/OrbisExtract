@@ -17,6 +17,7 @@
 #define AppExeName "OrbisExtract.App.Desktop.exe"
 
 [Setup]
+LicenseFile=..\..\LICENSE
 ; GUID fixo: é o que permite detectar versões antigas e instalar por cima (update)
 AppId={{6E1F0B8A-4B34-4C7A-9D21-8A5C2E7F3B91}
 AppName={#AppName}
@@ -62,8 +63,8 @@ CloseApplications=yes
 ShowLanguageDialog=no
 
 [Languages]
-Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"; LicenseFile: "license.pt-BR.txt"
-Name: "english"; MessagesFile: "compiler:Default.isl"; LicenseFile: "license.en.txt"
+Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"
 
 ; The Inno Setup language selection follows Windows, with manual override.
 ; Built-in dark styling preserves high contrast accessibility and native controls.

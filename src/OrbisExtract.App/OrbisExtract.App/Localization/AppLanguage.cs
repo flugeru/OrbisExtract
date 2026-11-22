@@ -46,7 +46,7 @@ public static class AppLanguage
         ["Aguardando seleção de arquivo e destino."] = "Waiting for a file and destination.", ["Cancelar"] = "Cancel",
         ["Extrair PKG"] = "Extract PKG", ["Ferramenta de extração para pacotes PlayStation 4."] = "Extraction tool for PlayStation 4 packages.",
         ["Fechar"] = "Close", ["Sobre o OrbisExtract"] = "About OrbisExtract", ["Repositório"] = "Repository",
-        ["Changelog"] = "Changelog", ["Licença MIT"] = "MIT License", ["Verificar atualizações"] = "Check for updates",
+        ["Changelog"] = "Changelog", ["Licença GPL-3.0"] = "GPL-3.0 License", ["Verificar atualizações"] = "Check for updates",
         ["Abrir atualização"] = "Open update", ["Agora não"] = "Not now", ["Atualização do OrbisExtract"] = "OrbisExtract update",
         ["Configurações"] = "Settings", ["Idioma"] = "Language", ["Automático (sistema)"] = "Automatic (system)",
         ["Português"] = "Portuguese", ["Inglês"] = "English", ["Arquivo selecionado."] = "File selected.",

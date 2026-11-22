@@ -37,6 +37,7 @@ public sealed class MainView : UserControl
     private readonly StackPanel _infoRows;
     private readonly TextBlock _gameTitle, _version, _contentId;
     private readonly Image _artwork;
+    private readonly Border _artworkFrame;
     private readonly TextBlock _artworkStatus, _artworkCredit;
     private readonly Button _artworkSource, _artworkLicense;
     private readonly CommonsArtworkSearch _onlineArtwork = new();
@@ -110,7 +111,19 @@ public sealed class MainView : UserControl
         _contentId.FontFamily = UiTheme.Mono;
         _artwork = new Image
         {
-            Height = 132, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center, IsVisible = false
+            Height = 132, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center
+        };
+        _artworkFrame = new Border
+        {
+            Child = _artwork,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Background = UiTheme.Brush(UiTheme.SurfaceElevated),
+            BorderBrush = UiTheme.Brush(UiTheme.Primary),
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(4),
+            CornerRadius = new CornerRadius(UiTheme.ControlRadius),
+            ClipToBounds = true,
+            IsVisible = false
         };
         _artworkStatus = UiTheme.Text("", 12, UiTheme.TextSecondary);
         _artworkStatus.IsVisible = false;
@@ -123,6 +136,7 @@ public sealed class MainView : UserControl
         _artworkSource.Click += async (_, _) => await OpenArtworkLinkAsync(_artworkSourceUri);
         _artworkLicense.Click += async (_, _) => await OpenArtworkLinkAsync(_artworkLicenseUri);
         _previewPicker = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, IsVisible = false };
+        _previewPicker.Classes.Add("pkgPicker");
         _previewPicker.SelectionChanged += async (_, _) =>
         {
             if (_previewPicker.SelectedIndex >= 0 && _packages.Count > 1)
@@ -135,7 +149,7 @@ public sealed class MainView : UserControl
             Margin = new Thickness(0, 4, 0, 0),
             Children =
             {
-                _artwork, _artworkStatus, _artworkCredit, _artworkSource, _artworkLicense,
+                _artworkFrame, _artworkStatus, _artworkCredit, _artworkSource, _artworkLicense,
                 Field("Jogo", _gameTitle), Field("Versão", _version), Field("Content ID", _contentId)
             }
         };
@@ -170,6 +184,7 @@ public sealed class MainView : UserControl
         _elapsed.IsVisible = false;
         _progress = new ProgressBar
         {
+            IsVisible = false,
             Minimum = 0,
             Maximum = 100,
             Height = 8,
@@ -198,11 +213,10 @@ public sealed class MainView : UserControl
         }
 
         _logPanel = new StackPanel { Spacing = 0 };
-        _logScroll = new ScrollViewer
+        _logScroll = new LogScrollViewer
         {
-            MaxHeight = 260,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             Content = _logPanel
         };
         var logBox = new Border
@@ -213,13 +227,8 @@ public sealed class MainView : UserControl
             CornerRadius = new CornerRadius(UiTheme.ControlRadius),
             Padding = new Thickness(12),
             MinHeight = 112,
-            Child = new StackPanel
-            {
-                Spacing = 8,
-                Children = { _logScroll }
-            }
+            Child = _logScroll
         };
-        _logScroll.MaxHeight = 260;
         _bannerText = UiTheme.Text("", 13, UiTheme.TextPrimary);
         _banner = new Border
         {
@@ -259,11 +268,15 @@ public sealed class MainView : UserControl
         Grid.SetColumn(_cancel, 3);
         metaRow.Children.Add(_cancel);
 
-        _monitorCard = UiTheme.Card(new StackPanel
+        var monitor = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 10 };
+        monitor.Children.Add(new StackPanel
         {
             Spacing = 10,
-            Children = { header, _progress, metaRow, _status, _banner, logBox }
+            Children = { header, _progress, metaRow, _status, _banner }
         });
+        Grid.SetRow(logBox, 1);
+        monitor.Children.Add(logBox);
+        _monitorCard = UiTheme.Card(monitor);
 
         // ---------- Grid responsivo do conteúdo ----------
         _contentGrid = new Grid { ColumnSpacing = 16, RowSpacing = 16 };
@@ -689,7 +702,7 @@ public sealed class MainView : UserControl
                 },
                 AboutSection("Repositório", repository, _repositoryError),
                 AboutSection("Changelog", _aboutChangelog, CreateUpdateButton()),
-                AboutSection("Licença MIT", licenseBox)
+                AboutSection("Licença GPL-3.0", licenseBox)
             }
         };
         close.Click += (_, _) => _aboutOverlay.IsVisible = false;
@@ -903,6 +916,18 @@ public sealed class MainView : UserControl
         SetLocalized(_bannerText, message);
         _banner.BorderBrush = UiTheme.Brush(color);
         _banner.Background = new SolidColorBrush(Color.Parse(color), 0.12);
+    }
+
+    // The page scrolls vertically, so the card may be measured with unbounded height.
+    // Limit the log's requested height but let it stretch to the actual card height.
+    private sealed class LogScrollViewer : ScrollViewer
+    {
+        protected override Type StyleKeyOverride => typeof(ScrollViewer);
+
+        protected override Size MeasureOverride(Size availableSize) =>
+            base.MeasureOverride(double.IsPositiveInfinity(availableSize.Height)
+                ? new Size(availableSize.Width, 260)
+                : availableSize);
     }
 
     private void SetProgressIdle()
@@ -1119,7 +1144,7 @@ public sealed class MainView : UserControl
         _previewRequest = request;
         var token = request.Token;
         _infoRows.IsVisible = false;
-        _artwork.IsVisible = false;
+        _artworkFrame.IsVisible = false;
         _artworkStatus.IsVisible = _artworkCredit.IsVisible = _artworkSource.IsVisible = _artworkLicense.IsVisible = false;
         _artworkSourceUri = _artworkLicenseUri = null;
         if (_artwork.Source is Bitmap old)
@@ -1193,7 +1218,7 @@ public sealed class MainView : UserControl
                 token.ThrowIfCancellationRequested();
             }
             _artwork.Source = bitmap;
-            _artwork.IsVisible = true;
+            _artworkFrame.IsVisible = true;
             return true;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -1280,6 +1305,7 @@ public sealed class MainView : UserControl
         SetLocalized(_stateTitle, () => AppLanguage.Text("Preparando"));
         SetLocalized(_counter, () => AppLanguage.Text("Preparando a extração…"));
         _progress.IsIndeterminate = true;
+        _progress.IsVisible = true;
         _percent.Text = "";
         _elapsed.Text = "00:00";
         _clock.Restart();
@@ -1428,6 +1454,8 @@ public sealed class MainView : UserControl
         finally
         {
             timer.Stop();
+            _progress.IsVisible = false;
+            _percent.Text = "";
             _clock.Stop();
             _elapsed.Text = $"{(int)_clock.Elapsed.TotalMinutes:00}:{_clock.Elapsed.Seconds:00}";
             _cancel.IsVisible = _pause.IsVisible = false;

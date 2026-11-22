@@ -3,5 +3,45 @@
              x:Class="OrbisExtract.App.App">
   <Application.Styles>
     <FluentTheme />
+    <Style Selector="ComboBox.pkgPicker">
+      <Style.Resources>
+        <SolidColorBrush x:Key="ComboBoxDropDownBackground">#1D2530</SolidColorBrush>
+        <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush">#2B3542</SolidColorBrush>
+        <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground">#B9A7FF</SolidColorBrush>
+        <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver">#1D2530</SolidColorBrush>
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver">#B9A7FF</SolidColorBrush>
+        <SolidColorBrush x:Key="ComboBoxItemForeground">#F5F7FA</SolidColorBrush>
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver">#2B3542</SolidColorBrush>
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected">#29243B</SolidColorBrush>
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver">#39314F</SolidColorBrush>
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelected">#B9A7FF</SolidColorBrush>
+        <Thickness x:Key="ComboBoxDropdownBorderPadding">5</Thickness>
+        <CornerRadius x:Key="OverlayCornerRadius">12</CornerRadius>
+      </Style.Resources>
+      <Setter Property="Background" Value="#1D2530" />
+      <Setter Property="Foreground" Value="#F5F7FA" />
+      <Setter Property="BorderBrush" Value="#2B3542" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="Padding" Value="14,8,0,8" />
+      <Setter Property="MaxDropDownHeight" Value="320" />
+      <Setter Property="ItemTemplate">
+        <DataTemplate>
+          <TextBlock Text="{ReflectionBinding}" TextWrapping="Wrap" />
+        </DataTemplate>
+      </Setter>
+      <Setter Property="SelectionBoxItemTemplate">
+        <DataTemplate>
+          <TextBlock Text="{ReflectionBinding}" TextTrimming="CharacterEllipsis" />
+        </DataTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="ComboBox.pkgPicker /template/ Popup#PART_Popup">
+      <Setter Property="Width" Value="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}, x:DataType=ComboBox}" />
+    </Style>
+    <Style Selector="ComboBox.pkgPicker ComboBoxItem">
+      <Setter Property="Padding" Value="10,8" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
   </Application.Styles>
 </Application>

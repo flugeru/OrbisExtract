@@ -1,6 +1,6 @@
 # Avisos de terceiros
 
-Componentes usados pelo OrbisExtract e suas respectivas licenças. O código próprio deste repositório está sob a licença MIT (ver `LICENSE`).
+Componentes usados pelo OrbisExtract e suas respectivas licenças. O código próprio deste repositório está sob a [GPL-3.0-only](LICENSE). O [aviso MIT histórico](PRIOR-MIT-LICENSE-NOTICE.md) documenta as versões anteriores.
 
 ## OpenOrbis / LibOrbisPkg
 
