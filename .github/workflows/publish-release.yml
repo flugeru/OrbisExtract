@@ -1,0 +1,30 @@
+name: Publish verified Actions artifacts
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Successful main Build all platforms run ID'
+        required: true
+        type: string
+      version:
+        description: 'Release version (for example 1.0.5)'
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: publish-release-${{ inputs.version }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download, validate and publish existing build artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: python3 scripts/publish-release.py
