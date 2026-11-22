@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://flugeru.github.io/OrbisExtract/sitemap.xml
