@@ -23,7 +23,7 @@ O **OrbisExtract extrai o conteúdo dos PKGs de jogos de PlayStation 4**, a part
 - Abre PKGs de jogos de PS4 compatíveis e mostra título, versão e capa disponível.
 - Extrai os arquivos do pacote para o destino escolhido.
 - Mostra progresso, permite pausar ou cancelar e mantém log e histórico locais.
-- Nos builds 1.0.5, extrai jogos independentes em paralelo e integra updates compatíveis à extração do jogo base.
+- Na versão 1.0.5, extrai jogos independentes em paralelo e integra updates compatíveis à extração do jogo base.
 
 ### O que você precisa ter
 
@@ -47,7 +47,7 @@ Builds de teste ficam nos [Artifacts do Actions](https://github.com/flugeru/Orbi
 
 macOS, iOS e navegador não têm distribuição validada. A versão Android ainda não foi publicada na Google Play.
 
-### Recursos dos builds 1.0.5
+### Novidades da 1.0.5
 
 - **Extração em lote:** jogos independentes são processados em paralelo. Selecione a base e os updates juntos para aplicar as versões em ordem.
 - **Leitura em blocos:** buffers reutilizáveis permitem ler e descriptografar o próximo bloco enquanto o atual é gravado.
@@ -67,7 +67,7 @@ macOS, iOS e navegador não têm distribuição validada. A versão Android aind
 
 ### Vários jogos e pacotes de update
 
-Nos builds 1.0.5, selecione os PKGs de todos os jogos que deseja extrair. Para integrar updates, selecione o PKG base e seus PKGs de atualização juntos. O app agrupa os pacotes compatíveis por jogo; grupos independentes são processados em paralelo, enquanto a base e seus updates são aplicados na ordem correta dentro de cada grupo.
+Na versão 1.0.5, selecione os PKGs de todos os jogos que deseja extrair. Para integrar updates, selecione o PKG base e seus PKGs de atualização juntos. O app agrupa os pacotes compatíveis por jogo; grupos independentes são processados em paralelo, enquanto a base e seus updates são aplicados na ordem correta dentro de cada grupo.
 
 No modo em lote, jogos independentes são extraídos em paralelo. Cada grupo usa uma subpasta própria, publicada após a extração da base e a aplicação dos updates em ordem de `APP_VER`. Pastas de destino existentes são preservadas. Updates delta binários exigem reconstrução e ficam fora dessa integração. No Android, selecione uma pasta em um provedor que permita renomear pastas, como o armazenamento interno. A prévia usa `icon0.png` ou `pic1.png` do próprio PKG quando disponível.
 
@@ -112,11 +112,11 @@ No CI, `ANDROID_SIGNING_KEYSTORE_BASE64` deve conter o keystore existente em Bas
 
 A **dump** is a copy of game data you obtained from your own PS4. OrbisExtract reads an existing dump in a compatible PKG format; it **does not dump games from your console**. Extraction produces the files inside the package, not a new PKG.
 
-[Official website](https://flugeru.github.io/OrbisExtract/en.html) · [Support](https://flugeru.github.io/OrbisExtract/support.html#english) · [Privacy](https://flugeru.github.io/OrbisExtract/privacy-policy.html#english) · [Terms](https://flugeru.github.io/OrbisExtract/terms.html#english)
+[Official website](https://flugeru.github.io/OrbisExtract/en.html) · [Support](https://flugeru.github.io/OrbisExtract/support-en.html) · [Privacy](https://flugeru.github.io/OrbisExtract/privacy-policy-en.html) · [Terms](https://flugeru.github.io/OrbisExtract/terms-en.html)
 
 ### What it does and what you need
 
-The app opens supported PS4 game PKGs, displays metadata and artwork, and extracts their contents. It provides progress, pause/cancel controls, logs and local history. Builds for 1.0.5 also include parallel extraction groups and integration of compatible game updates.
+The app opens supported PS4 game PKGs, displays metadata and artwork, and extracts their contents. It provides progress, pause/cancel controls, logs and local history. Version 1.0.5 also includes parallel extraction groups and integration of compatible game updates.
 
 Bring your own compatible PKG dump, enough storage for its extracted contents and read/write access to the selected locations. On Android, grant access through the system file picker. The app supplies no games, is not an emulator, does not install games on a PS4, and does not create or convert PKGs. Protected or unsupported packages may not be extractable; there is no passcode field. Having a dump does not guarantee that its format or protection is supported.
 
@@ -128,7 +128,7 @@ Windows x64, Linux x64 and Android 7.0+ builds are available through GitHub Rele
 
 Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and Android 7.0+ APK. See the artifact names in the table above. macOS, iOS and browser distributions are not validated. The app is not published on Google Play yet.
 
-### Features in 1.0.5 builds
+### What's new in 1.0.5
 
 - **Batch extraction:** independent games extract in parallel. Select the base package and its updates together to apply versions in order.
 - **Buffered extraction:** reusable buffers let the engine read and decrypt the next block while writing the current one.
@@ -148,7 +148,7 @@ Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and 
 
 ### Multiple games and update packages
 
-In 1.0.5 builds, select multiple game PKGs to extract independent groups in parallel. To integrate game updates, select the base game and its compatible update PKGs together. Each group processes its base first, followed by updates in `APP_VER` order. Each output folder becomes final after the group completes. Binary delta updates require reconstruction and are outside this integration. On Android, use a provider that supports renaming folders, such as internal storage. Preview uses embedded `icon0.png` or `pic1.png` when available.
+In version 1.0.5, select multiple game PKGs to extract independent groups in parallel. To integrate game updates, select the base game and its compatible update PKGs together. Each group processes its base first, followed by updates in `APP_VER` order. Each output folder becomes final after the group completes. Binary delta updates require reconstruction and are outside this integration. On Android, use a provider that supports renaming folders, such as internal storage. Preview uses embedded `icon0.png` or `pic1.png` when available.
 
 Extraction runs locally. If embedded artwork is unavailable, an automatic Wikimedia Commons query sends the game title, not the PKG or its path. Local extraction works offline; artwork and update queries require connectivity.
 
