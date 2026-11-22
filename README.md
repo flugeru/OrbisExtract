@@ -8,7 +8,7 @@
 
 </div>
 
-**[Português (Brasil)](#português-brasil)** · **[English](#english)**
+**[English](#english)** · **[Português (Brasil)](#português-brasil)**
 
 ## Português (Brasil)
 
