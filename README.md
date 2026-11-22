@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="OrbisExtract-transparent.png" alt="Logo do OrbisExtract" width="128" />
+<img src="OrbisExtract-transparent.png" alt="OrbisExtract logo" width="128" />
 
 # OrbisExtract
 
@@ -9,6 +9,83 @@
 </div>
 
 **[English](#english)** · **[Português (Brasil)](#português-brasil)**
+
+## English
+
+**OrbisExtract extracts the contents of PlayStation 4 game PKGs from dumps you made of your own games.** It runs on Windows, Linux and Android: select your package, inspect its game information and extract the files to a folder.
+
+A **dump** is a copy of game data you obtained from your own PS4. OrbisExtract reads an existing dump in a compatible PKG format; it **does not dump games from your console**. Extraction produces the files inside the package, not a new PKG.
+
+[Official website](https://flugeru.github.io/OrbisExtract/en.html) · [Support](https://flugeru.github.io/OrbisExtract/support-en.html) · [Privacy](https://flugeru.github.io/OrbisExtract/privacy-policy-en.html) · [Terms](https://flugeru.github.io/OrbisExtract/terms-en.html)
+
+### What it does and what you need
+
+The app opens supported PS4 game PKGs, displays metadata and artwork, and extracts their contents. It provides progress, pause/cancel controls, logs and local history. Version 1.0.5 also includes parallel extraction groups and integration of compatible game updates.
+
+Bring your own compatible PKG dump, enough storage for its extracted contents and read/write access to the selected locations. On Android, grant access through the system file picker. The app supplies no games, is not an emulator, does not install games on a PS4, and does not create or convert PKGs. Protected or unsupported packages may not be extractable; there is no passcode field. Having a dump does not guarantee that its format or protection is supported.
+
+### Downloads
+
+**[Latest published release](https://github.com/flugeru/OrbisExtract/releases/latest)** · **[All releases](https://github.com/flugeru/OrbisExtract/releases)**
+
+Windows x64, Linux x64 and Android 7.0+ builds are available through GitHub Releases. Test builds are available in [Actions artifacts](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml) for 14 days and require GitHub sign-in.
+
+Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and Android 7.0+ APK. macOS, iOS and browser distributions are not validated. The app is not published on Google Play yet.
+
+### What's new in 1.0.5
+
+- **Batch extraction:** independent games extract in parallel. Select the base package and its updates together to apply versions in order.
+- **Buffered extraction:** reusable buffers let the engine read and decrypt the next block while writing the current one.
+- **Game preview:** shows the package title, version and artwork. When embedded artwork is unavailable, the app searches Wikimedia Commons and displays attribution.
+- **Interface:** themed package picker, framed artwork, progress shown during extraction and a log that fills the card.
+- **License:** GPL-3.0-only in the app and Windows installer.
+
+[Version 1.0.5 release notes](docs/release-1.0.5.md)
+
+### How to extract your game dump
+
+1. Download and open the official app for your platform.
+2. Select the PKG from your own PS4 game dump and check its metadata.
+3. Choose an output folder with enough free space.
+4. Start extraction, follow its progress and use pause/cancel if needed. Check the log and history for the result.
+5. Check output before deleting originals. Interrupted extractions can leave temporary or partial files.
+
+### Multiple games and update packages
+
+In version 1.0.5, select multiple game PKGs to extract independent groups in parallel. To integrate game updates, select the base game and its compatible update PKGs together. Each group processes its base first, followed by updates in `APP_VER` order. Each output folder becomes final after the group completes. Binary delta updates require reconstruction and are outside this integration. On Android, use a provider that supports renaming folders, such as internal storage. Preview uses embedded `icon0.png` or `pic1.png` when available.
+
+Extraction runs locally. If embedded artwork is unavailable, an automatic Wikimedia Commons query sends the game title, not the PKG or its path. Local extraction works offline; artwork and update queries require connectivity.
+
+### Updating the application
+
+On Windows, run the new installer over the existing installation or replace the portable build. On Linux, download the new AppImage. Updating OrbisExtract is separate from applying a game's update PKG.
+
+**Android updates require a compatible signing identity, the same package ID and no version-code downgrade.** New CI builds reuse the project signing key; older APKs with different signatures may require reinstallation. Preserve important app data before uninstalling. Private signing material is never included in the repository or download artifacts; public certificate details accompany the Actions APK.
+
+Settings support system language detection or a saved Portuguese/English selection. The app checks for updates but never installs them automatically.
+
+### Building
+
+Use .NET SDK 8 for desktop/tests; Android requires .NET SDK 10, the `android` workload, Java 17 and Android SDK 36.
+
+Build and test:
+
+```sh
+dotnet restore OrbisExtract.sln
+dotnet build OrbisExtract.sln -c Release
+dotnet test OrbisExtract.sln -c Release --no-restore
+python tests/check_android_updates.py
+```
+
+| Output | Command |
+|---|---|
+| Windows | `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1` |
+| Windows installer, after publishing | `ISCC packaging\windows\orbisextract.iss` — current Inno Setup 6 |
+| Linux | `bash scripts/publish-linux.sh` |
+| AppImage, after publishing Linux | `bash scripts/build-appimage.sh` — requires `appimagetool` |
+| Local Android build | `bash scripts/publish-android.sh` |
+
+CI requires the existing Base64 keystore in `ANDROID_SIGNING_KEYSTORE_BASE64`; missing signing material fails the build rather than silently replacing the key. Local builds need the same signing key to update CI installations.
 
 ## Português (Brasil)
 
@@ -105,64 +182,6 @@ python tests/check_android_updates.py
 | Android local | `bash scripts/publish-android.sh` |
 
 No CI, `ANDROID_SIGNING_KEYSTORE_BASE64` deve conter o keystore existente em Base64; o build falha se o Secret estiver ausente, em vez de gerar outra chave. Não use uma chave diferente se precisar manter compatibilidade com instalações anteriores. A assinatura local precisa ser configurada com a mesma chave para produzir APKs compatíveis com os do CI.
-
-## English
-
-**OrbisExtract extracts the contents of PlayStation 4 game PKGs from dumps you made of your own games.** It runs on Windows, Linux and Android: select your package, inspect its game information and extract the files to a folder.
-
-A **dump** is a copy of game data you obtained from your own PS4. OrbisExtract reads an existing dump in a compatible PKG format; it **does not dump games from your console**. Extraction produces the files inside the package, not a new PKG.
-
-[Official website](https://flugeru.github.io/OrbisExtract/en.html) · [Support](https://flugeru.github.io/OrbisExtract/support-en.html) · [Privacy](https://flugeru.github.io/OrbisExtract/privacy-policy-en.html) · [Terms](https://flugeru.github.io/OrbisExtract/terms-en.html)
-
-### What it does and what you need
-
-The app opens supported PS4 game PKGs, displays metadata and artwork, and extracts their contents. It provides progress, pause/cancel controls, logs and local history. Version 1.0.5 also includes parallel extraction groups and integration of compatible game updates.
-
-Bring your own compatible PKG dump, enough storage for its extracted contents and read/write access to the selected locations. On Android, grant access through the system file picker. The app supplies no games, is not an emulator, does not install games on a PS4, and does not create or convert PKGs. Protected or unsupported packages may not be extractable; there is no passcode field. Having a dump does not guarantee that its format or protection is supported.
-
-### Downloads
-
-**[Latest published release](https://github.com/flugeru/OrbisExtract/releases/latest)** · **[All releases](https://github.com/flugeru/OrbisExtract/releases)**
-
-Windows x64, Linux x64 and Android 7.0+ builds are available through GitHub Releases. Test builds are available in [Actions artifacts](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml) for 14 days and require GitHub sign-in.
-
-Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and Android 7.0+ APK. See the artifact names in the table above. macOS, iOS and browser distributions are not validated. The app is not published on Google Play yet.
-
-### What's new in 1.0.5
-
-- **Batch extraction:** independent games extract in parallel. Select the base package and its updates together to apply versions in order.
-- **Buffered extraction:** reusable buffers let the engine read and decrypt the next block while writing the current one.
-- **Game preview:** shows the package title, version and artwork. When embedded artwork is unavailable, the app searches Wikimedia Commons and displays attribution.
-- **Interface:** themed package picker, framed artwork, progress shown during extraction and a log that fills the card.
-- **License:** GPL-3.0-only in the app and Windows installer.
-
-[Version 1.0.5 release notes](docs/release-1.0.5.md)
-
-### How to extract your game dump
-
-1. Download and open the official app for your platform.
-2. Select the PKG from your own PS4 game dump and check its metadata.
-3. Choose an output folder with enough free space.
-4. Start extraction, follow its progress and use pause/cancel if needed. Check the log and history for the result.
-5. Check output before deleting originals. Interrupted extractions can leave temporary or partial files.
-
-### Multiple games and update packages
-
-In version 1.0.5, select multiple game PKGs to extract independent groups in parallel. To integrate game updates, select the base game and its compatible update PKGs together. Each group processes its base first, followed by updates in `APP_VER` order. Each output folder becomes final after the group completes. Binary delta updates require reconstruction and are outside this integration. On Android, use a provider that supports renaming folders, such as internal storage. Preview uses embedded `icon0.png` or `pic1.png` when available.
-
-Extraction runs locally. If embedded artwork is unavailable, an automatic Wikimedia Commons query sends the game title, not the PKG or its path. Local extraction works offline; artwork and update queries require connectivity.
-
-### Updating the application
-
-On Windows, run the new installer over the existing installation or replace the portable build. On Linux, download the new AppImage. Updating OrbisExtract is separate from applying a game's update PKG.
-
-**Android updates require a compatible signing identity, the same package ID and no version-code downgrade.** New CI builds reuse the project signing key; older APKs with different signatures may require reinstallation. Preserve important app data before uninstalling. Private signing material is never included in the repository or download artifacts; public certificate details accompany the Actions APK.
-
-Settings support system language detection or a saved Portuguese/English selection. The app checks for updates but never installs them automatically.
-
-### Building
-
-Use .NET SDK 8 for desktop/tests; Android requires .NET SDK 10, the `android` workload, Java 17 and Android SDK 36. Build/test commands and platform publishing scripts are listed above. CI requires the existing Base64 keystore in `ANDROID_SIGNING_KEYSTORE_BASE64`; missing signing material fails the build rather than silently replacing the key. Local builds need the same signing key to update CI installations.
 
 ## Credits / Créditos
 
