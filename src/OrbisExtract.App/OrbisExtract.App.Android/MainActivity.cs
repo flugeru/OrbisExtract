@@ -22,7 +22,22 @@ public class MainActivity : AvaloniaMainActivity
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
+        #if PLAY_STORE
+        // Compile-time channel survives backup, restore and installer-source changes.
+        UpdateChecker.IsPlayInstall = () => true;
+#else
         UpdateChecker.IsPlayInstall = IsInstalledFromPlayStore;
+#endif
+        UpdateChecker.GetInstalledVersionCode = () =>
+        {
+            var info = PackageManager?.GetPackageInfo(PackageName ?? "", 0);
+#pragma warning disable CA1416 // LongVersionCode is guarded by SDK >= 28.
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.P) return info?.LongVersionCode ?? 0;
+#pragma warning restore CA1416
+#pragma warning disable CS0618, CA1422
+            return info?.VersionCode ?? 0;
+#pragma warning restore CS0618, CA1422
+        };
         UpdateChecker.GetInstalledVersion = () => PackageManager?.GetPackageInfo(PackageName ?? "", 0)?.VersionName ?? "1.0.5";
         UpdateChecker.OpenAndroidUrl = url => StartActivity(new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(url)));
         base.OnCreate(savedInstanceState);

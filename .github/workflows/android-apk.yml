@@ -113,10 +113,11 @@ jobs:
         run: >-
           dotnet publish
           src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj
-          -f net10.0-android
+          -f net10.0-android36.0
           -c Release
           --no-restore
-          -p:AndroidPackageFormat=apk
+          -p:DistributionChannel=Github
+          -p:AndroidPackageFormats=apk
           -p:ApplicationVersion=${{ env.APK_VERSION_CODE }}
           -p:AndroidKeyStore=true
           -p:AndroidSigningKeyStore="$HOME/.local/share/orbisextract-signing/development.jks"

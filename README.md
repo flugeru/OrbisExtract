@@ -119,3 +119,7 @@ Use .NET SDK 8 for desktop/tests; Android requires .NET SDK 10, the `android` wo
 - [Avalonia UI](https://avaloniaui.net): cross-platform UI, MIT.
 
 [Third-party notices](THIRD-PARTY-NOTICES.md) · [Project license: GPL-3.0-only](LICENSE) · [Prior MIT notice](PRIOR-MIT-LICENSE-NOTICE.md)
+
+### Publicação Android
+
+Veja [preparação para Google Play](docs/play-store.md) para gerar AAB assinado, configurar a chave de envio e publicar com canais de atualização separados.

@@ -7,4 +7,4 @@ if ! dotnet --list-sdks | grep -q '^10\.'; then
   exit 2
 fi
 dotnet workload list | grep -q '^android' || { echo 'Instale o workload Android com: dotnet workload install android' >&2; exit 2; }
-dotnet publish "$PROJECT" -f net10.0-android -c Release -p:AndroidPackageFormat=apk -o "$ROOT/artifacts/android"
+dotnet publish "$PROJECT" -f net10.0-android36.0 -c Release -p:DistributionChannel=Github -p:AndroidPackageFormats=apk -o "$ROOT/artifacts/android"
