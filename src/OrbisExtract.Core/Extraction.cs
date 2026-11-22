@@ -1,5 +1,4 @@
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,10 +26,14 @@ public sealed class ExtractionPauseGate
     }
     public async Task WaitAsync(CancellationToken cancellationToken)
     {
-        Task? pending;
-        lock (_sync) pending = _resume?.Task;
-        if (pending is not null) await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Task? pending;
+            lock (_sync) pending = _resume?.Task;
+            if (pending is null) return;
+            await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 }
 
@@ -70,10 +73,12 @@ public sealed class LocalExtractionDestination : IExtractionDestination
     {
         cancellationToken.ThrowIfCancellationRequested();
         var output = SafeExtractionPath.Resolve(root, relativePath);
-        if (failOnExistingFiles && File.Exists(output))
+        EnsureNoReparsePoints(relativePath);
+        if (Directory.Exists(output) || (failOnExistingFiles && File.Exists(output)))
             throw new PkgExtractionException($"O arquivo já existe: {output}");
-        Directory.CreateDirectory(Path.GetDirectoryName(output)!);
-        var temporary = output + ".orbisextract.tmp";
+        var directory = Path.GetDirectoryName(output)!;
+        Directory.CreateDirectory(directory);
+        var temporary = Path.Combine(directory, $".orbisextract-{System.Guid.NewGuid():N}.tmp");
         return Task.FromResult<Stream>(new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, true));
     }
 
@@ -83,9 +88,10 @@ public sealed class LocalExtractionDestination : IExtractionDestination
         if (temporaryFile is not FileStream file)
             throw new PkgExtractionException("Destino local recebeu um temporário inválido.");
         var output = SafeExtractionPath.Resolve(root, relativePath);
-        file.Flush();
         file.Dispose();
-        File.Move(file.Name, output, overwrite: false);
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureNoReparsePoints(relativePath);
+        File.Move(file.Name, output, overwrite: !failOnExistingFiles);
         return Task.CompletedTask;
     }
 
@@ -94,10 +100,32 @@ public sealed class LocalExtractionDestination : IExtractionDestination
         if (temporaryFile is FileStream file)
         {
             var name = file.Name;
-            file.Dispose();
-            if (File.Exists(name)) File.Delete(name);
+            try { file.Dispose(); }
+            finally { File.Delete(name); }
         }
         return Task.CompletedTask;
+    }
+
+    private void EnsureNoReparsePoints(string relativePath)
+    {
+        RejectReparsePoint(root);
+        var current = root;
+        foreach (var segment in SafeExtractionPath.GetSegments(relativePath))
+        {
+            current = Path.Combine(current, segment);
+            RejectReparsePoint(current);
+        }
+    }
+
+    private static void RejectReparsePoint(string path)
+    {
+        try
+        {
+            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+                throw new PkgExtractionException($"O destino contém um link ou ponto de redirecionamento: {path}");
+        }
+        catch (FileNotFoundException) { }
+        catch (DirectoryNotFoundException) { }
     }
 }
 
@@ -114,16 +142,34 @@ public sealed class PkgExtractionException : Exception
 
 public static class SafeExtractionPath
 {
+    public static string[] GetSegments(string packagePath)
+    {
+        var segments = packagePath.Replace('\\', '/').Split('/');
+        foreach (var segment in segments)
+        {
+            if (string.IsNullOrWhiteSpace(segment) || segment is "." or ".." ||
+                segment.Contains(':') || segment.Contains('\0') ||
+                (System.OperatingSystem.IsWindows() && IsInvalidWindowsName(segment)))
+                throw new PkgExtractionException($"Caminho interno inseguro: {packagePath}");
+        }
+        return segments;
+    }
+
     public static string Resolve(string destinationDirectory, string packagePath)
     {
-        if (string.IsNullOrWhiteSpace(packagePath)) throw new PkgExtractionException("O pacote contém um caminho vazio.");
-        var normalized = packagePath.Replace('\\', '/');
-        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (normalized.StartsWith('/') || Path.IsPathRooted(packagePath) || segments.Any(segment => segment == "..")) throw new PkgExtractionException($"Caminho interno inseguro: {packagePath}");
         var fullDestination = Path.GetFullPath(destinationDirectory);
-        var fullPath = Path.GetFullPath(Path.Combine(fullDestination, normalized));
-        var relative = Path.GetRelativePath(fullDestination, fullPath);
-        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || Path.IsPathRooted(relative)) throw new PkgExtractionException($"Caminho interno fora do destino: {packagePath}");
-        return fullPath;
+        return Path.Combine(fullDestination, Path.Combine(GetSegments(packagePath)));
+    }
+
+    private static bool IsInvalidWindowsName(string segment)
+    {
+        if (segment.EndsWith('.') || segment.EndsWith(' ') || segment.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            return true;
+
+        var dot = segment.IndexOf('.');
+        var stem = (dot < 0 ? segment : segment[..dot]).TrimEnd(' ').ToUpperInvariant();
+        return stem is "CON" or "PRN" or "AUX" or "NUL" or "CONIN$" or "CONOUT$" ||
+            (stem.Length == 4 && (stem.StartsWith("COM", System.StringComparison.Ordinal) ||
+             stem.StartsWith("LPT", System.StringComparison.Ordinal)) && "123456789¹²³".Contains(stem[3]));
     }
 }

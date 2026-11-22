@@ -4,16 +4,23 @@ namespace OrbisExtract.Tests;
 
 public sealed class PathSecurityTests
 {
-    [Fact]
-    public void RejectsTraversal()
+    [Theory]
+    [InlineData("../escape.txt")]
+    [InlineData("/absolute")]
+    [InlineData("C:drive-relative")]
+    [InlineData("file.txt:stream")]
+    [InlineData("nested//file.txt")]
+    [InlineData("nested/./file.txt")]
+    public void RejectsUnsafePath(string path)
     {
-        Assert.Throws<PkgExtractionException>(() => SafeExtractionPath.Resolve("C:\\out", "../escape.txt"));
+        Assert.Throws<PkgExtractionException>(() => SafeExtractionPath.Resolve(Path.GetTempPath(), path));
     }
 
     [Fact]
     public void KeepsNestedPathInsideDestination()
     {
-        var path = SafeExtractionPath.Resolve("C:\\out", "nested/file.bin");
-        Assert.StartsWith(Path.GetFullPath("C:\\out"), path, StringComparison.OrdinalIgnoreCase);
+        var root = Path.GetTempPath();
+        var path = SafeExtractionPath.Resolve(root, "nested/file.bin");
+        Assert.Equal(Path.Combine(root, "nested", "file.bin"), path);
     }
 }

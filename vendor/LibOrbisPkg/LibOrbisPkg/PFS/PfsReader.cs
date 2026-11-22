@@ -110,13 +110,15 @@ namespace LibOrbisPkg.PFS
     private Dir uroot;
     private byte[] sectorBuf;
     private Stream sectorStream;
+    private readonly long? imageLength;
 
     public PfsReader(MemoryMappedViewAccessor r, ulong pfs_flags = 0, byte[] ekpfs = null, byte[] tweak = null, byte[] data = null)
-    : this(new MemoryMappedViewAccessor_(r), pfs_flags, ekpfs, tweak, data)
+    : this(new MemoryMappedViewAccessor_(r), pfs_flags, ekpfs, tweak, data, imageLength: r.Capacity)
     { }
-    public PfsReader(IMemoryReader r, ulong pfs_flags = 0, byte[] ekpfs = null, byte[] tweak = null, byte[] data = null, ReadTimings timings = null)
+    public PfsReader(IMemoryReader r, ulong pfs_flags = 0, byte[] ekpfs = null, byte[] tweak = null, byte[] data = null, ReadTimings timings = null, long? imageLength = null)
     {
       reader = r;
+      this.imageLength = imageLength;
       var buf = new byte[0x400];
       reader.Read(0, buf, 0, 0x400);
 
@@ -128,16 +130,27 @@ namespace LibOrbisPkg.PFS
       Func<Stream, Inode> dinodeReader;
       if (hdr.Mode.HasFlag(PfsMode.Signed))
       {
-        dinodes = new DinodeS32[hdr.DinodeCount];
         dinodeReader = DinodeS32.ReadFromStream;
         dinodeSize = 0x2C8;
       }
       else
       {
-        dinodes = new DinodeD32[hdr.DinodeCount];
         dinodeReader = DinodeD32.ReadFromStream;
         dinodeSize = 0xA8;
       }
+      if (hdr.BlockSize < 4096 || hdr.BlockSize > 1024 * 1024 ||
+          (hdr.BlockSize & (hdr.BlockSize - 1)) != 0)
+        throw new InvalidDataException("Invalid PFS block size");
+
+      var maxPerSector = hdr.BlockSize / dinodeSize;
+      var dinodeStartPos = (long)hdr.BlockSize * (1 + hdr.InodeBlockSig.IndirectBlocks.Count(b => b > 0));
+      if (hdr.DinodeCount <= 0 || hdr.DinodeCount > int.MaxValue || hdr.DinodeBlockCount <= 0 ||
+          hdr.DinodeBlockCount > (long.MaxValue - dinodeStartPos) / hdr.BlockSize ||
+          hdr.DinodeCount > hdr.DinodeBlockCount * maxPerSector ||
+          dinodeStartPos + hdr.DinodeBlockCount * hdr.BlockSize > imageLength)
+        throw new InvalidDataException("Invalid PFS inode table");
+      dinodes = new Inode[hdr.DinodeCount];
+
       if (hdr.Mode.HasFlag(PfsMode.Encrypted))
       {
         const int XtsSectorSize = 0x1000;
@@ -156,12 +169,10 @@ namespace LibOrbisPkg.PFS
       }
       var total = 0;
 
-      var maxPerSector = hdr.BlockSize / dinodeSize;
       sectorBuf = new byte[hdr.BlockSize];
       sectorStream = new MemoryStream(sectorBuf);
       // skip over indirect blocks, block signatures are never checked anyway
-      var dinodeStartPos = hdr.BlockSize + (hdr.BlockSize * hdr.InodeBlockSig.IndirectBlocks.Where(b => b > 0).Count());
-      for (var i = 0; i < hdr.DinodeBlockCount; i++)
+      for (long i = 0; i < hdr.DinodeBlockCount && total < hdr.DinodeCount; i++)
       {
         var position = dinodeStartPos + (hdr.BlockSize * i);
         reader.Read(position, sectorBuf, 0, sectorBuf.Length);
@@ -169,7 +180,7 @@ namespace LibOrbisPkg.PFS
         for (var j = 0; j < maxPerSector && total < hdr.DinodeCount; j++)
           dinodes[total++] = dinodeReader(sectorStream);
       }
-      root = LoadDir(0, null, "");
+      root = LoadDir(0, null, "", new HashSet<uint>(), 0);
       uroot = root.Get("uroot") as Dir;
       if (uroot == null)
         throw new Exception("Invalid PFS image (no uroot)");
@@ -198,15 +209,18 @@ namespace LibOrbisPkg.PFS
       return root;
     }
 
-    private Dir LoadDir(uint dinode, Dir parent, string name)
+    private Dir LoadDir(uint dinode, Dir parent, string name, HashSet<uint> visited, int depth)
     {
       // 100M blocks is enough for a 6TB file.
       const int MAX_BLOCKS = 100_000_000;
+      if (depth > 256 || !visited.Add(dinode))
+        throw new InvalidDataException("Invalid PFS directory tree (repeated inode or excessive depth)");
       var ret = new Dir() { name = name, parent = parent };
-      var ino = dinodes[dinode];
-      var postLoad = new List<Func<Dir>>();
+      var ino = GetInode(dinode);
+      var postLoad = new List<PfsDirent>();
       var blocks = (int)ino.Blocks;
-      if (blocks < 1 || ino.StartBlock < 1 || ino.StartBlock > MAX_BLOCKS || blocks > MAX_BLOCKS)
+      if (blocks < 1 || ino.StartBlock < 1 || ino.StartBlock > MAX_BLOCKS || blocks > MAX_BLOCKS ||
+          ((long)ino.StartBlock + blocks) * hdr.BlockSize > imageLength)
       {
         throw new Exception($"Inode {dinode} is corrupt. ");
       }
@@ -215,7 +229,7 @@ namespace LibOrbisPkg.PFS
         var position = hdr.BlockSize * x;
         reader.Read(position, sectorBuf, 0, sectorBuf.Length);
         sectorStream.Position = 0;
-        while (position < hdr.BlockSize * (x + 1))
+        while (sectorStream.Length - sectorStream.Position >= 16)
         {
           var dirent = PfsDirent.ReadFromStream(sectorStream);
           if (dirent.EntSize == 0) break;
@@ -225,7 +239,7 @@ namespace LibOrbisPkg.PFS
               ret.children.Add(LoadFile(dirent.InodeNumber, ret, dirent.Name));
               break;
             case DirentType.Directory:
-              postLoad.Add(() => LoadDir(dirent.InodeNumber, ret, dirent.Name));
+              postLoad.Add(dirent);
               break;
             case DirentType.Dot:
               break;
@@ -234,31 +248,44 @@ namespace LibOrbisPkg.PFS
             default:
               break;
           }
-          position += dirent.EntSize;
         }
       }
       foreach (var p in postLoad)
       {
-        ret.children.Add(p());
+        ret.children.Add(LoadDir(p.InodeNumber, ret, p.Name, visited, depth + 1));
       }
       return ret;
     }
 
+    private Inode GetInode(uint number)
+    {
+      if (number >= dinodes.Length || dinodes[number] == null)
+        throw new InvalidDataException($"Missing PFS inode {number}");
+      return dinodes[number];
+    }
+
     private File LoadFile(uint dinode, Dir parent, string name)
     {
+      var inode = GetInode(dinode);
+      var offset = (long)inode.StartBlock * hdr.BlockSize;
+      if (inode.Size < 0 || offset < 0 || inode.Size > (long)inode.Blocks * hdr.BlockSize ||
+          (inode.Size > 0 && inode.StartBlock == 0))
+        throw new InvalidDataException($"Invalid PFS file extent for inode {dinode}");
       int[] blocks = null;
-      if(dinodes[dinode].Blocks > 1 && dinodes[dinode].DirectBlocks[1] != -1)
+      if(inode.Blocks > 1 && inode.DirectBlocks[1] != -1)
       {
         if (!hdr.Mode.HasFlag(PfsMode.Signed))
         {
           throw new Exception("Unsigned PFS images probably shouldn't have noncontiguous blocks");
         }
-        blocks = new int[dinodes[dinode].Blocks];
-        var remainingBlocks = (long)dinodes[dinode].Blocks;
+        if (inode.Blocks > 100_000_000 || inode.Blocks > imageLength / hdr.BlockSize)
+          throw new InvalidDataException($"Invalid PFS block count for inode {dinode}");
+        blocks = new int[inode.Blocks];
+        var remainingBlocks = (long)inode.Blocks;
         var sigsPerBlock = hdr.BlockSize / 36;
         for (int i = 0; i < 12 && i < remainingBlocks; i++)
         {
-          blocks[i] = dinodes[dinode].DirectBlocks[i];
+          blocks[i] = inode.DirectBlocks[i];
         }
 
         var bufferedReader = new BufferedMemoryReader(reader, 0x10000);
@@ -266,42 +293,42 @@ namespace LibOrbisPkg.PFS
         long blockIndexOffset = 12;
         for (int i = 0; i < remainingBlocks && i < sigsPerBlock; i++)
         {
-          bufferedReader.Read(dinodes[dinode].IndirectBlocks[0] * hdr.BlockSize + (i * 36) + 32, out blocks[i + blockIndexOffset]);
+          bufferedReader.Read(inode.IndirectBlocks[0] * hdr.BlockSize + (i * 36) + 32, out blocks[i + blockIndexOffset]);
         }
         remainingBlocks -= sigsPerBlock;
         blockIndexOffset += sigsPerBlock;
         for (int j = 0; j * sigsPerBlock < remainingBlocks; j++)
         {
-          bufferedReader.Read(dinodes[dinode].IndirectBlocks[1] * hdr.BlockSize + (j * 36) + 32, out int indirectBlockOffset);
+          bufferedReader.Read(inode.IndirectBlocks[1] * hdr.BlockSize + (j * 36) + 32, out int indirectBlockOffset);
           for (int i = 0; i < sigsPerBlock && i + (j * sigsPerBlock) < remainingBlocks; i++)
           {
             bufferedReader.Read(indirectBlockOffset * hdr.BlockSize + (i * 36) + 32, out blocks[i + blockIndexOffset]);
           }
           blockIndexOffset += sigsPerBlock;
         }
-        bool contiguous = true;
-        int last = blocks[0] - 1;
-        for(int i = 1; i < blocks.Length; i++)
+        bool contiguous = blocks[0] == inode.StartBlock;
+        for(int i = 0; i < blocks.Length; i++)
         {
-          if(blocks[i - 1] + 1 != blocks[i])
-          {
+          if (blocks[i] <= 0 || ((long)blocks[i] + 1) * hdr.BlockSize > imageLength)
+            throw new InvalidDataException($"Invalid PFS data block for inode {dinode}");
+          if (i > 0 && blocks[i - 1] + 1L != blocks[i])
             contiguous = false;
-            break;
-          }
         }
         if (contiguous)
           blocks = null;
       }
+      if (blocks == null && imageLength is long length && (offset > length || inode.Size > length - offset))
+        throw new InvalidDataException($"PFS file outside the image (inode {dinode})");
       return new File(reader)
       {
         name = name,
         parent = parent,
-        offset = dinodes[dinode].StartBlock * hdr.BlockSize,
-        size = dinodes[dinode].Size,
-        compressed_size = dinodes[dinode].SizeCompressed,
+        offset = offset,
+        size = inode.Size,
+        compressed_size = inode.SizeCompressed,
         ino = dinode,
         blocks = blocks,
-        flags = dinodes[dinode].Flags,
+        flags = inode.Flags,
         blockSize = (int)hdr.BlockSize
       };
     }

@@ -47,8 +47,14 @@ No teste informado pelo usuário, o mesmo PKG passou de **03:29 para cerca de 44
 ### Atualização e uso
 
 1. Instale a versão correspondente à plataforma. No Windows, execute o instalador novo sobre a instalação anterior; o portátil dispensa instalação.
-2. Selecione o PKG e uma pasta de destino vazia. Confira espaço livre: o conteúdo extraído pode ser maior que o pacote.
+2. Selecione um ou mais PKGs e a pasta de destino. Para integrar updates, inclua o jogo base na mesma seleção. Confira o espaço livre, pois a extração pode ocupar mais espaço que o PKG.
 3. Inicie a extração. Use os controles de pausa/cancelamento e consulte o histórico ou o log em caso de erro.
+
+No modo em lote, jogos independentes são extraídos em paralelo. Cada grupo usa uma subpasta própria, publicada após a extração da base e a aplicação dos updates em ordem de `APP_VER`. Pastas de destino existentes são preservadas. Updates delta binários exigem reconstrução e ficam fora dessa integração. No Android, selecione uma pasta em um provedor que permita renomear pastas, como o armazenamento interno. A prévia usa `icon0.png` ou `pic1.png` do próprio PKG quando disponível.
+
+O limite de extrações simultâneas considera CPU, memória disponível, tamanho das imagens PFS e tipo de armazenamento. Para arquivos de 8 MiB ou mais, o motor pode ler e descriptografar o próximo bloco enquanto grava o atual, usando dois buffers reutilizáveis de 1 MiB por extração ativa.
+
+Se o PKG não tiver arte utilizável, a prévia busca uma capa ou captura de tela no Wikimedia Commons em segundo plano. A consulta envia o título do jogo, sem enviar o arquivo, seu caminho ou seu identificador. Uma imagem encontrada mostra a autoria, a fonte e a licença. A seleção e a extração funcionam mesmo sem conexão.
 
 **Android:** instalar por cima exige o mesmo identificador e assinatura compatível, sem reduzir o código de versão. Builds novos usam a chave persistente do projeto; APKs antigos assinados com outras chaves podem exigir reinstalação. Preserve os dados importantes antes de desinstalar. A chave privada não fica no repositório nem nos artefatos; os dados do certificado público acompanham o APK do Actions.
 
@@ -103,7 +109,7 @@ A user-reported test of the same PKG improved from **03:29 to about 44 seconds o
 
 ### Updating and extracting
 
-Run the new Windows installer over the previous installation, or use the portable build. Select a PKG and an empty destination folder with enough free space; extracted contents can exceed the package size. Use pause/cancel controls as needed and inspect the history or log for errors.
+Run the new Windows installer over the previous installation, or use the portable build. Select one or more PKGs and an output folder with enough free space. To apply updates, include the base game in the same selection. Independent groups extract concurrently into separate folders. Each folder becomes final after its base and ordered `APP_VER` updates complete. Binary delta updates require reconstruction. On Android, use a storage provider that can rename folders, such as internal storage. The app previews embedded `icon0.png` or `pic1.png` artwork when available.
 
 **Android updates require a compatible signing identity, the same package ID and no version-code downgrade.** New CI builds reuse the project signing key; older APKs with different signatures may require reinstallation. Preserve important app data before uninstalling. Private signing material is never included in the repository or download artifacts; public certificate details accompany the Actions APK.
 

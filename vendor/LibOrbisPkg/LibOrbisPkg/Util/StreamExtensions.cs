@@ -25,7 +25,7 @@ namespace LibOrbisPkg.Util
     {
       byte ret;
       byte[] tmp = new byte[1];
-      s.Read(tmp, 0, 1);
+      s.ReadExactly(tmp, 0, 1);
       ret = tmp[0];
       return ret;
     }
@@ -46,7 +46,7 @@ namespace LibOrbisPkg.Util
     {
       int ret;
       byte[] tmp = new byte[2];
-      s.Read(tmp, 0, 2);
+      s.ReadExactly(tmp, 0, 2);
       ret = tmp[0] & 0x00FF;
       ret |= (tmp[1] << 8) & 0xFF00;
       return (short)ret;
@@ -81,7 +81,7 @@ namespace LibOrbisPkg.Util
     {
       int ret;
       byte[] tmp = new byte[2];
-      s.Read(tmp, 0, 2);
+      s.ReadExactly(tmp, 0, 2);
       ret = (tmp[0] << 8) & 0xFF00;
       ret |= tmp[1] & 0x00FF;
       return (short)ret;
@@ -109,7 +109,7 @@ namespace LibOrbisPkg.Util
     {
       int ret;
       byte[] tmp = new byte[3];
-      s.Read(tmp, 0, 3);
+      s.ReadExactly(tmp, 0, 3);
       ret = tmp[0] & 0x0000FF;
       ret |= (tmp[1] << 8) & 0x00FF00;
       ret |= (tmp[2] << 16) & 0xFF0000;
@@ -125,7 +125,7 @@ namespace LibOrbisPkg.Util
     {
       int ret;
       byte[] tmp = new byte[3];
-      s.Read(tmp, 0, 3);
+      s.ReadExactly(tmp, 0, 3);
       ret = tmp[0] & 0x0000FF;
       ret |= (tmp[1] << 8) & 0x00FF00;
       ret |= (tmp[2] << 16) & 0xFF0000;
@@ -145,7 +145,7 @@ namespace LibOrbisPkg.Util
     {
       int ret;
       byte[] tmp = new byte[3];
-      s.Read(tmp, 0, 3);
+      s.ReadExactly(tmp, 0, 3);
       ret = tmp[2] & 0x0000FF;
       ret |= (tmp[1] << 8) & 0x00FF00;
       ret |= (tmp[0] << 16) & 0xFF0000;
@@ -161,7 +161,7 @@ namespace LibOrbisPkg.Util
     {
       int ret;
       byte[] tmp = new byte[3];
-      s.Read(tmp, 0, 3);
+      s.ReadExactly(tmp, 0, 3);
       ret = tmp[2] & 0x0000FF;
       ret |= (tmp[1] << 8) & 0x00FF00;
       ret |= (tmp[0] << 16) & 0xFF0000;
@@ -188,7 +188,7 @@ namespace LibOrbisPkg.Util
     {
       int ret;
       byte[] tmp = new byte[4];
-      s.Read(tmp, 0, 4);
+      s.ReadExactly(tmp, 0, 4);
       ret = tmp[0] & 0x000000FF;
       ret |= (tmp[1] << 8) & 0x0000FF00;
       ret |= (tmp[2] << 16) & 0x00FF0000;
@@ -227,7 +227,7 @@ namespace LibOrbisPkg.Util
     {
       int ret;
       byte[] tmp = new byte[4];
-      s.Read(tmp, 0, 4);
+      s.ReadExactly(tmp, 0, 4);
       ret = (tmp[0] << 24);
       ret |= (tmp[1] << 16) & 0x00FF0000;
       ret |= (tmp[2] << 8) & 0x0000FF00;
@@ -266,7 +266,7 @@ namespace LibOrbisPkg.Util
     {
       long ret;
       byte[] tmp = new byte[8];
-      s.Read(tmp, 0, 8);
+      s.ReadExactly(tmp, 0, 8);
       ret = tmp[4] & 0x000000FFL;
       ret |= (tmp[5] << 8) & 0x0000FF00L;
       ret |= (tmp[6] << 16) & 0x00FF0000L;
@@ -315,7 +315,7 @@ namespace LibOrbisPkg.Util
     {
       long ret;
       byte[] tmp = new byte[8];
-      s.Read(tmp, 0, 8);
+      s.ReadExactly(tmp, 0, 8);
       ret = tmp[3] & 0x000000FFL;
       ret |= (tmp[2] << 8) & 0x0000FF00L;
       ret |= (tmp[1] << 16) & 0x00FF0000L;
@@ -376,7 +376,7 @@ namespace LibOrbisPkg.Util
     public static float ReadFloat(this Stream s)
     {
       byte[] tmp = new byte[4];
-      s.Read(tmp, 0, 4);
+      s.ReadExactly(tmp, 0, 4);
       return BitConverter.ToSingle(tmp, 0);
     }
 
@@ -407,7 +407,7 @@ namespace LibOrbisPkg.Util
     {
       int length = s.ReadInt32LE();
       byte[] chars = new byte[length];
-      s.Read(chars, 0, length);
+      s.ReadExactly(chars, 0, length);
       return e.GetString(chars);
     }
 
@@ -432,7 +432,7 @@ namespace LibOrbisPkg.Util
       // Size of returned array at most count, at least difference between position and length.
       int realCount = (int)((s.Position + count > s.Length) ? (s.Length - s.Position) : count);
       byte[] ret = new byte[realCount];
-      s.Read(ret, 0, realCount);
+      s.ReadExactly(ret, 0, realCount);
       return ret;
     }
 

@@ -17,49 +17,36 @@ public sealed class ExtractionForegroundService : Service
 {
     public override IBinder? OnBind(Intent? intent) => null;
 
-    private void StopForegroundCompat()
-    {
-#pragma warning disable CA1422 // Called only on Android 24-25.
-        StopForeground(true);
-#pragma warning restore CA1422
-    }
-
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {
-        var action = intent?.Action;
-        if (action == AndroidNotificationHelper.ActionTogglePause)
+        switch (intent?.Action)
         {
-            AndroidNotificationHelper.RequestTogglePause();
-            return StartCommandResult.Sticky;
-        }
-        if (action == AndroidNotificationHelper.ActionPause)
-        {
-            AndroidNotificationHelper.RequestPause();
-            return StartCommandResult.Sticky;
-        }
-        if (action == AndroidNotificationHelper.ActionResume)
-        {
-            AndroidNotificationHelper.RequestResume();
-            return StartCommandResult.Sticky;
-        }
-        if (action == AndroidNotificationHelper.ActionFinish || action == AndroidNotificationHelper.ActionCancel)
-        {
-            if (action == AndroidNotificationHelper.ActionCancel)
+            case AndroidNotificationHelper.ActionStart:
+                StartForeground(AndroidNotificationHelper.NotificationId,
+                    AndroidNotificationHelper.BuildNotification(ApplicationContext ?? this, true));
+                break;
+            case AndroidNotificationHelper.ActionTogglePause:
+                AndroidNotificationHelper.RequestTogglePause();
+                break;
+            case AndroidNotificationHelper.ActionPause:
+                AndroidNotificationHelper.RequestPause();
+                break;
+            case AndroidNotificationHelper.ActionResume:
+                AndroidNotificationHelper.RequestResume();
+                break;
+            case AndroidNotificationHelper.ActionCancel:
                 AndroidNotificationHelper.RequestCancellation();
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.N)
-                StopForeground(StopForegroundFlags.Remove);
-            else
-                StopForegroundCompat();
-            StopSelf(startId);
-            return StartCommandResult.NotSticky;
+                break;
+            default:
+                StopSelf(startId);
+                break;
         }
+        return StartCommandResult.NotSticky;
+    }
 
-        if (action == AndroidNotificationHelper.ActionStart)
-        {
-            // Android exige que o serviço entre em foreground imediatamente.
-            StartForeground(AndroidNotificationHelper.NotificationId,
-                AndroidNotificationHelper.BuildNotification(ApplicationContext ?? this, true));
-        }
-        return StartCommandResult.Sticky;
+    public override void OnTimeout(int startId, global::Android.Content.PM.ForegroundService fgsType)
+    {
+        AndroidNotificationHelper.RequestCancellation();
+        StopSelf(startId);
     }
 }

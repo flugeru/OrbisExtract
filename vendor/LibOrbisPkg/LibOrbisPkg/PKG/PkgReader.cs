@@ -1,5 +1,7 @@
 ﻿using System;
 using LibOrbisPkg.Util;
+using System.IO;
+using System.Threading;
 
 namespace LibOrbisPkg.PKG
 {
@@ -9,9 +11,14 @@ namespace LibOrbisPkg.PKG
     {
     }
 
-    public Pkg ReadPkg()
+    private Pkg ReadStructure(CancellationToken cancellationToken, bool metadataPrefix = false)
     {
+      if (s.Length < 0x1100)
+        throw new InvalidDataException("Truncated PKG header");
       var header = ReadHeader();
+      if (header.entry_count > ushort.MaxValue ||
+          (ulong)header.entry_table_offset + (ulong)header.entry_count * Pkg.PKG_TABLE_ENTRY_SIZE > (ulong)s.Length)
+        throw new InvalidDataException("Invalid PKG entry table");
       s.Position = 0xFE0;
       var headerDigest = s.ReadBytes(32);
       var headerSignature = s.ReadBytes(256);
@@ -19,17 +26,51 @@ namespace LibOrbisPkg.PKG
       var metasEntry = new MetasEntry();
       for (var i = 0; i < header.entry_count; i++)
       {
-        metasEntry.Metas.Add(MetaEntry.Read(s));
+        cancellationToken.ThrowIfCancellationRequested();
+        var entry = MetaEntry.Read(s);
+        if (!metadataPrefix && (ulong)entry.DataOffset + entry.DataSize > (ulong)s.Length)
+          throw new InvalidDataException($"PKG entry outside the file: {entry.id}");
+        metasEntry.Metas.Add(entry);
       }
-      var pkg = new Pkg
+      return new Pkg
       {
         Header = header,
         HeaderDigest = headerDigest,
         HeaderSignature = headerSignature,
         Metas = metasEntry,
       };
+    }
+
+    public Pkg ReadMetadata(CancellationToken cancellationToken = default, bool metadataPrefix = false)
+    {
+      var pkg = ReadStructure(cancellationToken, metadataPrefix);
       foreach (var entry in pkg.Metas.Metas)
       {
+        if (entry.id != EntryId.PARAM_SFO) continue;
+        if ((ulong)entry.DataOffset + entry.DataSize > (ulong)s.Length)
+          throw new InvalidDataException("PKG metadata outside the readable prefix");
+        try { pkg.ParamSfo = ReadParamSfo(entry); }
+        catch (InvalidDataException) { /* Header identity remains available. */ }
+        catch (EndOfStreamException) { }
+        break;
+      }
+      return pkg;
+    }
+
+    private SfoEntry ReadParamSfo(MetaEntry entry)
+    {
+      using var data = new SubStream(s, entry.DataOffset, entry.DataSize);
+      return new SfoEntry(SFO.ParamSfo.FromStream(data)) { meta = entry };
+    }
+
+    public Pkg ReadPkg(bool readOptionalEntries = true, CancellationToken cancellationToken = default)
+    {
+      var pkg = ReadStructure(cancellationToken);
+      foreach (var entry in pkg.Metas.Metas)
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!readOptionalEntries && entry.id != EntryId.ENTRY_KEYS && entry.id != EntryId.IMAGE_KEY)
+          continue;
         switch (entry.id)
         {
           case EntryId.METAS:
@@ -39,15 +80,17 @@ namespace LibOrbisPkg.PKG
             pkg.EntryNames = NameTableEntry.Read(entry, s);
             break;
           case EntryId.PARAM_SFO:
-            s.Position = entry.DataOffset;
-            pkg.ParamSfo = new SfoEntry(SFO.ParamSfo.FromStream(s));
-            pkg.ParamSfo.meta = entry;
+            pkg.ParamSfo = ReadParamSfo(entry);
             break;
           case EntryId.ENTRY_KEYS:
+            if (entry.DataSize < 2048)
+              throw new InvalidDataException("Truncated PKG key table");
             pkg.EntryKeys = KeysEntry.Read(entry, s);
             pkg.EntryKeys.meta = entry;
             break;
           case EntryId.IMAGE_KEY:
+            if (entry.DataSize != 256)
+              throw new InvalidDataException("Invalid PKG image key size");
             s.Position = entry.DataOffset;
             pkg.ImageKey = new GenericEntry(EntryId.IMAGE_KEY)
             {

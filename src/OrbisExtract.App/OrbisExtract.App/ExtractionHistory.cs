@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace OrbisExtract.App;
 
@@ -26,7 +27,7 @@ internal static class ExtractionHistory
             try
             {
                 if (!File.Exists(FilePath)) return new();
-                return JsonSerializer.Deserialize<List<ExtractionHistoryEntry>>(File.ReadAllText(FilePath)) ?? new();
+                return JsonSerializer.Deserialize(File.ReadAllText(FilePath), ExtractionHistoryJsonContext.Default.ListExtractionHistoryEntry) ?? new();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
             {
@@ -47,7 +48,7 @@ internal static class ExtractionHistory
                 var path = FilePath;
                 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
                 var temporary = path + ".tmp";
-                File.WriteAllText(temporary, JsonSerializer.Serialize(entries));
+                File.WriteAllText(temporary, JsonSerializer.Serialize(entries, ExtractionHistoryJsonContext.Default.ListExtractionHistoryEntry));
                 File.Move(temporary, path, true);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -57,3 +58,6 @@ internal static class ExtractionHistory
         }
     }
 }
+
+[JsonSerializable(typeof(List<ExtractionHistoryEntry>))]
+internal sealed partial class ExtractionHistoryJsonContext : JsonSerializerContext;

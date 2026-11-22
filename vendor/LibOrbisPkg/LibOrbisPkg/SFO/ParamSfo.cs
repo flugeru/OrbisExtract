@@ -70,6 +70,8 @@ namespace LibOrbisPkg.SFO
       {
         start = start + 0x800;
       }
+      if (start > s.Length - 0x14)
+        throw new InvalidDataException("Truncated SFO header");
       s.Position = start;
       if (s.ReadUInt32BE() != 0x00505346)
       {
@@ -79,16 +81,27 @@ namespace LibOrbisPkg.SFO
       var keyTableStart = s.ReadInt32LE();
       var dataTableStart = s.ReadInt32LE();
       var numValues = s.ReadInt32LE();
+      var length = s.Length - start;
+      if (numValues < 0 || keyTableStart < 0x14 + (long)numValues * 0x10 ||
+          dataTableStart < keyTableStart || dataTableStart > length)
+        throw new InvalidDataException("Invalid SFO tables");
       for (int value = 0; value < numValues; value++)
       {
-        s.Position = value * 0x10 + 0x14 + start;
+        s.Position = (long)value * 0x10 + 0x14 + start;
         var keyOffset = s.ReadUInt16LE();
         var format = (SfoEntryType)s.ReadUInt16LE();
         var len = s.ReadInt32LE();
         var maxLen = s.ReadInt32LE();
         var dataOffset = s.ReadUInt32LE();
+        var keyLength = dataTableStart - keyTableStart - keyOffset;
+        if (keyLength <= 0 || len < 0 || maxLen < len ||
+            (long)dataTableStart + dataOffset + len > length ||
+            (format == SfoEntryType.Integer && len != sizeof(int)))
+          throw new InvalidDataException("Invalid SFO field");
         s.Position = start + keyTableStart + keyOffset;
-        var name = s.ReadASCIINullTerminated();
+        var name = s.ReadASCIINullTerminated(keyLength);
+        if (name.Length == keyLength)
+          throw new InvalidDataException("Unterminated SFO field name");
         s.Position = start + dataTableStart + dataOffset;
         switch (format)
         {
@@ -102,7 +115,7 @@ namespace LibOrbisPkg.SFO
             ret.Values.Add(new Utf8SpecialValue(name, Encoding.UTF8.GetString(s.ReadBytes(len)), maxLen));
             break;
           default:
-            throw new Exception($"Unknown SFO type: {(ushort)format:X4}");
+            throw new InvalidDataException($"Unknown SFO type: {(ushort)format:X4}");
         }
       }
       return ret;

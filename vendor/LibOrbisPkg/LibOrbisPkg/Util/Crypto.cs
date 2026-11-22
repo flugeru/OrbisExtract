@@ -131,7 +131,7 @@ namespace LibOrbisPkg.Util
     /// <returns>RSA 2048 signature of the hash</returns>
     public static byte[] RSA2048SignSha256(byte[] sha256Hash, RSAKeyset keyset)
     {
-      RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+      using var rsa = new RSACryptoServiceProvider();
       rsa.ImportParameters(new RSAParameters
       {
         P = keyset.Prime1,

@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,12 +10,14 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using OrbisExtract.Core;
 using OrbisExtract.Infrastructure.OpenOrbis;
 using OrbisExtract.App.Updates;
 using OrbisExtract.App.Localization;
+using OrbisExtract.App.Shared;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -33,6 +36,12 @@ public sealed class MainView : UserControl
     private readonly WrapPanel _chips;
     private readonly StackPanel _infoRows;
     private readonly TextBlock _gameTitle, _version, _contentId;
+    private readonly Image _artwork;
+    private readonly TextBlock _artworkStatus, _artworkCredit;
+    private readonly Button _artworkSource, _artworkLicense;
+    private readonly CommonsArtworkSearch _onlineArtwork = new();
+    private Uri? _artworkSourceUri, _artworkLicenseUri;
+    private readonly ComboBox _previewPicker;
     private readonly Button _choosePackage;
 
     // Configuração
@@ -68,7 +77,9 @@ public sealed class MainView : UserControl
     private bool _startupUpdateChecked;
 
     // Estado
-    private IStorageFile? _package;
+    private IReadOnlyList<IStorageFile> _packages = [];
+    private CancellationTokenSource? _previewRequest;
+    private bool _selecting;
     private IStorageFolder? _destination;
     private CancellationTokenSource? _run;
     private ExtractionPauseGate? _pauseGate;
@@ -97,19 +108,43 @@ public sealed class MainView : UserControl
         _version = UiTheme.Text("", 14);
         _contentId = UiTheme.Text("", 13);
         _contentId.FontFamily = UiTheme.Mono;
+        _artwork = new Image
+        {
+            Height = 132, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center, IsVisible = false
+        };
+        _artworkStatus = UiTheme.Text("", 12, UiTheme.TextSecondary);
+        _artworkStatus.IsVisible = false;
+        _artworkCredit = UiTheme.Text("", 12, UiTheme.TextSecondary);
+        _artworkCredit.TextWrapping = TextWrapping.Wrap;
+        _artworkCredit.IsVisible = false;
+        _artworkSource = UiTheme.OutlinedButton("Origem da imagem");
+        _artworkLicense = UiTheme.OutlinedButton("Licença da imagem");
+        _artworkSource.IsVisible = _artworkLicense.IsVisible = false;
+        _artworkSource.Click += async (_, _) => await OpenArtworkLinkAsync(_artworkSourceUri);
+        _artworkLicense.Click += async (_, _) => await OpenArtworkLinkAsync(_artworkLicenseUri);
+        _previewPicker = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, IsVisible = false };
+        _previewPicker.SelectionChanged += async (_, _) =>
+        {
+            if (_previewPicker.SelectedIndex >= 0 && _packages.Count > 1)
+                await PreviewPackageAsync(_previewPicker.SelectedIndex);
+        };
         _infoRows = new StackPanel
         {
             Spacing = 10,
             IsVisible = false,
             Margin = new Thickness(0, 4, 0, 0),
-            Children = { Field("Jogo", _gameTitle), Field("Versão", _version), Field("Content ID", _contentId) }
+            Children =
+            {
+                _artwork, _artworkStatus, _artworkCredit, _artworkSource, _artworkLicense,
+                Field("Jogo", _gameTitle), Field("Versão", _version), Field("Content ID", _contentId)
+            }
         };
-        _choosePackage = UiTheme.ActionButton("Selecionar arquivo PKG");
+        _choosePackage = UiTheme.ActionButton("Selecionar arquivos PKG");
         _choosePackage.Click += async (_, _) => await ChoosePackageAsync();
 
-        _packageCard = Section("Arquivo do pacote",
-            "Selecione o PKG para consultar os metadados antes de extrair.",
-            _fileName, _chips, _infoRows, _choosePackage);
+        _packageCard = Section("Pacotes PKG",
+            "Selecione um ou mais PKGs, incluindo o jogo base e seus updates.",
+            _fileName, _choosePackage, _previewPicker, _chips, _infoRows);
 
         // ---------- Cartão de configuração (passcode removido da UI) ----------
         _destinationName = UiTheme.Text("Nenhuma pasta escolhida", 14, UiTheme.TextSecondary);
@@ -323,9 +358,11 @@ public sealed class MainView : UserControl
             {
                 OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested -= CancelFromNotification;
                 OrbisExtract.App.Shared.AppNotificationHelper.PauseRequested -= PauseFromNotification;
+                OrbisExtract.App.Shared.AppNotificationHelper.TogglePauseRequested -= TogglePauseFromNotification;
                 OrbisExtract.App.Shared.AppNotificationHelper.ResumeRequested -= ResumeFromNotification;
                 OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested += CancelFromNotification;
                 OrbisExtract.App.Shared.AppNotificationHelper.PauseRequested += PauseFromNotification;
+                OrbisExtract.App.Shared.AppNotificationHelper.TogglePauseRequested += TogglePauseFromNotification;
                 OrbisExtract.App.Shared.AppNotificationHelper.ResumeRequested += ResumeFromNotification;
             }
         };
@@ -1020,15 +1057,27 @@ public sealed class MainView : UserControl
     private async Task ChoosePackageAsync()
     {
         var top = TopLevel.GetTopLevel(this);
-        if (top is null) return;
+        if (top is null || _run is not null || _selecting) return;
+        _selecting = true;
+        _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _extract.IsEnabled = false;
+        try { await SelectPackagesAsync(top); }
+        finally
+        {
+            _selecting = false;
+            _choosePackage.IsEnabled = _chooseDestination.IsEnabled = true;
+            _extract.IsEnabled = _packages.Count > 0 && _destination is not null;
+        }
+    }
 
+    private async Task SelectPackagesAsync(TopLevel top)
+    {
         IReadOnlyList<IStorageFile> files;
         try
         {
             files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = AppLanguage.Text("Selecionar pacote PlayStation PKG"),
-                AllowMultiple = false,
+                AllowMultiple = true,
                 FileTypeFilter =
                 [
                     new FilePickerFileType(AppLanguage.Text("Pacotes PKG")) { Patterns = ["*.pkg", "*.PKG"] },
@@ -1046,55 +1095,133 @@ public sealed class MainView : UserControl
 
         if (files.Count == 0) return;
 
-        _package = files[0];
-        SetLiteral(_fileName, _package.Name);
+        _packages = files.DistinctBy(file => file.Path).ToArray();
+        var names = _packages.Select(file => file.Name).ToArray();
+        _previewRequest?.Cancel();
+        if (names.Length == 1) SetLiteral(_fileName, names[0]);
+        else SetLocalized(_fileName, () => $"{names.Length} {AppLanguage.Text("PKGs selecionados")}");
         _fileName.Foreground = UiTheme.Brush(UiTheme.TextPrimary);
-        _infoRows.IsVisible = false;
-        _chips.Children.Clear();
-        _chips.Children.Add(UiTheme.Chip("PS4"));
-        _chips.IsVisible = true;
-        SetLocalized(_counter, () => AppLanguage.Text("Arquivo selecionado."));
+        SetLocalized(_counter, () => $"{names.Length} {AppLanguage.Text("PKGs selecionados")}");
         ShowBanner(null);
-        Log($"Pacote selecionado: {_package.Name}");
-        _extract.IsEnabled = false;
+        Log($"{names.Length} {AppLanguage.Text("PKGs selecionados")}");
+        _previewPicker.SelectedIndex = -1;
+        _previewPicker.ItemsSource = names;
+        _previewPicker.IsVisible = names.Length > 1;
+        if (names.Length == 1) _ = PreviewPackageAsync(0);
+        else _previewPicker.SelectedIndex = 0;
+    }
 
-        try
+    private async Task PreviewPackageAsync(int index)
+    {
+        var package = _packages[index];
+        _previewRequest?.Cancel();
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        _previewRequest = request;
+        var token = request.Token;
+        _infoRows.IsVisible = false;
+        _artwork.IsVisible = false;
+        _artworkStatus.IsVisible = _artworkCredit.IsVisible = _artworkSource.IsVisible = _artworkLicense.IsVisible = false;
+        _artworkSourceUri = _artworkLicenseUri = null;
+        if (_artwork.Source is Bitmap old)
         {
-            var props = await _package.GetBasicPropertiesAsync();
-            if (props.Size is { } size) _chips.Children.Add(UiTheme.Chip(FormatSize(size)));
+            _artwork.Source = null;
+            old.Dispose();
         }
-        catch { /* tamanho é opcional */ }
-
+        _chips.Children.Clear();
+        _chips.IsVisible = false;
         try
         {
-            await using var stream = await _package.OpenReadAsync();
-            if (!stream.CanSeek)
+            PackagePreview preview;
+            await using (var stream = await package.OpenReadAsync())
+                preview = await new OpenOrbisPkgMetadataReader().ReadPreviewAsync(stream, token);
+            token.ThrowIfCancellationRequested();
+            var info = preview.Metadata;
+            _chips.Children.Add(UiTheme.Chip("PS4"));
+            if (info.TitleId is not null) _chips.Children.Add(UiTheme.Chip(info.TitleId));
+            if (info.Kind == PackageKind.BaseGame) _chips.Children.Add(UiTheme.Chip(AppLanguage.Text("Jogo base")));
+            if (info.Kind is PackageKind.Update or PackageKind.DeltaUpdate) _chips.Children.Add(UiTheme.Chip("Update"));
+            _chips.IsVisible = true;
+            SetLiteral(_gameTitle, info.Title);
+            SetLiteral(_version, info.Version);
+            SetLiteral(_contentId, info.ContentId);
+            _infoRows.IsVisible = true;
+            if (preview.Artwork is { } png && await ShowArtworkAsync(png, preview.ArtworkWidth, token))
+                return;
+
+            if (info.Title == "Título não informado") return;
+            SetLocalized(_artworkStatus, () => AppLanguage.Text("Buscando arte online…"));
+            _artworkStatus.IsVisible = true;
+            var online = await _onlineArtwork.FindAsync(info.Title, token);
+            token.ThrowIfCancellationRequested();
+            if (online is not null && await ShowArtworkAsync(online.Image, online.Width, token))
             {
-                SetLocalized(_counter, () => AppLanguage.Text("Metadados serão validados durante a extração."));
+                _artworkStatus.IsVisible = false;
+                _artworkSourceUri = online.SourceUri;
+                _artworkLicenseUri = online.LicenseUri;
+                SetLiteral(_artworkCredit, string.IsNullOrEmpty(online.Author)
+                    ? $"{online.Title} · {online.License}"
+                    : $"{online.Title} · {online.Author} · {online.License}");
+                _artworkCredit.IsVisible = _artworkSource.IsVisible = true;
+                _artworkLicense.IsVisible = _artworkLicenseUri is not null;
             }
-            else
+            else SetLocalized(_artworkStatus, () => AppLanguage.Text("Sem arte online disponível."));
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception ex) when (!token.IsCancellationRequested)
+        {
+            Log($"Aviso ao ler metadados: {ex.Message}");
+        }
+        catch (Exception) when (token.IsCancellationRequested) { }
+        finally
+        {
+            if (_previewRequest == request) _previewRequest = null;
+        }
+    }
+
+    private async Task<bool> ShowArtworkAsync(byte[] image, int width, CancellationToken token)
+    {
+        try
+        {
+            var bitmap = await Task.Run(() =>
             {
-                Log("Lendo metadados do PKG…");
-                var info = await new OpenOrbisPkgMetadataReader().ReadAsync(stream, _lifetime.Token);
-                Log("Metadados do PKG lidos.");
-                SetLiteral(_gameTitle, info.Title?.ToString() ?? "—");
-                SetLiteral(_version, info.Version?.ToString() ?? "—");
-                SetLiteral(_contentId, info.ContentId?.ToString() ?? "—");
-                _infoRows.IsVisible = true;
+                using var data = new MemoryStream(image, writable: false);
+                return Bitmap.DecodeToWidth(data, Math.Min(512, width));
+            }, token);
+            if (token.IsCancellationRequested)
+            {
+                bitmap.Dispose();
+                token.ThrowIfCancellationRequested();
             }
+            _artwork.Source = bitmap;
+            _artwork.IsVisible = true;
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log($"Capa indisponível: {ex.Message}");
+            return false;
+        }
+    }
+
+    private async Task OpenArtworkLinkAsync(Uri? uri)
+    {
+        if (uri is null) return;
+        try
+        {
+            if (TopLevel.GetTopLevel(this) is { } top && await top.Launcher.LaunchUriAsync(uri)) return;
+            ShowBanner("Navegador indisponível.", UiTheme.Warning);
         }
         catch (Exception ex)
         {
-            ShowBanner("Metadados indisponíveis; o pacote ainda pode ser tentado.", UiTheme.Warning);
-            Log($"Aviso ao ler metadados: {ex.Message}");
+            Log($"Não foi possível abrir o link: {ex.Message}");
+            ShowBanner("Navegador indisponível.", UiTheme.Warning);
         }
-        _extract.IsEnabled = _destination is not null;
     }
 
     private async Task ChooseDestinationAsync()
     {
         var top = TopLevel.GetTopLevel(this);
-        if (top is null) return;
+        if (top is null || _run is not null || _selecting) return;
 
         IReadOnlyList<IStorageFolder> folders;
         try
@@ -1120,192 +1247,166 @@ public sealed class MainView : UserControl
         _destination = folders[0];
         SetLiteral(_destinationName, _destination.Name);
         _destinationName.Foreground = UiTheme.Brush(UiTheme.TextPrimary);
-        _extract.IsEnabled = _package is not null;
+        _extract.IsEnabled = _packages.Count > 0;
         Log($"Destino selecionado: {_destination.Name}");
     }
 
     private async Task ExtractAsync()
     {
-        if (_package is null || _destination is null) return;
+        if (_run is not null || _selecting || _packages.Count == 0 || _destination is null) return;
 
+        var packages = _packages;
+        var selectedFolder = _destination;
+        _previewRequest?.Cancel();
+        _artworkStatus.IsVisible = false;
+        _previewPicker.IsEnabled = false;
+        var localPath = OperatingSystem.IsAndroid() ? null : selectedFolder.TryGetLocalPath();
         _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _extract.IsEnabled = false;
         _run = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
-        _pauseGate = new ExtractionPauseGate();
+        var pauseGate = _pauseGate = new ExtractionPauseGate();
         _extractionPaused = false;
         var token = _run.Token;
         lock (_sessionEvents) _sessionEvents.Clear();
         _recordingHistory = true;
         var historyStartedAt = DateTimeOffset.Now;
-        var historyPackage = _package.Name;
-        var historyDestination = _destination.Name;
+        var batchName = packages.Count == 1 ? packages[0].Name : $"{packages.Count} PKGs";
         var historyResult = "Falha na extração";
         long historyFiles = 0, historyBytes = 0;
 
         ShowBanner(null);
         _cancel.IsVisible = _pause.IsVisible = _elapsed.IsVisible = true;
-        // An empty status line must not reserve vertical space between controls and logs.
         _status.IsVisible = false;
         _pause.Content = AppLanguage.Text("Pausar");
         SetLocalized(_stateTitle, () => AppLanguage.Text("Preparando"));
         SetLocalized(_counter, () => AppLanguage.Text("Preparando a extração…"));
-        _status.Text = "";
         _progress.IsIndeterminate = true;
         _percent.Text = "";
         _elapsed.Text = "00:00";
         _clock.Restart();
 
-        Log("--------------------------------------------------");
-        Log($"Iniciando extração. Pacote: {_package.Name}");
-        Log($"Destino: {_destination.Name}");
-        Log("Passcode: não utilizado nesta versão.");
+        Log($"Iniciando extração. Pacote: {batchName}");
+        Log($"Destino: {selectedFolder.Name}");
 
-        string? tempPath = null;
-        Stream? packageStream = null;
-        System.Timers.Timer? timer = null;
+        var progressSlots = Enumerable.Range(0, packages.Count).Select(_ => new PackageProgress()).ToArray();
+        int progressTotal = 0;
         long lastNotificationSecond = -1;
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        timer.Tick += (_, _) =>
+        {
+            var elapsed = _clock.Elapsed;
+            _elapsed.Text = $"{(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}";
+            if (progressTotal == 0) return;
+            var snapshots = progressSlots.Select(slot => slot.Snapshot).ToArray();
+            int done = snapshots.Count(snapshot => snapshot.Completed);
+            int active = snapshots.Count(snapshot => snapshot.Active);
+            double fraction = Math.Clamp(snapshots.Sum(snapshot => snapshot.Fraction) / progressTotal, 0, 1);
+            string Detail() => $"{done:N0} {AppLanguage.Text("de")} {progressTotal:N0} PKGs · {active:N0} {AppLanguage.Text("em execução")}";
+            _progress.IsIndeterminate = false;
+            _progress.Value = fraction * 100;
+            _percent.Text = $"{fraction:P0}";
+            if (!_extractionPaused) SetLocalized(_stateTitle, () => AppLanguage.Text("Extraindo"));
+            SetLocalized(_counter, Detail);
+            var second = (long)elapsed.TotalSeconds;
+            if (lastNotificationSecond == second) return;
+            lastNotificationSecond = second;
+            AppNotificationHelper.UpdateElapsed(elapsed);
+            AppNotificationHelper.UpdateProgress((long)(fraction * 1000), 1000, "Extraindo", Detail());
+        };
 
         try
         {
-            // Ativa o serviço foreground antes de abrir/copiar um PKG grande.
-            // Assim o Android não pode encerrar o processo durante a preparação inicial.
-            OrbisExtract.App.Shared.AppNotificationHelper.StartExtraction(
-                _package.Name, _destination.Name, 0, 0);
+            AppNotificationHelper.StartExtraction(batchName, selectedFolder.Name, 0, 0);
+            timer.Start();
+            bool limitedIo = UsesConstrainedStorage(localPath);
+            long estimatedWorkerBytes = 48 * 1024 * 1024;
+            int WorkerLimit() => GetWorkerLimit(limitedIo, estimatedWorkerBytes);
+            var (plan, unreadable) = await PlanBatchAsync(packages, pauseGate, WorkerLimit(), token);
+            var issues = unreadable.Concat(plan.Issues).ToArray();
+            foreach (var issue in issues)
+                Log($"{issue.Package}: {AppLanguage.Message(issue.Reason)}");
+            if (plan.Groups.Count == 0)
+                throw new PkgExtractionException(issues.FirstOrDefault()?.Reason ?? "Nenhum PKG pôde ser preparado.");
 
-            // Use o fluxo original diretamente quando ele permite seek. Alguns provedores
-            // Android retornam content:// sem seek; só nesses casos o parser exige um arquivo temporário.
-            var source = await _package.OpenReadAsync();
-            if (source.CanSeek)
+            estimatedWorkerBytes = plan.Groups.Max(group =>
+                group.Packages.Max(package => package.Metadata.EstimatedWorkingSetBytes));
+            progressTotal = plan.Groups.Sum(group => group.Packages.Count);
+            var hardware = GetHardwareBudget();
+            int workers = Math.Min(ParallelExtraction.WorkerLimit(hardware.Processors, hardware.Bytes, limitedIo,
+                hardware.Pressure, estimatedWorkerBytes), plan.Groups.Count);
+            Log($"{AppLanguage.Text("Grupos de extração")}: {plan.Groups.Count}; {AppLanguage.Text("operações simultâneas")}: {workers}.");
+            Log($"CPU: {hardware.Processors}; {AppLanguage.Text("RAM para o lote")}: {FormatSize((ulong)hardware.Bytes)}; " +
+                $"{AppLanguage.Text("estimativa por extração")}: {FormatSize((ulong)estimatedWorkerBytes)}.");
+            bool directOutput = packages.Count == 1;
+            var results = await ParallelExtraction.RunAsync(plan.Groups, WorkerLimit, async (group, stop) =>
             {
-                // PFS reads small sectors. Buffer SAF/JNI reads instead of crossing
-                // into the Android document provider for every sector.
-                packageStream = OperatingSystem.IsAndroid()
-                    ? new BufferedStream(source, 256 * 1024)
-                    : source;
-                Log("Lendo o PKG selecionado diretamente, sem copiá-lo.");
+                await pauseGate.WaitAsync(stop);
+                await using var workspace = directOutput ? null : await CreateWorkspaceAsync(selectedFolder, localPath, group.OutputName, stop);
+                var extractor = new OpenOrbisPkgExtractor();
+                long files = 0, bytes = 0;
+                foreach (var member in group.Packages)
+                {
+                    await pauseGate.WaitAsync(stop);
+                    var slot = progressSlots[member.Index];
+                    slot.Begin();
+                    try
+                    {
+                        var destination = workspace?.GetDestination(member != group.Packages[0])
+                            ?? CreateDirectDestination(selectedFolder, localPath);
+                        Log($"{group.OutputName} · {(member == group.Packages[0] ? AppLanguage.Text("Extraindo PKG") : AppLanguage.Text("Aplicando update"))}: {member.Name}");
+                        var result = await ExtractPackageAsync(packages[member.Index], member.Metadata,
+                            destination, extractor, slot, pauseGate, stop);
+                        files += result.FilesExtracted;
+                        bytes += result.BytesExtracted;
+                        if (result.PerformanceSummary is not null) Log($"{member.Name} · {result.PerformanceSummary}");
+                        slot.Finish();
+                    }
+                    catch
+                    {
+                        slot.Stop();
+                        throw;
+                    }
+                }
+                if (workspace is not null)
+                {
+                    await pauseGate.WaitAsync(stop);
+                    await workspace.PublishAsync(stop);
+                }
+                Log($"{AppLanguage.Text("Grupo concluído")}: {(directOutput ? selectedFolder.Name : group.OutputName)}");
+                return new ExtractionResult(files, bytes);
+            }, token);
+
+            historyFiles = results.Sum(result => result.Extraction?.FilesExtracted ?? 0);
+            historyBytes = results.Sum(result => result.Extraction?.BytesExtracted ?? 0);
+            foreach (var failure in results.Where(result => result.Error is not null and not OperationCanceledException))
+                Log($"{failure.Item.OutputName}: {AppLanguage.Message(failure.Error!.Message)}");
+
+            token.ThrowIfCancellationRequested();
+            int failures = issues.Length + results.Count(result => result.Error is not null);
+            if (results.All(result => result.Extraction is null))
+                throw new PkgExtractionException(results.First(result => result.Error is not null).Error!.Message);
+
+            historyResult = failures == 0 ? "Concluído" : "Concluído com falhas";
+            _progress.IsIndeterminate = false;
+            if (failures == 0)
+            {
+                _progress.Value = 100;
+                _percent.Text = "100%";
+            }
+            SetLocalized(_stateTitle, () => AppLanguage.Text(historyResult));
+            SetLocalized(_counter, () => $"{historyFiles:N0} {AppLanguage.Text("arquivos processados")} · {FormatSize((ulong)historyBytes)}");
+            if (failures == 0)
+            {
+                var duration = _clock.Elapsed.ToString(@"hh\:mm\:ss");
+                SetBanner(() => $"{AppLanguage.Text("Extração concluída com sucesso em")} {duration}.", UiTheme.Success);
+                AppNotificationHelper.CompleteExtraction(historyFiles, historyBytes);
             }
             else
             {
-                await source.DisposeAsync();
-                tempPath = Path.Combine(Path.GetTempPath(), $"orbisextract-{Guid.NewGuid():N}.pkg");
-                SetLocalized(_stateTitle, () => AppLanguage.Text("Preparando pacote"));
-                Log("O provedor não permite acesso aleatório; preparando uma cópia temporária necessária para leitura.");
-                await using var input = await _package.OpenReadAsync();
-                await using (var temp = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 1024 * 1024, true))
-                    await input.CopyToAsync(temp, token);
-                packageStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
+                ShowBanner("Alguns PKGs não foram extraídos. Veja o log.", UiTheme.Warning);
+                AppNotificationHelper.ShowError(AppLanguage.Text("Alguns PKGs não foram extraídos. Veja o log."));
             }
-            Log("Abrindo e validando a estrutura interna do PKG…");
-
-            // Inicializa o timer para atualização contínua do temporizador
-            timer = new System.Timers.Timer(200);
-            timer.Elapsed += (s, e) => Dispatcher.UIThread.Post(() =>
-            {
-                if (_run is not null)
-                {
-                    _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
-                    var second = (long)_clock.Elapsed.TotalSeconds;
-                    if (second != lastNotificationSecond)
-                    {
-                        lastNotificationSecond = second;
-                        OrbisExtract.App.Shared.AppNotificationHelper.UpdateElapsed(_clock.Elapsed);
-                    }
-                }
-            });
-            timer.AutoReset = true;
-            timer.Start();
-
-            // Para Windows com destino local, criamos um LocalExtractionDestination
-            // Para Android, usamos StorageFolderExtractionDestination
-            // A criação roda em Task.Run para não bloquear a UI em caminhos de rede/lentos.
-            IExtractionDestination destination = await Task.Run<IExtractionDestination>(() =>
-            {
-                if (!OperatingSystem.IsWindows())
-                {
-                    // Android - usa StorageFolderExtractionDestination
-                    return new StorageFolderExtractionDestination(_destination, Log);
-                }
-
-                // Usa o caminho completo da pasta escolhida (não apenas o nome base)
-                var destinationPath = _destination.TryGetLocalPath();
-                if (destinationPath is null)
-                    return new StorageFolderExtractionDestination(_destination, Log);
-
-                // Verifica se o destino é acessível e cria um fallback se necessário
-                var testPath = Path.Combine(destinationPath, "test_access");
-                try
-                {
-                    Directory.CreateDirectory(testPath);
-                    if (Directory.Exists(testPath)) Directory.Delete(testPath, true);
-                    return new LocalExtractionDestination(destinationPath);
-                }
-                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
-                {
-                    // Falha de permissão - usa fallback com nome do pacote
-                    Log($"Falha ao acessar destino: {ex.Message}. Usando fallback.");
-                    var fallbackRoot = CreateFallbackRoot();
-                    return new WindowsFallbackDestination(fallbackRoot, _package.Name, Log);
-                }
-            });
-
-            var progress = new Progress<ExtractionProgress>(p =>
-            {
-                if (token.IsCancellationRequested)
-                    return;
-
-                OrbisExtract.App.Shared.AppNotificationHelper.UpdateProgress(
-                    p.FilesCompleted, p.FilesTotal ?? 0, p.State);
-                Dispatcher.UIThread.Post(() =>
-                {
-                    if (token.IsCancellationRequested)
-                        return;
-
-                    var total = p.FilesTotal ?? 0;
-                    var pct = total > 0 ? Math.Clamp(p.FilesCompleted * 100d / total, 0, 100) : 0;
-                    _progress.IsIndeterminate = total <= 0;
-                    _progress.Value = pct;
-                    _percent.Text = total > 0 ? $"{pct:0}%" : "";
-                    SetLocalized(_stateTitle, () => AppLanguage.Text(p.State == "Concluído" ? "Concluindo" : p.State));
-                    SetLocalized(_counter, () => total > 0
-                        ? $"{p.FilesCompleted:N0} {AppLanguage.Text("de")} {total:N0} {AppLanguage.Text("arquivos")}"
-                        : $"{p.FilesCompleted:N0} {AppLanguage.Text("arquivos")}");
-                });
-            });
-
-            var result = await new OpenOrbisPkgExtractor().ExtractAsync(
-                new ExtractionRequest(packageStream, string.Empty,
-                    null, // Passcode removido da interface
-                    Destination: destination, PauseGate: _pauseGate),
-                progress,
-                token);
-
-            historyResult = "Concluído";
-            historyFiles = result.FilesExtracted;
-            historyBytes = result.BytesExtracted;
-            if (result.PerformanceSummary is not null)
-                Log(result.PerformanceSummary);
-            timer?.Stop();
-            timer?.Dispose();
-
-            _progress.IsIndeterminate = false;
-            _progress.Value = 100;
-            _percent.Text = "100%";
-            SetLocalized(_stateTitle, () => AppLanguage.Text("Concluído"));
-            SetLocalized(_counter, () => $"{result.FilesExtracted:N0} {AppLanguage.Text("arquivos")} · {result.BytesExtracted / 1024d / 1024d:N1} MiB");
-            
-            // Mostra notificação Android de sucesso se estiver no Android
-            if (OperatingSystem.IsAndroid())
-            {
-                var top = TopLevel.GetTopLevel(this);
-                if (top != null)
-                {
-                    OrbisExtract.App.Shared.AppNotificationHelper.CompleteExtraction(result.FilesExtracted, result.BytesExtracted);
-                }
-            }
-            
-            SetBanner(() => $"{AppLanguage.Text("Extração concluída com sucesso em")} {_clock.Elapsed:mm\\:ss}.", UiTheme.Success);
-            Log($"Extração concluída. Arquivos: {result.FilesExtracted:N0}; bytes: {result.BytesExtracted:N0}.");
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
             historyResult = "Cancelado";
             _progress.IsIndeterminate = false;
@@ -1313,115 +1414,285 @@ public sealed class MainView : UserControl
             SetLocalized(_counter, () => AppLanguage.Text("A extração foi interrompida."));
             ShowBanner("Extração cancelada.", UiTheme.Primary);
             Log("Extração cancelada.");
-            
-            // Mostra notificação Android de cancelamento se estiver no Android
-            if (OperatingSystem.IsAndroid())
-            {
-                var top = TopLevel.GetTopLevel(this);
-                if (top != null)
-                {
-                    OrbisExtract.App.Shared.AppNotificationHelper.CancelExtraction();
-                }
-            }
+            AppNotificationHelper.CancelExtraction();
         }
         catch (Exception ex)
         {
-            historyResult = "Falha na extração";
             _progress.IsIndeterminate = false;
             SetLocalized(_stateTitle, () => AppLanguage.Text("Falha na extração"));
             SetLocalized(_counter, () => AppLanguage.Text("Veja o log detalhado para mais informações."));
-            SetBanner(() => $"{AppLanguage.Text("Falha na extração:")} {ex.Message}", UiTheme.Error);
+            SetBanner(() => $"{AppLanguage.Text("Falha na extração:")} {AppLanguage.Message(ex.Message)}", UiTheme.Error);
             Log($"Falha na extração: {ex.Message}");
-            
-            // Mostra notificação Android de erro se estiver no Android
-            if (OperatingSystem.IsAndroid())
-            {
-                var top = TopLevel.GetTopLevel(this);
-                if (top != null)
-                {
-                    OrbisExtract.App.Shared.AppNotificationHelper.ShowError(ex.Message);
-                }
-            }
+            AppNotificationHelper.ShowError(AppLanguage.Message(ex.Message));
         }
         finally
         {
-            if (token.IsCancellationRequested && OperatingSystem.IsAndroid())
-                OrbisExtract.App.Shared.AppNotificationHelper.CancelExtraction();
-
-            timer?.Stop();
-            timer?.Dispose();
+            timer.Stop();
             _clock.Stop();
-            _elapsed.Text = _clock.Elapsed.ToString(@"mm\:ss");
+            _elapsed.Text = $"{(int)_clock.Elapsed.TotalMinutes:00}:{_clock.Elapsed.Seconds:00}";
             _cancel.IsVisible = _pause.IsVisible = false;
-            _pauseGate?.Resume();
             _pauseGate = null;
             _extractionPaused = false;
-            _run?.Dispose();
+            _run.Dispose();
             _run = null;
-            if (packageStream is not null) try { await packageStream.DisposeAsync(); } catch { }
-            if (tempPath is not null) try { File.Delete(tempPath); } catch { }
             Log("Processo de extração finalizado.");
             _recordingHistory = false;
             ExtractionHistory.Add(new ExtractionHistoryEntry(
-                historyStartedAt, historyPackage, historyDestination, historyResult,
-                historyFiles, historyBytes, (long)_clock.Elapsed.TotalSeconds,
-                SnapshotSessionEvents()));
-            _choosePackage.IsEnabled = _chooseDestination.IsEnabled = true;
-            _extract.IsEnabled = _package is not null && _destination is not null;
+                historyStartedAt, batchName, selectedFolder.Name, historyResult,
+                historyFiles, historyBytes, (long)_clock.Elapsed.TotalSeconds, SnapshotSessionEvents()));
+            _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _extract.IsEnabled = true;
+            _previewPicker.IsEnabled = true;
         }
     }
 
-    // Cria [nome_do_pkg]_extracted na mesma localização do PKG original.
-    // Se não houver permissão ao lado do PKG, usa a pasta temporária do sistema.
-    private string CreateFallbackRoot()
+    private static async Task<(BatchPlan Plan, BatchIssue[] Unreadable)> PlanBatchAsync(
+        IReadOnlyList<IStorageFile> packages, ExtractionPauseGate gate, int workers, CancellationToken token)
     {
-        var fallbackName = $"{_package!.Name}_extracted";
+        var inputs = new BatchPackage?[packages.Count];
+        var errors = new BatchIssue?[packages.Count];
+        var options = new ParallelOptions { MaxDegreeOfParallelism = workers, CancellationToken = token };
+        await Parallel.ForEachAsync(Enumerable.Range(0, packages.Count), options, async (index, ct) =>
+        {
+            var file = packages[index];
+            await gate.WaitAsync(ct);
+            try
+            {
+                await using var source = await file.OpenReadAsync();
+                var metadata = await new OpenOrbisPkgMetadataReader().ReadAsync(source, ct);
+                inputs[index] = new BatchPackage(index, file.Name, metadata);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                errors[index] = new BatchIssue(file.Name, ex.Message);
+            }
+        });
+        return (BatchPlanner.Create(inputs.OfType<BatchPackage>().ToArray()), errors.OfType<BatchIssue>().ToArray());
+    }
+
+    private async Task<ExtractionResult> ExtractPackageAsync(
+        IStorageFile package, PackageMetadata expected, IExtractionDestination destination, IPkgExtractor extractor,
+        IProgress<ExtractionProgress> progress, ExtractionPauseGate gate, CancellationToken token)
+    {
+        await using var original = await package.OpenReadAsync();
+        async Task<ExtractionResult> ExtractStreamAsync(Stream input)
+        {
+            var current = await new OpenOrbisPkgMetadataReader().ReadAsync(input, token);
+            if (current != expected)
+                throw new PkgExtractionException($"Os metadados mudaram antes da extração: {package.Name}");
+            return await extractor.ExtractAsync(new ExtractionRequest(input, string.Empty,
+                Destination: destination, PauseGate: gate), progress, token);
+        }
+
+        if (original.CanSeek)
+        {
+            if (!OperatingSystem.IsAndroid()) return await ExtractStreamAsync(original);
+            await using var buffered = new BufferedStream(original, 256 * 1024);
+            return await ExtractStreamAsync(buffered);
+        }
+
+        Log($"{package.Name}: {AppLanguage.Text("Preparando cópia temporária para leitura.")}");
+        var tempPath = Path.Combine(Path.GetTempPath(), $"orbisextract-{Guid.NewGuid():N}.pkg");
+        await using var staged = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None,
+            1024 * 1024, FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+        var buffer = ArrayPool<byte>.Shared.Rent(1024 * 1024);
         try
         {
-            var packagePath = _package.TryGetLocalPath();
-            var packageDirectory = packagePath is null ? null : Path.GetDirectoryName(packagePath);
-            if (!string.IsNullOrEmpty(packageDirectory) && Directory.Exists(packageDirectory))
+            while (true)
             {
-                var root = Path.Combine(packageDirectory, fallbackName);
-                Directory.CreateDirectory(root);
-                return root;
+                await gate.WaitAsync(token);
+                int count = await original.ReadAsync(buffer.AsMemory(0, 1024 * 1024), token);
+                if (count == 0) break;
+                await staged.WriteAsync(buffer.AsMemory(0, count), token);
             }
         }
-        catch
-        {
-            // Sem permissão ao lado do PKG: usa a pasta temporária do sistema.
-        }
-
-        var tempRoot = Path.Combine(Path.GetTempPath(), fallbackName);
-        Directory.CreateDirectory(tempRoot);
-        return tempRoot;
+        finally { ArrayPool<byte>.Shared.Return(buffer); }
+        staged.Position = 0;
+        return await ExtractStreamAsync(staged);
     }
 
-    // ===================== Destino de extração (inalterado) =====================
+    private IExtractionDestination CreateDirectDestination(IStorageFolder folder, string? localPath) =>
+        localPath is null ? new StorageFolderExtractionDestination(folder, Log) : new LocalExtractionDestination(localPath);
+
+    private async Task<IExtractionWorkspace> CreateWorkspaceAsync(
+        IStorageFolder folder, string? localPath, string outputName, CancellationToken token)
+    {
+        if (localPath is not null) return new LocalExtractionWorkspace(localPath, outputName);
+#if ANDROID
+        return await StorageExtractionWorkspace.CreateAsync(folder, outputName, Log, token);
+#else
+        await Task.CompletedTask;
+        throw new PkgExtractionException("Escolha uma pasta local ou de rede para extrair em lote.");
+#endif
+    }
+
+    private static bool UsesConstrainedStorage(string? localPath)
+    {
+        if (localPath is null || localPath.StartsWith(@"\\", StringComparison.Ordinal)) return true;
+        try { return new DriveInfo(Path.GetPathRoot(localPath)!).DriveType is DriveType.Network or DriveType.Removable; }
+        catch (IOException) { return true; }
+        catch (ArgumentException) { return true; }
+    }
+
+    private static int GetWorkerLimit(bool limitedIo, long estimatedWorkerBytes)
+    {
+        var hardware = GetHardwareBudget();
+        return ParallelExtraction.WorkerLimit(hardware.Processors, hardware.Bytes, limitedIo, hardware.Pressure, estimatedWorkerBytes);
+    }
+
+    private static (int Processors, long Bytes, bool Pressure) GetHardwareBudget()
+    {
+        int processors = Environment.ProcessorCount;
+#if ANDROID
+        var manager = global::Android.App.Application.Context.GetSystemService(
+            global::Android.Content.Context.ActivityService) as global::Android.App.ActivityManager;
+        if (manager is not null)
+        {
+            using var available = new global::Android.App.ActivityManager.MemoryInfo();
+            manager.GetMemoryInfo(available);
+            // Android's current low-memory state includes the native and
+            // managed parts of the app. GC counters can reflect an older GC
+            // and only describe limits for the managed runtime.
+            if (available.TotalMem > 0)
+                return (processors, Math.Max(1, (available.AvailMem - available.Threshold) / 2), available.LowMemory);
+        }
+#endif
+        var memory = GC.GetGCMemoryInfo();
+        bool pressure = memory.HighMemoryLoadThresholdBytes > 0 &&
+            memory.MemoryLoadBytes >= memory.HighMemoryLoadThresholdBytes;
+        return (processors, Math.Max(0, memory.TotalAvailableMemoryBytes / 3), pressure);
+    }
+
+    private sealed record ProgressSnapshot(bool Active, bool Completed, double Fraction);
+
+    private sealed class PackageProgress : IProgress<ExtractionProgress>
+    {
+        private ProgressSnapshot _snapshot = new(false, false, 0);
+        public ProgressSnapshot Snapshot => Volatile.Read(ref _snapshot);
+        public void Begin() => Volatile.Write(ref _snapshot, new(true, false, 0));
+        public void Finish() => Volatile.Write(ref _snapshot, new(false, true, 1));
+        public void Stop() => Volatile.Write(ref _snapshot, new(false, false, 0));
+
+        public void Report(ExtractionProgress value)
+        {
+            var fraction = value.BytesTotal is > 0 ? (double)value.BytesCompleted / value.BytesTotal.Value
+                : value.FilesTotal is > 0 ? (double)value.FilesCompleted / value.FilesTotal.Value : Snapshot.Fraction;
+            fraction = Math.Clamp(fraction, 0, 1);
+            if (Snapshot.Fraction != fraction) Volatile.Write(ref _snapshot, new(true, false, fraction));
+        }
+    }
+
+#if ANDROID
+    private sealed class StorageExtractionWorkspace : IExtractionWorkspace
+    {
+        private readonly IStorageFolder parent;
+        private readonly IStorageFolder staging;
+        private readonly string outputName;
+        private readonly Action<string> log;
+        private bool published;
+        private global::Android.Net.Uri? stagingUri;
+
+        private StorageExtractionWorkspace(IStorageFolder parent, IStorageFolder staging, string outputName, Action<string> log)
+        {
+            this.parent = parent;
+            this.staging = staging;
+            this.outputName = outputName;
+            this.log = log;
+        }
+
+        public static async Task<StorageExtractionWorkspace> CreateAsync(
+            IStorageFolder parent, string outputName, Action<string> log, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            if (await parent.GetFolderAsync(outputName) is not null || await parent.GetFileAsync(outputName) is not null)
+                throw new PkgExtractionException($"O destino já existe: {outputName}");
+
+            var name = $"orbisextract-{Guid.NewGuid():N}.partial";
+            var folder = await parent.CreateFolderAsync(name)
+                ?? throw new PkgExtractionException("O provedor não criou uma pasta temporária para o grupo.");
+            var workspace = new StorageExtractionWorkspace(parent, folder, outputName, log);
+            try
+            {
+                var resolver = global::Android.App.Application.Context.ContentResolver!;
+                using var cursor = resolver.Query(workspace.TryGetStagingUri(),
+                    [global::Android.Provider.DocumentsContract.Document.ColumnFlags], null, null, null);
+                if (cursor is null || !cursor.MoveToFirst() ||
+                    (cursor.GetLong(0) & (long)global::Android.Provider.DocumentContractFlags.SupportsRename) == 0)
+                    throw new PkgExtractionException("Escolha um provedor de armazenamento que permita renomear pastas para extrair em lote.");
+                token.ThrowIfCancellationRequested();
+                return workspace;
+            }
+            catch
+            {
+                await workspace.DisposeAsync();
+                throw;
+            }
+        }
+
+        public IExtractionDestination GetDestination(bool overwrite) =>
+            new StorageFolderExtractionDestination(staging, log, privateWorkspace: true, overwrite);
+
+        public async Task PublishAsync(CancellationToken token)
+        {
+            if (await parent.GetFolderAsync(outputName) is not null || await parent.GetFileAsync(outputName) is not null)
+                throw new PkgExtractionException($"O destino já existe: {outputName}");
+            token.ThrowIfCancellationRequested();
+            var resolver = global::Android.App.Application.Context.ContentResolver!;
+            var renamed = global::Android.Provider.DocumentsContract.RenameDocument(resolver, TryGetStagingUri(), outputName);
+            if (renamed is null)
+                throw new PkgExtractionException("O provedor não publicou a pasta do grupo.");
+            stagingUri = renamed;
+            using var cursor = resolver.Query(renamed,
+                [global::Android.Provider.DocumentsContract.Document.ColumnDisplayName], null, null, null);
+            if (cursor is null || !cursor.MoveToFirst() || cursor.GetString(0) != outputName)
+                throw new PkgExtractionException($"O provedor alterou o nome da pasta '{outputName}'.");
+            published = true;
+        }
+
+        private global::Android.Net.Uri TryGetStagingUri() => stagingUri ??=
+            global::Android.Net.Uri.Parse(staging.Path.OriginalString)
+            ?? throw new PkgExtractionException("O provedor não retornou uma pasta temporária válida.");
+
+        public ValueTask DisposeAsync()
+        {
+            try
+            {
+                if (!published && !global::Android.Provider.DocumentsContract.DeleteDocument(
+                    global::Android.App.Application.Context.ContentResolver!, TryGetStagingUri()))
+                    log($"Não foi possível remover a pasta temporária: {staging.Name}");
+            }
+            catch (Exception ex)
+            {
+                log($"Não foi possível remover a pasta temporária: {ex.Message}");
+            }
+            finally { staging.Dispose(); }
+            return ValueTask.CompletedTask;
+        }
+    }
+#endif
 
     private sealed class StorageFolderExtractionDestination : IExtractionDestination
     {
         private readonly IStorageFolder _root;
         private readonly Action<string> _log;
+        private readonly bool _privateWorkspace;
+        private readonly bool _overwrite;
         private readonly Dictionary<Stream, IStorageFile> _files = new();
         private readonly Dictionary<string, IStorageFolder> _folders = new(StringComparer.Ordinal);
 
-        public StorageFolderExtractionDestination(IStorageFolder root, Action<string> log)
+        public StorageFolderExtractionDestination(IStorageFolder root, Action<string> log,
+            bool privateWorkspace = false, bool overwrite = false)
         {
             _root = root ?? throw new ArgumentNullException(nameof(root));
             _log = log ?? (_ => { });
+            _privateWorkspace = privateWorkspace;
+            _overwrite = overwrite;
         }
 
         public async Task<Stream> CreateTemporaryFileAsync(string relativePath, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var segments = relativePath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-            if (segments.Length == 0 || segments.Any(s => s is "." or ".."))
-                throw new PkgExtractionException($"Caminho interno inseguro: {relativePath}");
-
-            IStorageFolder? folder = _root;
-            if (folder is null)
-                throw new PkgExtractionException("O provedor de armazenamento não forneceu a pasta de destino.");
+            var segments = SafeExtractionPath.GetSegments(relativePath);
+            var folder = _root;
 
             var folderPath = "";
             foreach (var segment in segments[..^1])
@@ -1433,44 +1704,58 @@ public sealed class MainView : UserControl
                     folder = cached;
                     continue;
                 }
-                var parent = folder ?? throw new PkgExtractionException($"Pasta pai inválida ao criar '{segment}'.");
-                IStorageFolder? child = null;
-                try { child = await parent.GetFolderAsync(segment); }
-                catch (Exception ex)
-                {
-                    _log($"Pasta '{segment}' ainda não existe ou não pôde ser aberta: {ex.Message}");
-                }
+                var child = await folder.GetFolderAsync(segment);
 
                 if (child is null)
                 {
                     _log($"Criando diretório de saída: {segment}");
-                    child = await parent.CreateFolderAsync(segment);
+                    if (!_privateWorkspace && await folder.GetFileAsync(segment) is not null)
+                        throw new PkgExtractionException($"Um arquivo ocupa o caminho da pasta '{segment}'.");
+                    child = await folder.CreateFolderAsync(segment);
+                    if (child is not null && !string.Equals(child.Name, segment, StringComparison.Ordinal))
+                    {
+                        try { await child.DeleteAsync(); } catch { }
+                        throw new PkgExtractionException($"O provedor alterou o nome da pasta '{segment}'.");
+                    }
                 }
 
                 folder = child ?? throw new PkgExtractionException($"O provedor de armazenamento não conseguiu abrir nem criar o diretório '{segment}'.");
                 _folders[folderPath] = folder;
             }
 
-            var targetFolder = folder ?? throw new PkgExtractionException($"Pasta de destino inválida para '{relativePath}'.");
             // Grava diretamente no arquivo final do SAF: evita copiar cada arquivo extraído
             // novamente do temporário para o destino, o que era muito lento em PKGs grandes.
-            var file = await targetFolder.CreateFileAsync(segments[^1]);
+            var name = segments[^1];
+            if (!_privateWorkspace && (await folder.GetFileAsync(name) is not null || await folder.GetFolderAsync(name) is not null))
+                throw new PkgExtractionException($"O arquivo já existe: {relativePath}");
+            cancellationToken.ThrowIfCancellationRequested();
+            var existing = _overwrite ? await folder.GetFileAsync(name) : null;
+            var file = existing ?? await folder.CreateFileAsync(name);
             if (file is null)
                 throw new PkgExtractionException($"O provedor de armazenamento não criou o arquivo de destino para '{relativePath}'.");
-            var stream = await file.OpenWriteAsync();
-            if (stream is null)
-                throw new PkgExtractionException($"Não foi possível abrir o arquivo temporário para escrita: '{relativePath}'.");
-            _files[stream] = file;
-            return stream;
+            try
+            {
+                if (!string.Equals(file.Name, name, StringComparison.Ordinal))
+                    throw new PkgExtractionException($"O provedor alterou o nome de '{relativePath}'.");
+                cancellationToken.ThrowIfCancellationRequested();
+                var stream = await file.OpenWriteAsync();
+                _files.Add(stream, file);
+                return stream;
+            }
+            catch
+            {
+                try { await file.DeleteAsync(); } catch { }
+                throw;
+            }
         }
 
         public async Task CommitAsync(Stream temporaryFile, string relativePath, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!_files.Remove(temporaryFile, out var file))
+            if (!_files.ContainsKey(temporaryFile))
                 throw new PkgExtractionException("Arquivo temporário de destino inválido.");
-            await temporaryFile.FlushAsync(cancellationToken);
             await temporaryFile.DisposeAsync();
+            _files.Remove(temporaryFile);
             // O arquivo já é o destino final; não faça uma segunda cópia de seus bytes.
         }
 
@@ -1484,96 +1769,4 @@ public sealed class MainView : UserControl
         }
     }
 
-    private sealed class LocalExtractionDestination : IExtractionDestination
-    {
-        private readonly string _root;
-        private readonly bool _failOnExistingFiles;
-
-        public LocalExtractionDestination(string root, bool failOnExistingFiles = true)
-        {
-            _root = Path.GetFullPath(root);
-            _failOnExistingFiles = failOnExistingFiles;
-            Directory.CreateDirectory(_root);
-        }
-
-        public Task<Stream> CreateTemporaryFileAsync(string relativePath, CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var output = SafeExtractionPath.Resolve(_root, relativePath);
-            if (_failOnExistingFiles && File.Exists(output))
-                throw new PkgExtractionException($"O arquivo já existe: {output}");
-            Directory.CreateDirectory(Path.GetDirectoryName(output)!);
-            var temporary = output + ".orbisextract.tmp";
-            return Task.FromResult<Stream>(new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, true));
-        }
-
-        public Task CommitAsync(Stream temporaryFile, string relativePath, CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (temporaryFile is not FileStream file)
-                throw new PkgExtractionException("Destino local recebeu um temporário inválido.");
-            var output = SafeExtractionPath.Resolve(_root, relativePath);
-            file.Flush();
-            file.Dispose();
-            File.Move(file.Name, output, overwrite: false);
-            return Task.CompletedTask;
-        }
-
-        public Task DeleteTemporaryFileAsync(Stream temporaryFile, CancellationToken cancellationToken = default)
-        {
-            if (temporaryFile is FileStream file)
-            {
-                var name = file.Name;
-                file.Dispose();
-                if (File.Exists(name)) File.Delete(name);
-            }
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class WindowsFallbackDestination : IExtractionDestination
-    {
-        private readonly string _root;
-        private readonly string _packageName;
-        private readonly Action<string> _log;
-
-        public WindowsFallbackDestination(string root, string packageName, Action<string> log)
-        {
-            _root = Path.GetFullPath(root);
-            _packageName = packageName;
-            _log = log ?? (_ => { });
-        }
-
-        public Task<Stream> CreateTemporaryFileAsync(string relativePath, CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var output = SafeExtractionPath.Resolve(_root, relativePath);
-            var temporary = Path.Combine(Path.GetDirectoryName(output)!, $"{Path.GetFileNameWithoutExtension(output)}.orbisextract.tmp");
-            _log($"Criando arquivo temporário: {temporary}");
-            Directory.CreateDirectory(Path.GetDirectoryName(temporary)!);
-            return Task.FromResult<Stream>(new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, true));
-        }
-
-        public Task CommitAsync(Stream temporaryFile, string relativePath, CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var output = SafeExtractionPath.Resolve(_root, relativePath);
-            ((FileStream)temporaryFile).Flush();
-            ((FileStream)temporaryFile).Dispose();
-            if (File.Exists(((FileStream)temporaryFile).Name))
-                File.Move(((FileStream)temporaryFile).Name, output, overwrite: false);
-            return Task.CompletedTask;
-        }
-
-        public Task DeleteTemporaryFileAsync(Stream temporaryFile, CancellationToken cancellationToken = default)
-        {
-            if (temporaryFile is FileStream file)
-            {
-                var name = file.Name;
-                file.Dispose();
-                if (File.Exists(name)) File.Delete(name);
-            }
-            return Task.CompletedTask;
-        }
-    }
 }

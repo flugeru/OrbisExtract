@@ -13,21 +13,14 @@ public static class AndroidNotificationHelper
 {
     internal const string ChannelId = "orbis_extract_channel";
     internal const int NotificationId = 1;
+    private const int ResultNotificationId = 2;
     internal const string ActionStart = "orbisextract.action.START";
-    internal const string ActionFinish = "orbisextract.action.FINISH";
     internal const string ActionTogglePause = "orbisextract.action.TOGGLE_PAUSE";
     internal const string ActionPause = "orbisextract.action.PAUSE";
     internal const string ActionResume = "orbisextract.action.RESUME";
     internal const string ActionCancel = "orbisextract.action.CANCEL";
     public static event Action? TogglePauseRequested;
-    internal static void RequestTogglePause()
-    {
-        // Update the notification immediately on the service thread. The UI callback
-        // is dispatched asynchronously and must not be required for the first redraw.
-        if (TogglePauseRequested is null) return;
-        SetPaused(!_paused);
-        TogglePauseRequested.Invoke();
-    }
+    internal static void RequestTogglePause() => TogglePauseRequested?.Invoke();
     public static event Action? PauseRequested;
     public static event Action? ResumeRequested;
     internal static void RequestPause() => PauseRequested?.Invoke();
@@ -36,6 +29,7 @@ public static class AndroidNotificationHelper
     public static event Action? CancellationRequested;
     internal static void RequestCancellation() => CancellationRequested?.Invoke();
     private static Context? _context;
+    private static bool _active;
     private static int _smallIcon;
     private static string _packageName = "PKG";
     private static string _destinationName = "Destino selecionado";
@@ -56,7 +50,7 @@ public static class AndroidNotificationHelper
     public static void Initialize(Context context)
     {
         _context = context.ApplicationContext;
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+        if (OperatingSystem.IsAndroidVersionAtLeast(26))
             CreateNotificationChannel();
     }
 
@@ -74,9 +68,10 @@ public static class AndroidNotificationHelper
         _lastTotal = totalFiles;
         _lastState = "Preparando extração";
         _lastCurrentFile = null;
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+        if (OperatingSystem.IsAndroidVersionAtLeast(26))
             CreateNotificationChannel();
 
+        NotificationManagerCompat.From(context)?.Cancel(ResultNotificationId);
         var intent = new Intent(context, typeof(ExtractionForegroundService));
         intent.SetAction(ActionStart);
         intent.PutExtra("packageName", packageName);
@@ -85,14 +80,13 @@ public static class AndroidNotificationHelper
             StartForegroundService26(context, intent);
         else
             context.StartService(intent);
-
-        NotificationManagerCompat.From(context)?.Notify(NotificationId, BuildNotification(context, true));
+        _active = true;
     }
 
     public static void UpdateProgress(long currentFiles, long totalFiles, string state, string? currentFile = null)
     {
         var context = _context;
-        if (context is null) return;
+        if (context is null || !_active) return;
 
         if (_paused) return;
         _lastFiles = currentFiles;
@@ -107,7 +101,7 @@ public static class AndroidNotificationHelper
     {
         _elapsed = elapsed;
         var context = _context;
-        if (context is not null && _lastState != "Extração concluída")
+        if (context is not null && _active)
             NotificationManagerCompat.From(context)?.Notify(NotificationId, BuildNotification(context, true));
     }
 
@@ -181,7 +175,7 @@ public static class AndroidNotificationHelper
     {
         _paused = paused;
         var context = _context;
-        if (context is null) return;
+        if (context is null || !_active) return;
         _lastState = paused ? "Pausado" : "Extraindo";
         NotificationManagerCompat.From(context)?.Notify(NotificationId, BuildNotification(context, true));
     }
@@ -197,16 +191,15 @@ public static class AndroidNotificationHelper
         _lastProgress = 100;
         _lastCurrentFile = $"{filesExtracted:N0} {AppLanguage.Text("arquivos")} · {bytesExtracted / 1024d / 1024d:N1} MiB";
         var notification = BuildNotification(context, false);
-        FinishService(context, ActionFinish);
-        NotificationManagerCompat.From(context)?.Notify(NotificationId, notification);
+        FinishService(context);
+        NotificationManagerCompat.From(context)?.Notify(ResultNotificationId, notification);
     }
 
     public static void CancelExtraction()
     {
         var context = _context;
         if (context is null) return;
-        FinishService(context, ActionFinish);
-        NotificationManagerCompat.From(context)?.Cancel(NotificationId);
+        FinishService(context);
     }
 
     public static void ShowError(string message)
@@ -215,15 +208,15 @@ public static class AndroidNotificationHelper
         if (context is null) return;
         _lastState = "Falha na extração";
         _lastCurrentFile = message;
-        NotificationManagerCompat.From(context)?.Notify(NotificationId, BuildNotification(context, false));
-        FinishService(context, ActionFinish);
+        FinishService(context);
+        NotificationManagerCompat.From(context)?.Notify(ResultNotificationId, BuildNotification(context, false));
     }
 
-    private static void FinishService(Context context, string action)
+    private static void FinishService(Context context)
     {
-        var intent = new Intent(context, typeof(ExtractionForegroundService));
-        intent.SetAction(action);
-        context.StartService(intent);
+        _active = false;
+        context.StopService(new Intent(context, typeof(ExtractionForegroundService)));
+        NotificationManagerCompat.From(context)?.Cancel(NotificationId);
     }
 
     private static void StartForegroundService26(Context context, Intent intent) =>

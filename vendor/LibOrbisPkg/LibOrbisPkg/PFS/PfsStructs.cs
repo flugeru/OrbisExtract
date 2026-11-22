@@ -556,7 +556,17 @@ namespace LibOrbisPkg.PFS
         NameLength = s.ReadInt32LE(),
         EntSize = s.ReadInt32LE(),
       };
+      if (d.EntSize == 0)
+        return d;
+      if (d.EntSize < 16 || d.EntSize > s.Length - pos ||
+          d.NameLength < 0 || d.NameLength > d.EntSize - 16 || d.NameLength > MaxSize - 16)
+        throw new InvalidDataException("Invalid PFS directory entry length");
+
       d.name = s.ReadASCIINullTerminated(d.NameLength);
+      if ((d.Type == DirentType.File || d.Type == DirentType.Directory) &&
+          (d.name.Length != d.NameLength || d.name.Length == 0 ||
+           d.name == "." || d.name == ".." || d.name.Contains('/') || d.name.Contains('\\')))
+        throw new InvalidDataException("Invalid PFS node name");
       s.Position = pos + d.EntSize;
       return d;
     }
