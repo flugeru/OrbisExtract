@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-android</TargetFramework>
+    <TargetFramework>net10.0-android36.0</TargetFramework>
     <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ApplicationId>com.tatsuya.orbisextract</ApplicationId>
@@ -9,9 +9,19 @@
     <ApplicationDisplayVersion>1.0.5</ApplicationDisplayVersion>
     <ApplicationVersion>1050000</ApplicationVersion>
     <Version>1.0.5</Version>
-    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidPackageFormats Condition="'$(AndroidPackageFormats)' == ''">apk</AndroidPackageFormats>
+    <DistributionChannel Condition="'$(DistributionChannel)' == ''">Github</DistributionChannel>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(DistributionChannel)' == 'Play'">
+    <DefineConstants>$(DefineConstants);PLAY_STORE</DefineConstants>
+    <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+  <Target Name="ValidateDistribution" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(DistributionChannel)' != 'Play' and '$(DistributionChannel)' != 'Github'" Text="DistributionChannel must be Play or Github." />
+    <Error Condition="'$(AndroidPackageFormats)' == 'aab' and '$(DistributionChannel)' != 'Play'" Text="Build store bundles with DistributionChannel=Play." />
+  </Target>
 
   <ItemGroup>
     <AndroidResource Include="Icon.png">

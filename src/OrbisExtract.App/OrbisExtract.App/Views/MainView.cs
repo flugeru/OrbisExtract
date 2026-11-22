@@ -686,6 +686,21 @@ public sealed class MainView : UserControl
                 _repositoryError.IsVisible = true;
             }
         };
+        var privacy = UiTheme.ActionButton("Privacidade / Privacy");
+        privacy.Click += (_, _) =>
+        {
+            const string url = "https://flugeru.github.io/OrbisExtract/privacy-policy.html";
+            try
+            {
+                if (OperatingSystem.IsAndroid()) UpdateChecker.OpenAndroidUrl?.Invoke(url);
+                else Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                SetLocalized(_repositoryError, () => $"{AppLanguage.Text("Não foi possível abrir o link:")} {ex.Message}");
+                _repositoryError.IsVisible = true;
+            }
+        };
         var content = new StackPanel
         {
             Spacing = 12,
@@ -702,6 +717,7 @@ public sealed class MainView : UserControl
                 },
                 AboutSection("Repositório", repository, _repositoryError),
                 AboutSection("Changelog", _aboutChangelog, CreateUpdateButton()),
+                privacy,
                 AboutSection("Licença GPL-3.0", licenseBox)
             }
         };

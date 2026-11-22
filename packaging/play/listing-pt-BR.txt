@@ -1,0 +1,20 @@
+Título: OrbisExtract
+Descrição curta: Extraia e organize seus arquivos PKG no Android, com controle e histórico.
+
+Descrição completa:
+OrbisExtract é uma ferramenta de extração e inspeção de arquivos PKG compatíveis.
+
+• Selecione arquivos e uma pasta de destino pelo seletor do Android.
+• Consulte metadados e a imagem disponível no pacote.
+• Extraia vários pacotes em paralelo, conforme os recursos do aparelho.
+• Aplique pacotes de atualização sobre a extração base compatível.
+• Pause, retome ou cancele a extração, inclusive pela notificação.
+• Acompanhe o progresso, o tempo e o histórico local.
+• Use a interface em português ou inglês.
+
+O processamento dos pacotes acontece no seu dispositivo. A busca de imagens de jogos consulta o Wikimedia Commons usando o título do jogo; a verificação de atualizações consulta o GitHub.
+
+O app não inclui jogos, não baixa arquivos PKG e não funciona como emulador. Utilize apenas arquivos que você tenha direito de acessar e extrair. Pacotes incompatíveis ou protegidos podem não ser extraídos.
+
+Projeto independente, sem vínculo ou endosso da Sony Interactive Entertainment ou PlayStation.
+Código-fonte e licença GPL-3.0: https://github.com/flugeru/OrbisExtract

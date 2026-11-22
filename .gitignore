@@ -37,3 +37,7 @@ project.lock.json
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Release signing credentials
+*.password.txt
+signing/

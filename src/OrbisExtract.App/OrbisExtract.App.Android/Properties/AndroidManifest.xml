@@ -4,7 +4,7 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-  <application android:label="OrbisExtract" android:icon="@drawable/Icon">
+  <application android:label="OrbisExtract" android:icon="@drawable/icon" android:allowBackup="false" android:usesCleartextTraffic="false">
     <service
       android:name="com.tatsuya.orbisextract.ExtractionForegroundService"
       android:exported="false"
