@@ -45,7 +45,8 @@ exec "\$HERE/usr/bin/$BIN" "\$@"
 EOF
 chmod +x "$APPDIR/AppRun"
 
-export VERSION="${VERSION:-$(git -C "$ROOT" describe --tags --always 2>/dev/null || echo dev)}"
+DESKTOP_PROJECT="$ROOT/src/OrbisExtract.App/OrbisExtract.App.Desktop/OrbisExtract.App.Desktop.csproj"
+export VERSION="${VERSION:-$(sed -n 's/.*<Version>\([^<]*\)<\/Version>.*/\1/p' "$DESKTOP_PROJECT")}"
 
 "$APPIMAGETOOL" "$APPDIR" "$ROOT/artifacts/OrbisExtract-x86_64.AppImage"
 

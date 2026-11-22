@@ -20,8 +20,6 @@ Use com seus próprios dumps. O aplicativo não baixa, instala, cria nem convert
 
 **[Última versão publicada](https://github.com/flugeru/OrbisExtract/releases/latest)** · **[Releases](https://github.com/flugeru/OrbisExtract/releases)**
 
-**[Versão 1.0.4 disponível](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.4):** [Windows instalador](https://github.com/flugeru/OrbisExtract/releases/download/1.0.4/OrbisExtract-1.0.4-windows-x64-setup.exe) · [Windows portátil](https://github.com/flugeru/OrbisExtract/releases/download/1.0.4/OrbisExtract-1.0.4-windows-x64-portable.zip) · [Linux AppImage](https://github.com/flugeru/OrbisExtract/releases/download/1.0.4/OrbisExtract-1.0.4-x86_64.AppImage) · [Android APK](https://github.com/flugeru/OrbisExtract/releases/download/1.0.4/OrbisExtract-1.0.4-signed.apk).
-
 Builds de teste ficam nos [Artifacts do Actions](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml), disponíveis por 14 dias. É necessário entrar no GitHub para baixá-los.
 
 | Plataforma | Formato | Artefato de teste |
@@ -32,17 +30,15 @@ Builds de teste ficam nos [Artifacts do Actions](https://github.com/flugeru/Orbi
 
 macOS, iOS e navegador não têm distribuição validada. A versão Android ainda não foi publicada na Google Play.
 
-### Novidades da 1.0.4
+### Novidades da 1.0.5
 
-- Extração otimizada: menos chamadas AES, processamento XTS em lotes, leitura Android com buffer e reutilização de pastas do provedor de armazenamento.
-- Pausar, retomar e cancelar a extração; controles também na notificação Android, com ajustes para HyperOS.
-- Histórico local de extrações com resultado, duração e relatório detalhado.
-- Barra de título personalizada no desktop, sem faixa cinza superior no Windows, mantendo estilos usados pelo Snap e redimensionamento.
-- Instalador Windows escuro, com identidade visual e licença GPL-3.0.
-- Ajustes de layout, traduções e diagnósticos de desempenho no log.
-- APKs do Actions com chave persistente em GitHub Actions Secrets e código de versão crescente.
+- **Extração em lote:** jogos independentes são processados em paralelo. Selecione a base e os updates juntos para aplicar as versões em ordem.
+- **Leitura em blocos:** buffers reutilizáveis permitem ler e descriptografar o próximo bloco enquanto o atual é gravado.
+- **Prévia do jogo:** mostra título, versão e capa do PKG. Quando a imagem está ausente, consulta o Wikimedia Commons e exibe a atribuição.
+- **Interface:** seletor de pacotes integrado ao tema, capa com moldura, progresso visível durante a extração e log que ocupa o espaço do cartão.
+- **Licença:** GPL-3.0-only no aplicativo e no instalador Windows.
 
-No teste informado pelo usuário, o mesmo PKG passou de **03:29 para cerca de 44 s no POCO X6 Pro**, usando memória interna. É uma medição desse aparelho e pacote, não uma garantia para outros dispositivos.
+[Notas da versão 1.0.5](docs/release-1.0.5.md)
 
 ### Atualização e uso
 
@@ -91,21 +87,19 @@ Use your own dumps. The app does not download, install, create or convert packag
 
 **[Latest published release](https://github.com/flugeru/OrbisExtract/releases/latest)** · **[All releases](https://github.com/flugeru/OrbisExtract/releases)**
 
-**[Version 1.0.4 is available](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.4).** Download the Windows installer/portable, Linux AppImage or Android APK using the links above. Test builds remain available as [Actions artifacts](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml) for 14 days; GitHub sign-in is required for artifacts, not release downloads.
+Windows x64, Linux x64 and Android 7.0+ builds are available through GitHub Releases. Test builds are available in [Actions artifacts](https://github.com/flugeru/OrbisExtract/actions/workflows/android-apk.yml) for 14 days and require GitHub sign-in.
 
 Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and Android 7.0+ APK. See the artifact names in the table above. macOS, iOS and browser distributions are not validated. The app is not published on Google Play yet.
 
-### What's new in 1.0.4
+### What's new in 1.0.5
 
-- Faster extraction through batched AES-XTS processing, buffered Android input and reused storage-provider folders.
-- Pause, resume and cancel, including Android notification controls with HyperOS layout fixes.
-- Local extraction history with outcomes, durations and detailed reports.
-- Custom desktop title bar without the gray Windows top strip, retaining native styles used for Snap and resizing.
-- Dark branded Windows installer with the GPL-3.0 license.
-- Layout and translation fixes, plus extraction performance diagnostics.
-- Actions APKs signed with a persistent GitHub Actions Secret and an increasing version code.
+- **Batch extraction:** independent games extract in parallel. Select the base package and its updates together to apply versions in order.
+- **Buffered extraction:** reusable buffers let the engine read and decrypt the next block while writing the current one.
+- **Game preview:** shows the package title, version and artwork. When embedded artwork is unavailable, the app searches Wikimedia Commons and displays attribution.
+- **Interface:** themed package picker, framed artwork, progress shown during extraction and a log that fills the card.
+- **License:** GPL-3.0-only in the app and Windows installer.
 
-A user-reported test of the same PKG improved from **03:29 to about 44 seconds on a POCO X6 Pro**, using internal storage. Results depend on the device, package and storage; this is not a general benchmark guarantee.
+[Version 1.0.5 release notes](docs/release-1.0.5.md)
 
 ### Updating and extracting
 

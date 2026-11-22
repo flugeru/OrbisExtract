@@ -8,7 +8,7 @@ project = ET.parse(root / "src/OrbisExtract.App/OrbisExtract.App.Android/OrbisEx
 assert project.findtext(".//ApplicationId") == "com.tatsuya.orbisextract"
 for required in (
     "${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}",
-    "1040000 + GITHUB_RUN_NUMBER",
+    "1050000 + GITHUB_RUN_NUMBER",
     "-p:ApplicationVersion=${{ env.APK_VERSION_CODE }}",
     "-p:AndroidKeyStore=true",
     '-p:AndroidSigningKeyStore="$HOME/.local/share/orbisextract-signing/development.jks"',
@@ -16,7 +16,7 @@ for required in (
     'certificate SHA-256 digest: $fingerprint',
 ):
     assert required in workflow, required
-assert "versionCode='1040000'" not in workflow
+assert "versionCode='1050000'" not in workflow
 assert "keytool -genkeypair" not in workflow
 assert "uses: actions/cache@" not in workflow
 print("Android update signing/version configuration checks passed")

@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <ApplicationId>com.tatsuya.orbisextract</ApplicationId>
     <ApplicationTitle>OrbisExtract</ApplicationTitle>
-    <ApplicationDisplayVersion>1.0.4</ApplicationDisplayVersion>
-    <ApplicationVersion>1040000</ApplicationVersion>
-    <Version>1.0.4</Version>
+    <ApplicationDisplayVersion>1.0.5</ApplicationDisplayVersion>
+    <ApplicationVersion>1050000</ApplicationVersion>
+    <Version>1.0.5</Version>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
   </PropertyGroup>

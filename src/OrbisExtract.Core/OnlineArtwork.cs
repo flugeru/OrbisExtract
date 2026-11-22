@@ -82,7 +82,7 @@ public sealed class CommonsArtworkSearch
     private async Task<byte[]?> FetchAsync(Uri uri, int byteLimit, string[] mediaTypes, CancellationToken token)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-        request.Headers.UserAgent.ParseAdd("OrbisExtract/1.0.4 (+https://github.com/flugeru/OrbisExtract)");
+        request.Headers.UserAgent.ParseAdd("OrbisExtract/1.0.5 (+https://github.com/flugeru/OrbisExtract)");
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength > byteLimit ||
             !mediaTypes.Contains(response.Content.Headers.ContentType?.MediaType, StringComparer.OrdinalIgnoreCase))

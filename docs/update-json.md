@@ -6,9 +6,9 @@ once when the view opens and when the user selects **Verificar atualizações** 
 **Sobre**. The prompt is optional: **Agora não** dismisses it. No APK or desktop
 installer is downloaded or installed by the app.
 
-The file starts at `1.0.1` while version `1.0.2` is being built. **Only change
-`version` to `1.0.2` after the relevant downloads are actually available** on
-GitHub and Play. Otherwise users may be sent to a page without an update.
+The public manifest tracks the published release. For 1.0.5, publish the
+downloads first, then copy [update-1.0.5.json](update-1.0.5.json) over
+`update.json` on `main` to announce the update.
 
 Example:
 

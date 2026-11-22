@@ -23,7 +23,7 @@ public class MainActivity : AvaloniaMainActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         UpdateChecker.IsPlayInstall = IsInstalledFromPlayStore;
-        UpdateChecker.GetInstalledVersion = () => PackageManager?.GetPackageInfo(PackageName ?? "", 0)?.VersionName ?? "1.0.4";
+        UpdateChecker.GetInstalledVersion = () => PackageManager?.GetPackageInfo(PackageName ?? "", 0)?.VersionName ?? "1.0.5";
         UpdateChecker.OpenAndroidUrl = url => StartActivity(new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(url)));
         base.OnCreate(savedInstanceState);
 
