@@ -56,17 +56,21 @@ ELF em 16 KB, além de `bundletool validate` e `bundletool dump config`.
 
 Textos PT-BR e EN-US em `packaging/play/`. Categoria sugerida: Ferramentas.
 Sem anúncios e sem login no código revisado. Sem compras nesta versão.
-Informe seu e-mail real de suporte na Console (ainda não fornecido).
+Contato de suporte e privacidade autorizado: `fluugell@gmail.com`. Informe o mesmo e-mail na Console.
 A classificação indicativa e público-alvo devem ser respondidos pelo titular.
 O app não fornece jogos ou downloads PKG. A descrição informa o uso autorizado.
 
 A política bilíngue está em `docs/privacy-policy.html`; o app abre
 `https://flugeru.github.io/OrbisExtract/privacy-policy.html` em Sobre.
-É obrigatório hospedar e testar essa URL antes de enviar à análise: configure
-GitHub Pages para a pasta `/docs` da branch `main` depois de integrar as mudanças,
-ou altere a URL do app para o endereço HTTPS que você publicar e reconstrua.
-A criação do arquivo no repositório não ativa Pages. A política identifica o
-projeto e usa Issues como contato; acrescente seu contato de privacidade se desejar.
+O site oficial está publicado por GitHub Actions em
+`https://flugeru.github.io/OrbisExtract/`. A política foi verificada publicamente
+em `https://flugeru.github.io/OrbisExtract/privacy-policy.html`, sem login,
+com contato `fluugell@gmail.com`. Termos: `/OrbisExtract/terms.html`;
+suporte: `/OrbisExtract/support.html`. A URL de privacidade já corresponde ao
+link incluído no AAB preparado; não é necessário reconstruí-lo só por esta
+publicação. Os termos preservam os direitos GPL e as licenças das versões antigas.
+Para atualizar o site, edite os arquivos em `docs/`; o workflow Pages valida
+links e publica apenas os arquivos web permitidos.
 
 Não marque “nenhum dado coletado” sem revisar o formulário: a busca automática
 de capas envia o título do jogo ao Wikimedia Commons; conexões de atualização
@@ -90,7 +94,7 @@ notificação e cancelar/concluir. Não há inicialização por boot no código.
 
 ## Antes do envio
 
-1. Integrar o PR e publicar a página de privacidade, verificando HTTP 200 e texto.
+1. Integrar as mudanças de preparação do app do PR; o site e a política já estão publicados.
 2. Preencher o contato, classificação, público-alvo, Segurança dos dados e FGS.
 3. Usar o ícone 512×512 e feature graphic 1024×500 da entrega; conferir titularidade.
 4. Capturar ao menos duas screenshots reais do app Android; não substituir por mockups.
