@@ -5,11 +5,17 @@ on:
   push:
     paths:
       - 'README.md'
+      - 'LICENSE'
+      - 'THIRD-PARTY-NOTICES.md'
+      - 'PRIOR-MIT-LICENSE-NOTICE.md'
       - 'docs/assets/icon.png'
       - 'src/**'
+      - 'tests/**'
       - 'vendor/LibOrbisPkg/**'
       - 'scripts/publish-android.sh'
       - 'scripts/publish-windows.ps1'
+      - 'scripts/publish-linux.sh'
+      - 'scripts/build-appimage.sh'
       - 'scripts/create-windows-icon.ps1'
       - 'packaging/**'
       - '.github/workflows/android-apk.yml'
@@ -206,6 +212,13 @@ jobs:
           --no-restore
           -o artifacts/windows
 
+      - name: Check published license notices
+        shell: pwsh
+        run: |
+          foreach ($notice in @('LICENSE', 'THIRD-PARTY-NOTICES.md', 'PRIOR-MIT-LICENSE-NOTICE.md', 'LibOrbisPkg-LICENSE.txt')) {
+            if (-not (Test-Path "artifacts/windows/$notice" -PathType Leaf)) { throw "Missing published notice: $notice" }
+          }
+
       - name: Generate branded installer image
         shell: pwsh
         run: |
@@ -292,6 +305,9 @@ jobs:
           test -f squashfs-root/orbisextract.desktop
           test -f squashfs-root/orbisextract.png
           test -x squashfs-root/usr/bin/OrbisExtract.App.Desktop
+          for notice in LICENSE THIRD-PARTY-NOTICES.md PRIOR-MIT-LICENSE-NOTICE.md LibOrbisPkg-LICENSE.txt; do
+            test -s "squashfs-root/usr/bin/$notice"
+          done
           head -n 3 squashfs-root/AppRun
           rm -rf squashfs-root
 

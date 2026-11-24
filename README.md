@@ -132,7 +132,7 @@ python tests/check_android_updates.py
 | Output | Command |
 |---|---|
 | Windows | `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1` |
-| Windows installer, after publishing | `ISCC packaging\windows\orbisextract.iss` — current Inno Setup 6 |
+| Windows installer, after publishing | Run `powershell -ExecutionPolicy Bypass -File packaging/windows/generate-wizard-image.ps1`, then `ISCC packaging\windows\orbisextract.iss` (Inno Setup 6). |
 | Linux | `bash scripts/publish-linux.sh` |
 | AppImage, after publishing Linux | `bash scripts/build-appimage.sh` — requires `appimagetool` |
 | Local Android build | `bash scripts/publish-android.sh` |
@@ -228,7 +228,7 @@ python tests/check_android_updates.py
 | Saída | Comando |
 |---|---|
 | Windows | `powershell -ExecutionPolicy Bypass -File scripts/publish-windows.ps1` |
-| Instalador, após publicar Windows | `ISCC packaging\windows\orbisextract.iss` — Inno Setup 6 atualizado |
+| Instalador, após publicar Windows | Execute `powershell -ExecutionPolicy Bypass -File packaging/windows/generate-wizard-image.ps1`, depois `ISCC packaging\windows\orbisextract.iss` (Inno Setup 6). |
 | Linux | `bash scripts/publish-linux.sh` |
 | AppImage, após publicar Linux | `bash scripts/build-appimage.sh` — requer `appimagetool` |
 | Android local | `bash scripts/publish-android.sh` |
@@ -240,4 +240,6 @@ No CI, `ANDROID_SIGNING_KEYSTORE_BASE64` deve conter o keystore existente em Bas
 - [OpenOrbis/LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg): package-reading library, included with local changes in `vendor/LibOrbisPkg/`, LGPL-3.0.
 - [Avalonia UI](https://avaloniaui.net): cross-platform UI, MIT.
 
-[Third-party notices](THIRD-PARTY-NOTICES.md) · [Project license: GPL-3.0-only](LICENSE) · [Prior MIT notice](PRIOR-MIT-LICENSE-NOTICE.md)
+[Third-party notices / Avisos de terceiros](THIRD-PARTY-NOTICES.md) · [Project license: GPL-3.0-only](LICENSE) · [Prior MIT notice](PRIOR-MIT-LICENSE-NOTICE.md)
+
+[Contributing / Como contribuir](CONTRIBUTING.md) · [Security / Segurança](SECURITY.md)

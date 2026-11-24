@@ -2,6 +2,7 @@
 [Bb]in/
 [Oo]bj/
 artifacts/
+/packaging/windows/wizard-brand.png
 TestResults/
 *.trx
 

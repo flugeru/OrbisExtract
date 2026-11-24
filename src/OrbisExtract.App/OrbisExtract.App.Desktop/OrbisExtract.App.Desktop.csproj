@@ -26,5 +26,9 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**/*" />
+    <Content Include="../../../LICENSE" Link="LICENSE" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../../THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../../PRIOR-MIT-LICENSE-NOTICE.md" Link="PRIOR-MIT-LICENSE-NOTICE.md" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../../vendor/LibOrbisPkg/LICENSE.txt" Link="LibOrbisPkg-LICENSE.txt" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
