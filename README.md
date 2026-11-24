@@ -56,6 +56,41 @@ In version 1.0.5, select multiple game PKGs to extract independent groups in par
 
 Extraction runs locally. If embedded artwork is unavailable, an automatic Wikimedia Commons query sends the game title, not the PKG or its path. Local extraction works offline; artwork and update queries require connectivity.
 
+### Extraction demo: Gravity Rush 2
+
+On Windows, OrbisExtract extracted the US base game (`CUSA03694`) and applied the `1.11` update to the same output in one run. The completion screen reported **65 files processed**, **26 GB**, and **1 min 58 s** for this run. Extraction time varies by hardware and storage.
+
+![OrbisExtract completion screen showing the Gravity Rush 2 update applied, 65 files processed, 26 GB, and an elapsed time of 1 minute 58 seconds](docs/assets/screenshots/en/gravity-rush-2-completed.png)
+
+<details>
+<summary>See the full workflow and the packages used</summary>
+
+- **Base game:** `[SuperPSX]-Gravity.Rush.2-CUSA03694-USA-Game-(5.05+)-PS4.pkg`
+- **Update 1.11:** `[SuperPSX]-Gravity.Rush.2-CUSA03694-USA-v1.11-(Fix 5.05)-PS4.pkg`
+
+**1. Select both PKGs and choose an output folder.**
+
+![OrbisExtract ready to extract two Gravity Rush 2 packages to the selected folder](docs/assets/screenshots/en/gravity-rush-2-ready.png)
+
+**2. Extract the base game first.** The progress panel shows the current package and live log.
+
+![OrbisExtract extracting the Gravity Rush 2 base game at 22 percent overall progress](docs/assets/screenshots/en/gravity-rush-2-extracting.png)
+
+**3. Apply the update.** The log shows OrbisExtract starting the `1.11` update after extracting the base game.
+
+![OrbisExtract log showing the Gravity Rush 2 version 1.11 update being applied at 76 percent overall progress](docs/assets/screenshots/en/gravity-rush-2-applying-update.png)
+
+</details>
+
+#### Port compatibility: manual tests
+
+| Title | Result |
+|---|---|
+| Gravity Rush 2 (`CUSA03694`, update `1.11`) | Ran successfully in [GRport](https://github.com/qnfn/GRport) with the updated files produced by OrbisExtract. |
+| God of War III | Ran successfully in its port with files extracted by OrbisExtract. |
+
+These results apply to the tested packages and port builds only. OrbisExtract extracts game files; the ports are separate projects.
+
 ### Updating the application
 
 On Windows, run the new installer over the existing installation or replace the portable build. On Linux, download the new AppImage. Updating OrbisExtract is separate from applying a game's update PKG.
