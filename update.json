@@ -12,7 +12,7 @@
     "Redesigned package picker, framed artwork, and improved progress and log layout.",
     "GPL-3.0-only license."
   ],
-  "androidPlayUrl": "https://play.google.com/store/apps/details?id=com.tatsuya.orbisextract",
+  "androidPlayUrl": "https://play.google.com/store/apps/details?id=com.flugel.orbisextract",
   "androidGithubUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5",
   "windowsUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5",
   "linuxUrl": "https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5",
@@ -26,6 +26,6 @@
     "published": false,
     "version": "1.0.5",
     "versionCode": 1051000,
-    "url": "https://play.google.com/store/apps/details?id=com.tatsuya.orbisextract"
+    "url": "https://play.google.com/store/apps/details?id=com.flugel.orbisextract"
   }
 }

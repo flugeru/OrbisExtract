@@ -95,7 +95,7 @@ try {
     $package = $badging | Where-Object { $_ -match '^package:' } | Select-Object -First 1
     $sdk = $badging | Where-Object { $_ -match '^sdkVersion:' } | Select-Object -First 1
     $target = $badging | Where-Object { $_ -match '^targetSdkVersion:' } | Select-Object -First 1
-    if ($package -notmatch "name='com\.tatsuya\.orbisextract'" -or
+    if ($package -notmatch "name='com\.flugel\.orbisextract'" -or
         $package -notmatch "versionCode='$([regex]::Escape($expectedVersionCode))'" -or
         $sdk -notmatch "'24'" -or $target -notmatch "'36'") {
         throw "Unexpected package settings: $package / $sdk / $target"

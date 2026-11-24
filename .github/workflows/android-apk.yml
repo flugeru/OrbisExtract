@@ -150,7 +150,7 @@ jobs:
           fingerprint="$(sha256sum artifacts/android/signing-certificate.der | cut -d ' ' -f 1)"
           grep -Fqi "certificate SHA-256 digest: $fingerprint" artifacts/android/signing-certificate.txt
           "$AAPT" dump badging "$SIGNED" | tee artifacts/android/package-info.txt
-          grep -q "package: name='com.tatsuya.orbisextract'" artifacts/android/package-info.txt
+          grep -q "package: name='com.flugel.orbisextract'" artifacts/android/package-info.txt
           grep -q "versionCode='$APK_VERSION_CODE'" artifacts/android/package-info.txt
           grep -q "sdkVersion:'24'" artifacts/android/package-info.txt
           grep -q "targetSdkVersion:'36'" artifacts/android/package-info.txt

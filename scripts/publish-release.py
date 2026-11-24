@@ -69,7 +69,7 @@ apksigner = tools[-1]
 aapt = apksigner.parent / 'aapt'
 cert = subprocess.check_output([str(apksigner), 'verify', '--verbose', '--print-certs', str(apk)], text=True)
 info = subprocess.check_output([str(aapt), 'dump', 'badging', str(apk)], text=True)
-assert f"versionName='{version}'" in info and "name='com.tatsuya.orbisextract'" in info
+assert f"versionName='{version}'" in info and "name='com.flugel.orbisextract'" in info
 code = int(re.search(r"versionCode='(\d+)'", info).group(1))
 assert code == 1050000 + run['run_number'], (code, run['run_number'])
 with zipfile.ZipFile(apk) as z:

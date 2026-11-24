@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 root = Path(__file__).resolve().parents[1]
 workflow = (root / ".github/workflows/android-apk.yml").read_text(encoding="utf-8")
 project = ET.parse(root / "src/OrbisExtract.App/OrbisExtract.App.Android/OrbisExtract.App.Android.csproj")
-assert project.findtext(".//ApplicationId") == "com.tatsuya.orbisextract"
+assert project.findtext(".//ApplicationId") == "com.flugel.orbisextract"
 for required in (
     "${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}",
     "1050000 + GITHUB_RUN_NUMBER",

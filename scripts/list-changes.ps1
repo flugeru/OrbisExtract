@@ -37,7 +37,7 @@ foreach ($file in $files + $backups + $created) {
 Write-Host "=== SUMMARY OF CHANGES ==="
 Write-Host ""
 Write-Host "1. Android:"
-Write-Host "   - ApplicationId changed to: orbisextract.app"
+Write-Host "   - ApplicationId changed to: com.flugel.orbisextract"
 Write-Host "   - ApplicationVersion changed to: 1.3"
 Write-Host "   - ApplicationDisplayVersion changed to: 1.3"
 Write-Host "   - android:label changed to: OrbisExtract"
