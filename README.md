@@ -43,7 +43,7 @@ Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and 
 - **Interface:** themed package picker, framed artwork, progress shown during extraction and a log that fills the card.
 - **License:** GPL-3.0-only in the app and Windows installer.
 
-[Version 1.0.5 release notes](docs/release-1.0.5.md)
+[Version 1.0.5 release notes](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5)
 
 ### How to extract your game dump
 
@@ -184,7 +184,7 @@ macOS, iOS e navegador não têm distribuição validada. A versão Android aind
 - **Interface:** seletor de pacotes integrado ao tema, capa com moldura, progresso visível durante a extração e log que ocupa o espaço do cartão.
 - **Licença:** GPL-3.0-only no aplicativo e no instalador Windows.
 
-[Notas da versão 1.0.5](docs/release-1.0.5.md)
+[Notas da versão 1.0.5](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5)
 
 ### Como extrair o dump do seu jogo
 
