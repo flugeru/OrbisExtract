@@ -18,11 +18,14 @@ A **dump** is a copy of game data you obtained from your own PS4. OrbisExtract r
 
 [Official website](https://flugeru.github.io/OrbisExtract/en.html) · [Support](https://flugeru.github.io/OrbisExtract/support-en.html) · [Privacy](https://flugeru.github.io/OrbisExtract/privacy-policy-en.html) · [Terms](https://flugeru.github.io/OrbisExtract/terms-en.html)
 
-### What it does and what you need
+[Downloads](#downloads) · [Extraction guide](#how-to-extract-your-game-dump) · [How extraction works](#how-extraction-works) · [Gravity Rush 2 demo](#extraction-demo-gravity-rush-2) · [Troubleshooting](#troubleshooting)
 
-The app opens supported PS4 game PKGs, displays metadata and artwork, and extracts their contents. It provides progress, pause/cancel controls, logs and local history. Version 1.0.5 also includes parallel extraction groups and integration of compatible game updates.
+### Before you start
 
-Bring your own compatible PKG dump, enough storage for its extracted contents and read/write access to the selected locations. On Android, grant access through the system file picker. The app supplies no games, is not an emulator, does not install games on a PS4, and does not create or convert PKGs. Protected or unsupported packages may not be extractable; there is no passcode field. Having a dump does not guarantee that its format or protection is supported.
+- **A compatible PS4 game PKG.** Use a dump of your own game. To apply an update, select its PKG together with the matching base game.
+- **A writable destination with enough free space.** Extracted files can take up more space than the original PKGs. Use an empty folder for a single package. On Android, grant file and folder access through the system picker; for a batch, choose a location that supports renaming folders, such as internal storage.
+
+OrbisExtract does not supply games, make dumps from a console, install or run games, or create new PKGs. Protected or unsupported packages may not open, and the app has no passcode field.
 
 ### Downloads
 
@@ -44,17 +47,31 @@ Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and 
 
 ### How to extract your game dump
 
-1. Download and open the official app for your platform.
-2. Select the PKG from your own PS4 game dump and check its metadata.
-3. Choose an output folder with enough free space.
-4. Start extraction, follow its progress and use pause/cancel if needed. Check the log and history for the result.
-5. Check output before deleting originals. Interrupted extractions can leave temporary or partial files.
+1. Open OrbisExtract and choose **Select PKG files**. Select the base game and, if needed, its compatible update PKGs in the same batch.
+2. Use the package list to check each selection. Confirm the game title, title ID (such as `CUSA03694`), package type and version before you continue.
+3. Set the destination with **Choose folder**. A single PKG extracts directly into that folder; a batch creates a separate subfolder for each game group.
+4. Choose **Extract files**. The status panel shows progress, elapsed time and the live log. Use **Pause** or **Cancel** if needed.
+5. Check the result in the log or local history and inspect the output folder. Keep the original PKGs until you have verified the files in the tool or port that will use them.
 
-### Multiple games and update packages
+### How extraction works
 
-In version 1.0.5, select multiple game PKGs to extract independent groups in parallel. To integrate game updates, select the base game and its compatible update PKGs together. Each group processes its base first, followed by updates in `APP_VER` order. Each output folder becomes final after the group completes. Binary delta updates require reconstruction and are outside this integration. On Android, use a provider that supports renaming folders, such as internal storage. Preview uses embedded `icon0.png` or `pic1.png` when available.
+| Stage | What OrbisExtract does |
+|---|---|
+| **Read the package** | Reads the PKG metadata to identify the title, package type and version. The preview uses embedded artwork such as `icon0.png` or `pic1.png` when available. |
+| **Plan the batch** | Matches updates to a base game by title ID, preferring a matching content ID when available. Each group processes the base first, then compatible updates in ascending `APP_VER` order. Independent game groups can run in parallel; the app limits concurrency based on CPU, available memory and storage. |
+| **Extract the files** | Reads the package's embedded file system (PFS), decrypts and decompresses supported data as needed, and writes files in blocks. The output includes game files and available system metadata, such as `sce_sys/param.sfo`. The source PKGs are not modified. |
+| **Apply updates and finalize** | Writes each compatible update over the matching paths in the staged base game and adds new files. The batch subfolder is finalized only after that group succeeds, without replacing an existing output folder. |
 
-Extraction runs locally. If embedded artwork is unavailable, an automatic Wikimedia Commons query sends the game title, not the PKG or its path. Local extraction works offline; artwork and update queries require connectivity.
+**Extraction works offline.** PKGs and their contents stay on your device. If embedded artwork is unavailable, the app can query Wikimedia Commons using the game title, not the PKG or its path. Artwork lookup and app update checks require internet access.
+
+### Troubleshooting
+
+| Symptom | What to check |
+|---|---|
+| An update is skipped or rejected | Select the matching base game in the same batch. When selecting multiple updates, use distinct, valid versions newer than the base. Binary delta updates require reconstruction and are not supported by this workflow. |
+| The PKG cannot be opened | Check that you can read the file and that the copy is complete. A valid dump can still use a format or protection the app does not support. |
+| Files cannot be written or the batch cannot be finalized | Check free space and write access, then try a new destination. On Android, use a storage location that supports folder renaming for batches. |
+| Extraction was interrupted | Check the log and destination before retrying. A single-package extraction may leave files already written; run again in an empty folder to avoid mixing partial and fresh output. |
 
 ### Extraction demo: Gravity Rush 2
 
