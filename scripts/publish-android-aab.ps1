@@ -10,7 +10,6 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $project = Join-Path $root 'src\OrbisExtract.App\OrbisExtract.App.Android\OrbisExtract.App.Android.csproj'
 [xml]$projectXml = Get-Content -LiteralPath $project -Raw
 $expectedVersionCode = [string]$projectXml.Project.PropertyGroup.ApplicationVersion
-$sourceIcon = Join-Path $root 'OrbisExtract-square.png'
 $projectIcon = Join-Path $root 'src\OrbisExtract.App\OrbisExtract.App.Android\Icon.png'
 $output = Join-Path $root ('artifacts\play-upload\' + [guid]::NewGuid().ToString('N'))
 $keyFile = (Resolve-Path -LiteralPath $KeyStore).Path
@@ -22,8 +21,8 @@ if (-not (Test-Path -LiteralPath (Join-Path $AndroidSdkDirectory 'platforms\andr
     throw "Android SDK not found at $AndroidSdkDirectory"
 }
 if ($KeyAlias -notmatch '^[a-zA-Z0-9_.-]+$') { throw 'Invalid key alias.' }
-if ((Get-FileHash -LiteralPath $sourceIcon -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath $projectIcon -Algorithm SHA256).Hash) {
-    throw 'Android Icon.png differs from OrbisExtract-square.png. Synchronize the icons before publishing.'
+if (-not (Test-Path -LiteralPath $projectIcon -PathType Leaf)) {
+    throw "Android project icon is missing: $projectIcon"
 }
 
 # The Android AAB signer requires file: password references, not env: references.

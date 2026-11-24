@@ -6,6 +6,7 @@ on:
     paths:
       - 'README.md'
       - 'docs/release-*.md'
+      - 'docs/assets/icon.png'
       - 'src/**'
       - 'vendor/LibOrbisPkg/**'
       - 'scripts/publish-android.sh'
@@ -66,11 +67,8 @@ jobs:
           test -d "$ANDROID_SDK_ROOT/build-tools/36.0.0"
           test -d "$ANDROID_SDK_ROOT/build-tools/35.0.0"
 
-      - name: Use supplied square Android icon
-        run: |
-          test -f OrbisExtract-square.png
-          cp OrbisExtract-square.png src/OrbisExtract.App/OrbisExtract.App.Android/Icon.png
-          file src/OrbisExtract.App/OrbisExtract.App.Android/Icon.png
+      - name: Check Android project icon
+        run: test -s src/OrbisExtract.App/OrbisExtract.App.Android/Icon.png
 
       - name: Clean Android build outputs
         run: |
@@ -186,12 +184,10 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Use supplied transparent Windows icon
+      - name: Check Windows packaging icon
         shell: pwsh
         run: |
-          Copy-Item OrbisExtract-transparent.ico packaging/windows/orbisextract.ico -Force
-          Copy-Item OrbisExtract-transparent.png packaging/linux/orbisextract.png -Force
-          if (-not (Test-Path packaging/windows/orbisextract.ico)) { throw "Ícone ICO transparente ausente." }
+          if (-not (Test-Path packaging/windows/orbisextract.ico -PathType Leaf)) { throw "Windows packaging icon is missing." }
 
       - name: Restore solution and desktop project
         run: |
@@ -265,10 +261,8 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Use supplied transparent Linux icon
-        run: |
-          cp OrbisExtract-transparent.png packaging/linux/orbisextract.png
-          file packaging/linux/orbisextract.png
+      - name: Check Linux packaging icon
+        run: test -s packaging/linux/orbisextract.png
 
       - name: Restore solution
         run: dotnet restore OrbisExtract.sln

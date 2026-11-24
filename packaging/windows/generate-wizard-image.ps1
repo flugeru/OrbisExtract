@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$source = Join-Path $root 'OrbisExtract-transparent.png'
+$source = Join-Path $root 'docs\assets\icon.png'
 $destination = Join-Path $PSScriptRoot 'wizard-brand.png'
 
 $canvas = New-Object System.Drawing.Bitmap(480, 920)

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="OrbisExtract-transparent.png" alt="OrbisExtract logo" width="128" />
+<img src="docs/assets/icon.png" alt="OrbisExtract logo" width="128" />
 
 # OrbisExtract
 
