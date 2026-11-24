@@ -9,7 +9,9 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / 'docs'
 FILES = ['privacy-policy-en.html', 'terms-en.html', 'support-en.html', 'index.html', 'en.html', 'privacy-policy.html', 'terms.html', 'support.html',
-         '404.html', 'robots.txt', 'sitemap.xml', '.nojekyll', 'assets/site.css', 'assets/icon.png']
+         '404.html', 'robots.txt', 'sitemap.xml', '.nojekyll', 'assets/site.css', 'assets/icon.png',
+         'assets/screenshots/en/gravity-rush-2-completed.png', 'assets/screenshots/en/gravity-rush-2-ready.png',
+         'assets/screenshots/en/gravity-rush-2-extracting.png', 'assets/screenshots/en/gravity-rush-2-applying-update.png']
 BASE = '/OrbisExtract/'
 
 class Document(HTMLParser):
