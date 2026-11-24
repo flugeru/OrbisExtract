@@ -35,6 +35,17 @@ Windows x64, Linux x64 and Android 7.0+ builds are available through GitHub Rele
 
 Supported distributions: Windows x64 installer/portable, Linux x64 AppImage and Android 7.0+ APK. macOS, iOS and browser distributions are not validated. The app is not published on Google Play yet.
 
+#### VirusTotal reports for version 1.0.5
+
+| Official download | Report |
+|---|---|
+| Windows x64 installer (`.exe`) | [View report](https://www.virustotal.com/gui/file/94b6f166d2c0c149b89329e38a460dfe00d2145aa7ecdb261191cdec540c99f4) |
+| Windows x64 portable (`.zip`) | [View report](https://www.virustotal.com/gui/file/6f9f912d6c954bc14889597c4d38d1db73a3d50c008825f353a08d9ac3f7e3c4) |
+| Linux x64 (`.AppImage`) | [View report](https://www.virustotal.com/gui/file/2c22cf4abe4ae947e8f1d9bbc12a295fc52433dc8d73e7155e5808dca85afa77) |
+| Android (`.apk`) | [View report](https://www.virustotal.com/gui/file/57a954f70647d69031d938d49129ac6de9f932d45cf10787bdcad0ae5be45b87) |
+
+Each report matches the SHA-256 of the corresponding [GitHub release asset](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5). Scan results can change and do not guarantee safety.
+
 ### What's new in 1.0.5
 
 - **Batch extraction:** independent games extract in parallel. Select the base package and its updates together to apply versions in order.
@@ -175,6 +186,17 @@ Builds de teste ficam nos [Artifacts do Actions](https://github.com/flugeru/Orbi
 | Android 7.0+ | APK | `OrbisExtract-Android-APK` |
 
 macOS, iOS e navegador não têm distribuição validada. A versão Android ainda não foi publicada na Google Play.
+
+#### Relatórios do VirusTotal para a versão 1.0.5
+
+| Download oficial | Relatório |
+|---|---|
+| Instalador Windows x64 (`.exe`) | [Ver relatório](https://www.virustotal.com/gui/file/94b6f166d2c0c149b89329e38a460dfe00d2145aa7ecdb261191cdec540c99f4) |
+| Windows x64 portátil (`.zip`) | [Ver relatório](https://www.virustotal.com/gui/file/6f9f912d6c954bc14889597c4d38d1db73a3d50c008825f353a08d9ac3f7e3c4) |
+| Linux x64 (`.AppImage`) | [Ver relatório](https://www.virustotal.com/gui/file/2c22cf4abe4ae947e8f1d9bbc12a295fc52433dc8d73e7155e5808dca85afa77) |
+| Android (`.apk`) | [Ver relatório](https://www.virustotal.com/gui/file/57a954f70647d69031d938d49129ac6de9f932d45cf10787bdcad0ae5be45b87) |
+
+Cada relatório corresponde ao SHA-256 do respectivo [arquivo publicado no GitHub](https://github.com/flugeru/OrbisExtract/releases/tag/1.0.5). Os resultados podem mudar e não garantem que um arquivo seja seguro.
 
 ### Novidades da 1.0.5
 
