@@ -18,5 +18,7 @@
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 
         <PackageVersion Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.0.1.15" />
+        <PackageVersion Include="Xamarin.Android.Google.BillingClient" Version="9.1.0.2" />
+        <PackageVersion Include="Xamarin.AndroidX.Lifecycle.Process" Version="2.11.0.1" />
     </ItemGroup>
 </Project>

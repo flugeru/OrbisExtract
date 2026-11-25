@@ -23,6 +23,9 @@ using System.Diagnostics;
 using System.Linq;
 using Button = Avalonia.Controls.Button;
 using ProgressBar = Avalonia.Controls.ProgressBar;
+#if ANDROID
+using SupportState = OrbisExtract.App.Android.PlaySupportBilling.SupportState;
+#endif
 
 namespace OrbisExtract.App.Views;
 
@@ -714,6 +717,9 @@ public sealed class MainView : UserControl
                     }
                 },
                 AboutSection("Repositório", repository, _repositoryError),
+#if ANDROID
+                CreateProjectSupportSection(),
+#endif
                 AboutSection("Changelog", _aboutChangelog, CreateUpdateButton()),
                 AboutSection("Licença GPL-3.0", licenseBox)
             }
@@ -763,6 +769,70 @@ public sealed class MainView : UserControl
             Child = overlayGrid
         };
     }
+
+#if ANDROID
+    private Control CreateProjectSupportSection()
+    {
+        var activity = OrbisExtract.App.Android.MainActivity.Current;
+        var billing = activity?.SupportBilling;
+        var description = UiTheme.Text("O OrbisExtract é gratuito, de código aberto e sem anúncios. Compartilhar o projeto já ajuda. Se quiser, apoie com uma compra única pelo Google Play e receba um selo de Apoiador. Nenhuma função de extração depende da compra.", 14, UiTheme.TextSecondary);
+        description.TextWrapping = TextWrapping.Wrap;
+        var share = UiTheme.OutlinedButton("Compartilhar projeto");
+        var buy = UiTheme.ActionButton("Apoiar pelo Google Play", primary: true);
+        var retry = UiTheme.OutlinedButton("Consultar compra no Google Play");
+        var mention = UiTheme.OutlinedButton("Solicitar menção no GitHub");
+        var notice = UiTheme.Text("", 13, UiTheme.TextSecondary);
+        notice.TextWrapping = TextWrapping.Wrap;
+        var message = UiTheme.Text("", 13, UiTheme.TextSecondary);
+        message.TextWrapping = TextWrapping.Wrap;
+        void Render()
+        {
+            var state = billing?.Status;
+            buy.IsVisible = state?.State == SupportState.Available;
+            if (buy.IsVisible)
+                buy.Content = $"{AppLanguage.Text("Apoiar com")} {state!.Price}";
+            retry.IsVisible = state?.State is SupportState.Unavailable
+                or SupportState.Error or SupportState.Pending;
+            mention.IsVisible = state?.State == SupportState.Supporter;
+            var text = state?.State switch
+            {
+                SupportState.Supporter => "Apoiador · Obrigado por apoiar o OrbisExtract!",
+                SupportState.Loading => "Consultando o Google Play…",
+                SupportState.Checkout => "Aguardando o Google Play…",
+                SupportState.Pending => "Pagamento pendente. O selo aparece depois da confirmação do Google Play.",
+                SupportState.Error => "Não foi possível confirmar a compra. Consulte o Google Play novamente antes de tentar pagar.",
+                SupportState.Available => "",
+                _ => "A compra de apoio não está disponível nesta instalação."
+            };
+            SetLocalized(notice, () => AppLanguage.Text(text));
+            notice.IsVisible = text.Length > 0;
+        }
+        share.Click += (_, _) =>
+        {
+            bool opened = activity?.ShareProject(AppLanguage.Text("Compartilhar projeto"), RepositoryUrl) == true;
+            SetLocalized(message, () => opened ? "" : AppLanguage.Text("Não foi possível compartilhar o link."));
+        };
+        buy.Click += async (_, _) => { if (billing is not null) await billing.BuyAsync(); };
+        retry.Click += async (_, _) => { if (billing is not null) await billing.RefreshAsync(); };
+        mention.Click += (_, _) =>
+        {
+            bool opened = activity?.RequestSupporterMention(AppLanguage.Text("Menção de apoiador do OrbisExtract"),
+                AppLanguage.Text("Autorizo a publicação do apelido abaixo na lista pública de apoiadores do OrbisExtract no GitHub. Posso pedir a remoção por e-mail.\n\nApelido: \n\nNão inclua recibos, tokens de compra ou dados de pagamento.")) == true;
+            SetLocalized(message, () => opened ? "" : AppLanguage.Text("Envie o pedido por e-mail para fluugell@gmail.com, sem dados da compra."));
+        };
+        if (billing is not null)
+        {
+            AttachedToVisualTree += (_, _) => { billing.Changed += Render; Render(); };
+            DetachedFromVisualTree += (_, _) => billing.Changed -= Render;
+        }
+        AppLanguage.Changed += RefreshSupportPrice;
+        DetachedFromVisualTree += (_, _) => AppLanguage.Changed -= RefreshSupportPrice;
+        AttachedToVisualTree += (_, _) => { AppLanguage.Changed -= RefreshSupportPrice; AppLanguage.Changed += RefreshSupportPrice; };
+        void RefreshSupportPrice() => Dispatcher.UIThread.Post(Render);
+        Render();
+        return AboutSection("Apoiar o OrbisExtract", description, share, buy, retry, notice, mention, message);
+    }
+#endif
 
     private static Border AboutSection(string title, params Control[] children)
     {

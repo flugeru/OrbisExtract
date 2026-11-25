@@ -19,9 +19,14 @@ namespace OrbisExtract.App.Android;
 public class MainActivity : AvaloniaMainActivity
 {
     private const string CHANNEL_ID = "orbis_extract_channel";
+    private PlaySupportBilling? supportBilling;
+    internal static MainActivity? Current { get; private set; }
+    internal PlaySupportBilling? SupportBilling => supportBilling;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
+        Current = this;
+        if (IsInstalledFromPlayStore()) supportBilling = PlaySupportBilling.Create(this);
         UpdateChecker.IsPlayInstall = IsInstalledFromPlayStore;
         UpdateChecker.GetInstalledVersion = () => PackageManager?.GetPackageInfo(PackageName ?? "", 0)?.VersionName ?? "1.0.5";
         UpdateChecker.OpenAndroidUrl = url => StartActivity(new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(url)));
@@ -37,6 +42,25 @@ public class MainActivity : AvaloniaMainActivity
         // Android 13+ exige consentimento em tempo de execução para exibir notificações
         if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
             RequestNotificationPermission();
+    }
+
+    internal bool ShareProject(string title, string url)
+    {
+        using var intent = new Intent(Intent.ActionSend);
+        intent.SetType("text/plain");
+        intent.PutExtra(Intent.ExtraText, url);
+        using var chooser = Intent.CreateChooser(intent, title);
+        try { StartActivity(chooser); return true; }
+        catch (ActivityNotFoundException) { return false; }
+    }
+
+    internal bool RequestSupporterMention(string subject, string body)
+    {
+        var uri = "mailto:fluugell@gmail.com?subject=" + System.Uri.EscapeDataString(subject) +
+            "&body=" + System.Uri.EscapeDataString(body);
+        using var intent = new Intent(Intent.ActionSendto, global::Android.Net.Uri.Parse(uri));
+        try { StartActivity(intent); return true; }
+        catch (ActivityNotFoundException) { return false; }
     }
 
     private bool IsPlayInstall30(string packageName)
@@ -64,8 +88,16 @@ public class MainActivity : AvaloniaMainActivity
 #pragma warning restore CA1416
     }
 
+    protected override void OnResume()
+    {
+        base.OnResume();
+        if (supportBilling is not null) _ = supportBilling.RefreshAsync();
+    }
+
     protected override void OnDestroy()
     {
+        supportBilling?.Stop();
+        if (Current == this) Current = null;
         base.OnDestroy();
     }
 

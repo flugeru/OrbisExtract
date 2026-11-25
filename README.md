@@ -236,6 +236,12 @@ Para retomar uma extração de um único PKG após fechar o app, selecione o mes
 
 Se o PKG não tiver arte utilizável, a prévia busca uma capa ou captura de tela no Wikimedia Commons em segundo plano. A consulta envia o título do jogo, sem enviar o arquivo, seu caminho ou seu identificador. Uma imagem encontrada mostra a autoria, a fonte e a licença. A seleção e a extração funcionam mesmo sem conexão.
 
+### Apoiadores
+
+Obrigado a quem ajuda a manter o OrbisExtract gratuito, aberto e sem anúncios. Compartilhar o projeto, relatar problemas e enviar sugestões também ajuda.
+
+Na versão distribuída pelo Google Play, a seção **Sobre → Apoiar o OrbisExtract** oferece uma compra única opcional. O selo de Apoiador não desbloqueia recursos. Quem quiser aparecer aqui pode solicitar, por e-mail, a publicação de um apelido. A lista é atualizada manualmente com autorização; não são publicados e-mails ou dados de pagamento. A remoção pode ser pedida pelo mesmo canal. [Configuração para publicação no Google Play](docs/play-billing-setup.md).
+
 ### Atualizar o aplicativo
 
 No Windows, execute o instalador novo sobre a instalação anterior ou substitua a versão portátil. No Linux, baixe o novo AppImage. Atualizar o app é diferente de aplicar um PKG de update a um jogo.

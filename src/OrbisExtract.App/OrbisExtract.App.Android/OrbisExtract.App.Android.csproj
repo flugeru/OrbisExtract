@@ -13,6 +13,10 @@
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
   </PropertyGroup>
 
+  <ItemGroup Condition="'$(PlayBillingPublicKey)' != ''">
+    <AssemblyMetadata Include="PlayBillingPublicKey" Value="$(PlayBillingPublicKey)" />
+  </ItemGroup>
+
   <ItemGroup>
     <AndroidResource Include="Icon.png">
       <Link>Resources\drawable\icon.png</Link>
@@ -31,6 +35,8 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
+    <PackageReference Include="Xamarin.Android.Google.BillingClient" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" />
   </ItemGroup>
 
   <ItemGroup>
