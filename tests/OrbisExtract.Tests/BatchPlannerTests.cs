@@ -34,6 +34,30 @@ public sealed class BatchPlannerTests
     }
 
     [Fact]
+    public void StandaloneUpdateRequiresConfirmationAndDoesNotRelaxBatchRules()
+    {
+        var update = Package(0, "CUSA00001", "a", PackageKind.Update, "01.02");
+        Assert.Empty(BatchPlanner.Create([update]).Groups);
+        var confirmed = BatchPlanner.Create([update], allowStandaloneUpdate: true);
+        Assert.Empty(confirmed.Issues);
+        Assert.Equal(update, Assert.Single(Assert.Single(confirmed.Groups).Packages));
+
+        var independent = Package(1, "CUSA00002", "b", PackageKind.BaseGame, "01.00");
+        var batch = BatchPlanner.Create([update, independent], allowStandaloneUpdate: true);
+        Assert.Equal(independent, Assert.Single(Assert.Single(batch.Groups).Packages));
+        Assert.Equal(update.Name, Assert.Single(batch.Issues).Package);
+    }
+
+    [Fact]
+    public void StandaloneBinaryDeltaStillRequiresReconstruction()
+    {
+        var delta = Package(0, "CUSA00001", "a", PackageKind.DeltaUpdate, "01.02");
+        var plan = BatchPlanner.Create([delta], allowStandaloneUpdate: true);
+        Assert.Empty(plan.Groups);
+        Assert.Contains("reconstrução", Assert.Single(plan.Issues).Reason);
+    }
+
+    [Fact]
     public void WorkerLimitAdaptsToCpuMemoryAndProvider()
     {
         const long GiB = 1024L * 1024 * 1024;

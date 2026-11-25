@@ -9,8 +9,16 @@ public sealed record BatchPlan(IReadOnlyList<PackageGroup> Groups, IReadOnlyList
 
 public static class BatchPlanner
 {
-    public static BatchPlan Create(IReadOnlyList<BatchPackage> packages)
+    public static BatchPlan Create(IReadOnlyList<BatchPackage> packages, bool allowStandaloneUpdate = false)
     {
+        if (packages is [var single] && IsUpdate(single))
+        {
+            if (single.Metadata.Kind == PackageKind.DeltaUpdate)
+                return new([], [new(single.Name, "Updates binários delta exigem reconstrução e não podem ser aplicados como arquivos.")]);
+            if (allowStandaloneUpdate)
+                return new([new(MakeFolderName(single), [single])], []);
+        }
+
         var issues = new List<BatchIssue>();
         var roots = packages.Where(package => !IsUpdate(package)).ToArray();
         var basesByTitle = roots.Where(package => package.Metadata.Kind == PackageKind.BaseGame &&

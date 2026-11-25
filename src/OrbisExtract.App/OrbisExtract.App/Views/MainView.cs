@@ -71,6 +71,10 @@ public sealed class MainView : UserControl
     private readonly StackPanel _historyList = new() { Spacing = 10 };
     private readonly Border _languageOverlay;
     private readonly Border _updateOverlay;
+    private readonly Border _standaloneUpdateOverlay;
+    private readonly ScrollViewer _mainPage;
+    private readonly Button _standaloneUpdateCancel;
+    private TaskCompletionSource<bool>? _standaloneUpdateDecision;
     private readonly TextBlock _updateMessage;
     private readonly Button _updateOpen;
     private Button _updateDismiss = null!;
@@ -317,7 +321,7 @@ public sealed class MainView : UserControl
             }
         };
         var centered = new Border { MaxWidth = isAndroid ? 820 : 1240, HorizontalAlignment = HorizontalAlignment.Stretch, Child = page };
-        var scroll = new ScrollViewer
+        var scroll = _mainPage = new ScrollViewer
         {
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
@@ -346,6 +350,8 @@ public sealed class MainView : UserControl
         _languageOverlay = CreateLanguageOverlay();
         mainGrid.Children.Add(_languageOverlay);
         mainGrid.Children.Add(_updateOverlay);
+        _standaloneUpdateOverlay = CreateStandaloneUpdateOverlay(out _standaloneUpdateCancel);
+        mainGrid.Children.Add(_standaloneUpdateOverlay);
         wrapper.Children.Add(mainGrid);
         Content = wrapper;
 
@@ -359,6 +365,7 @@ public sealed class MainView : UserControl
         DetachedFromVisualTree += (_, _) =>
         {
             AppLanguage.Changed -= ApplyLanguage;
+            _standaloneUpdateDecision?.TrySetResult(false);
             if (OperatingSystem.IsAndroid())
             {
                 OrbisExtract.App.Shared.AppNotificationHelper.CancellationRequested -= CancelFromNotification;
@@ -824,6 +831,55 @@ public sealed class MainView : UserControl
             card.MaxHeight = Math.Max(0, e.NewSize.Height - 32);
         };
         return overlay;
+    }
+
+    private Border CreateStandaloneUpdateOverlay(out Button cancel)
+    {
+        var title = UiTheme.Text("Extrair somente o update?", 20, UiTheme.TextPrimary, FontWeight.SemiBold);
+        title.TextWrapping = TextWrapping.Wrap;
+        var message = UiTheme.Text("Só os arquivos do update serão extraídos. Isso não instala a atualização nem gera o jogo completo.", 14, UiTheme.TextSecondary);
+        message.TextWrapping = TextWrapping.Wrap;
+        var confirm = UiTheme.ActionButton("Extrair só o update", primary: true);
+        cancel = UiTheme.OutlinedButton("Cancelar");
+        confirm.Click += (_, _) => _standaloneUpdateDecision?.TrySetResult(true);
+        cancel.Click += (_, _) => _standaloneUpdateDecision?.TrySetResult(false);
+        var card = UiTheme.Card(new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = new StackPanel { Spacing = 14, Children = { title, message, confirm, cancel } }
+        });
+        card.MaxWidth = 440;
+        card.Margin = new Thickness(16);
+        card.VerticalAlignment = VerticalAlignment.Center;
+        var overlay = new Border
+        {
+            IsVisible = false,
+            Background = new SolidColorBrush(Color.Parse("#CC000000")),
+            Child = card
+        };
+        overlay.KeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape) return;
+            e.Handled = true;
+            _standaloneUpdateDecision?.TrySetResult(false);
+        };
+        return overlay;
+    }
+
+    private async Task<bool> ConfirmStandaloneUpdateAsync()
+    {
+        var decision = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _standaloneUpdateDecision = decision;
+        _mainPage.IsEnabled = false;
+        _standaloneUpdateOverlay.IsVisible = true;
+        _standaloneUpdateCancel.Focus();
+        try { return await decision.Task; }
+        finally
+        {
+            _standaloneUpdateOverlay.IsVisible = false;
+            _mainPage.IsEnabled = true;
+            _standaloneUpdateDecision = null;
+        }
     }
 
     private async Task CheckForUpdatesAsync(bool manual)
@@ -1308,6 +1364,7 @@ public sealed class MainView : UserControl
         var batchName = packages.Count == 1 ? packages[0].Name : $"{packages.Count} PKGs";
         var historyResult = "Falha na extração";
         long historyFiles = 0, historyBytes = 0;
+        bool declinedStandaloneUpdate = false;
 
         ShowBanner(null);
         _cancel.IsVisible = _pause.IsVisible = _elapsed.IsVisible = true;
@@ -1320,9 +1377,6 @@ public sealed class MainView : UserControl
         _percent.Text = "";
         _elapsed.Text = "00:00";
         _clock.Restart();
-
-        Log($"Iniciando extração. Pacote: {batchName}");
-        Log($"Destino: {selectedFolder.Name}");
 
         var progressSlots = Enumerable.Range(0, packages.Count).Select(_ => new PackageProgress()).ToArray();
         int progressTotal = 0;
@@ -1353,12 +1407,24 @@ public sealed class MainView : UserControl
 
         try
         {
-            AppNotificationHelper.StartExtraction(batchName, selectedFolder.Name, 0, 0);
-            timer.Start();
             bool limitedIo = UsesConstrainedStorage(localPath);
             long estimatedWorkerBytes = 48 * 1024 * 1024;
             int WorkerLimit() => GetWorkerLimit(limitedIo, estimatedWorkerBytes);
-            var (plan, unreadable) = await PlanBatchAsync(packages, pauseGate, WorkerLimit(), token);
+            var (readable, unreadable) = await ReadBatchPackagesAsync(packages, pauseGate, WorkerLimit(), token);
+            token.ThrowIfCancellationRequested();
+            bool standaloneUpdate = packages.Count == 1 && readable is [{ Metadata.Kind: PackageKind.Update }];
+            if (standaloneUpdate && !await ConfirmStandaloneUpdateAsync())
+            {
+                declinedStandaloneUpdate = true;
+                SetProgressIdle();
+                SetLocalized(_stateTitle, () => AppLanguage.Text("Pronto para extrair"));
+                SetLiteral(_counter, "");
+                return;
+            }
+            token.ThrowIfCancellationRequested();
+            Log($"Iniciando extração. Pacote: {batchName}");
+            Log($"Destino: {selectedFolder.Name}");
+            var plan = BatchPlanner.Create(readable, allowStandaloneUpdate: standaloneUpdate);
             var issues = unreadable.Concat(plan.Issues).ToArray();
             foreach (var issue in issues)
                 Log($"{issue.Package}: {AppLanguage.Message(issue.Reason)}");
@@ -1367,6 +1433,10 @@ public sealed class MainView : UserControl
 
             estimatedWorkerBytes = plan.Groups.Max(group =>
                 group.Packages.Max(package => package.Metadata.EstimatedWorkingSetBytes));
+            if (standaloneUpdate) Log(AppLanguage.Text("Extraindo somente os arquivos do update."));
+            _clock.Restart();
+            AppNotificationHelper.StartExtraction(batchName, selectedFolder.Name, 0, 0);
+            timer.Start();
             progressTotal = plan.Groups.Sum(group => group.Packages.Count);
             var hardware = GetHardwareBudget();
             int workers = Math.Min(ParallelExtraction.WorkerLimit(hardware.Processors, hardware.Bytes, limitedIo,
@@ -1480,18 +1550,22 @@ public sealed class MainView : UserControl
             _extractionPaused = false;
             _run.Dispose();
             _run = null;
-            Log("Processo de extração finalizado.");
+            _elapsed.IsVisible = !declinedStandaloneUpdate;
+            if (!declinedStandaloneUpdate)
+            {
+                Log("Processo de extração finalizado.");
+                ExtractionHistory.Add(new ExtractionHistoryEntry(
+                    historyStartedAt, batchName, selectedFolder.Name, historyResult,
+                    historyFiles, historyBytes, (long)_clock.Elapsed.TotalSeconds, SnapshotSessionEvents()));
+            }
             _recordingHistory = false;
-            ExtractionHistory.Add(new ExtractionHistoryEntry(
-                historyStartedAt, batchName, selectedFolder.Name, historyResult,
-                historyFiles, historyBytes, (long)_clock.Elapsed.TotalSeconds, SnapshotSessionEvents()));
             _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _extract.IsEnabled = true;
             _resumeExisting.IsEnabled = _verifyPackage.IsEnabled = true;
             _previewPicker.IsEnabled = true;
         }
     }
 
-    private static async Task<(BatchPlan Plan, BatchIssue[] Unreadable)> PlanBatchAsync(
+    private static async Task<(BatchPackage[] Readable, BatchIssue[] Unreadable)> ReadBatchPackagesAsync(
         IReadOnlyList<IStorageFile> packages, ExtractionPauseGate gate, int workers, CancellationToken token)
     {
         var inputs = new BatchPackage?[packages.Count];
@@ -1512,7 +1586,7 @@ public sealed class MainView : UserControl
                 errors[index] = new BatchIssue(file.Name, ex.Message);
             }
         });
-        return (BatchPlanner.Create(inputs.OfType<BatchPackage>().ToArray()), errors.OfType<BatchIssue>().ToArray());
+        return (inputs.OfType<BatchPackage>().ToArray(), errors.OfType<BatchIssue>().ToArray());
     }
 
     private async Task<ExtractionResult> ExtractPackageAsync(

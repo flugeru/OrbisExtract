@@ -64,6 +64,8 @@ Each report matches the SHA-256 of the corresponding [GitHub release asset](http
 4. Choose **Extract files**. The status panel shows progress, elapsed time and the live log. Use **Pause** or **Cancel** if needed.
 5. Check the result in the log or local history and inspect the output folder. Keep the original PKGs until you have verified the files in the tool or port that will use them.
 
+To extract a supported update by itself, select only its PKG and confirm **Extract only the update**. This extracts the update files without applying them to a base game. Binary delta updates still require reconstruction.
+
 ### How extraction works
 
 | Stage | What OrbisExtract does |
@@ -83,7 +85,7 @@ For local desktop paths, one active game group can extract up to four files from
 
 | Symptom | What to check |
 |---|---|
-| An update is skipped or rejected | Select the matching base game in the same batch. When selecting multiple updates, use distinct, valid versions newer than the base. Binary delta updates require reconstruction and are not supported by this workflow. |
+| An update is skipped or rejected | To apply it, select the matching base game in the same batch. To extract it without the base, select only that update. When applying multiple updates, use distinct, valid versions newer than the base. Binary delta updates require reconstruction. |
 | The PKG cannot be opened | Check that you can read the file and that the copy is complete. A valid dump can still use a format or protection the app does not support. |
 | Files cannot be written or the batch cannot be finalized | Check free space and write access, then try a new destination. On Android, use a storage location that supports folder renaming for batches. |
 | Extraction was interrupted | For a single PKG, select the same package and folder and enable **Resume and verify existing files**. Only matching files are reused. If a file differs, move it out of the destination or choose another folder. Batches must restart. |
@@ -219,6 +221,8 @@ Cada relatório corresponde ao SHA-256 do respectivo [arquivo publicado no GitHu
 3. Escolha a pasta onde os arquivos serão salvos e confira o espaço livre.
 4. Inicie a extração e acompanhe o progresso. Você pode pausar ou cancelar; consulte o log e o histórico para verificar o resultado.
 5. Confira a saída antes de remover qualquer original. Extrações interrompidas podem deixar arquivos temporários ou parciais.
+
+Para extrair um update compatível sem o jogo base, selecione apenas o PKG do update e confirme **Extrair só o update**. Isso extrai os arquivos sem aplicar a atualização ao jogo. Updates binários delta continuam exigindo reconstrução.
 
 ### Vários jogos e pacotes de update
 
