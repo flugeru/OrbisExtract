@@ -105,20 +105,21 @@ namespace LibOrbisPkg.PFS
       else
       {
         // slow case: compressed sector
-        var sectorBuf = new byte[(int)sectorSize - 2];
-        _accessor.Read(sectorOffset + 2, sectorBuf, 0, (int)sectorSize - 2);
-        long started = Timings == null ? 0 : System.Diagnostics.Stopwatch.GetTimestamp();
-        using (var bufStream = new MemoryStream(sectorBuf))
-        using (var ds = new DeflateStream(bufStream, CompressionMode.Decompress))
+        int compressedLength = (int)sectorSize - 2;
+        var sectorBuf = ArrayPool<byte>.Shared.Rent(compressedLength);
+        try
         {
-          // DeflateStream.Read may return fewer bytes than requested without
-          // reaching EOF. A single read leaves the remainder of this reused
-          // sector buffer filled with data from the preceding sector, corrupting
-          // large files at compression boundaries.
+          _accessor.Read(sectorOffset + 2, sectorBuf, 0, compressedLength);
+          var timings = Timings;
+          long started = timings == null ? 0 : System.Diagnostics.Stopwatch.GetTimestamp();
+          using var bufStream = new MemoryStream(sectorBuf, 0, compressedLength, writable: false);
+          using var ds = new DeflateStream(bufStream, CompressionMode.Decompress);
+          // The rented output may contain data from a previous read.
           ds.ReadExactly(output, 0, hdr.BlockSz);
+          if (timings != null)
+            System.Threading.Interlocked.Add(ref timings.DecompressionTicks, System.Diagnostics.Stopwatch.GetTimestamp() - started);
         }
-        if (Timings != null)
-          Timings.DecompressionTicks += System.Diagnostics.Stopwatch.GetTimestamp() - started;
+        finally { ArrayPool<byte>.Shared.Return(sectorBuf); }
       }
     }
     

@@ -73,6 +73,10 @@ Each report matches the SHA-256 of the corresponding [GitHub release asset](http
 | **Extract the files** | Reads the package's embedded file system (PFS), decrypts and decompresses supported data as needed, and writes files in blocks. The output includes game files and available system metadata, such as `sce_sys/param.sfo`. The source PKGs are not modified. |
 | **Apply updates and finalize** | Writes each compatible update over the matching paths in the staged base game and adds new files. The batch subfolder is finalized only after that group succeeds, without replacing an existing output folder. |
 
+For local desktop paths, one active game group can extract up to four files from the same PKG at once, depending on CPU, memory and storage. Android keeps the system picker and extracts each PKG sequentially. Local destinations check available space before writing when the volume reports it.
+
+**Verify PKG SHA-256 before extracting** compares the package body and PFS image with the hashes stored in the PKG. It adds a read pass, detects corruption in those regions, and does not authenticate the publisher.
+
 **Extraction works offline.** PKGs and their contents stay on your device. If embedded artwork is unavailable, the app can query Wikimedia Commons using the game title, not the PKG or its path. Artwork lookup and app update checks require internet access.
 
 ### Troubleshooting
@@ -82,7 +86,7 @@ Each report matches the SHA-256 of the corresponding [GitHub release asset](http
 | An update is skipped or rejected | Select the matching base game in the same batch. When selecting multiple updates, use distinct, valid versions newer than the base. Binary delta updates require reconstruction and are not supported by this workflow. |
 | The PKG cannot be opened | Check that you can read the file and that the copy is complete. A valid dump can still use a format or protection the app does not support. |
 | Files cannot be written or the batch cannot be finalized | Check free space and write access, then try a new destination. On Android, use a storage location that supports folder renaming for batches. |
-| Extraction was interrupted | Check the log and destination before retrying. A single-package extraction may leave files already written; run again in an empty folder to avoid mixing partial and fresh output. |
+| Extraction was interrupted | For a single PKG, select the same package and folder and enable **Resume and verify existing files**. Only matching files are reused. If a file differs, move it out of the destination or choose another folder. Batches must restart. |
 
 ### Extraction demo: Gravity Rush 2
 
@@ -222,7 +226,9 @@ Na versão 1.0.5, selecione os PKGs de todos os jogos que deseja extrair. Para i
 
 No modo em lote, jogos independentes são extraídos em paralelo. Cada grupo usa uma subpasta própria, publicada após a extração da base e a aplicação dos updates em ordem de `APP_VER`. Pastas de destino existentes são preservadas. Updates delta binários exigem reconstrução e ficam fora dessa integração. No Android, selecione uma pasta em um provedor que permita renomear pastas, como o armazenamento interno. A prévia usa `icon0.png` ou `pic1.png` do próprio PKG quando disponível.
 
-O limite de extrações simultâneas considera CPU, memória disponível, tamanho das imagens PFS e tipo de armazenamento. Para arquivos de 8 MiB ou mais, o motor pode ler e descriptografar o próximo bloco enquanto grava o atual, usando dois buffers reutilizáveis de 1 MiB por extração ativa.
+O limite de extrações simultâneas considera CPU, memória disponível, tamanho das imagens PFS e tipo de armazenamento. Se houver um único grupo e entrada e saída locais no desktop, o motor pode extrair até quatro arquivos do mesmo PKG em paralelo. No Android, o seletor do sistema é mantido e os arquivos de cada PKG saem em sequência. O motor reutiliza buffers dimensionados de 4 KiB a 1 MiB; para arquivos de 8 MiB ou mais, usa um segundo buffer para ler o próximo bloco durante a gravação do atual. Destinos locais são verificados quanto ao espaço livre quando o volume informa esse dado.
+
+Para retomar uma extração de um único PKG após fechar o app, selecione o mesmo pacote e a mesma pasta e marque **Retomar e verificar arquivos existentes**. Só arquivos com SHA-256 idêntico ao conteúdo do PKG são reaproveitados. Em caso de divergência, mova o arquivo para fora da pasta ou escolha outro destino. A opção **Verificar SHA-256 do PKG antes de extrair** compara o corpo do pacote e a imagem PFS com os hashes do cabeçalho. Isso acrescenta uma leitura e detecta corrupção nessas regiões, mas não autentica a origem do PKG.
 
 Se o PKG não tiver arte utilizável, a prévia busca uma capa ou captura de tela no Wikimedia Commons em segundo plano. A consulta envia o título do jogo, sem enviar o arquivo, seu caminho ou seu identificador. Uma imagem encontrada mostra a autoria, a fonte e a licença. A seleção e a extração funcionam mesmo sem conexão.
 

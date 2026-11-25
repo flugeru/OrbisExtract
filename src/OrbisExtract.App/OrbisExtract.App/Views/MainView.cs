@@ -49,6 +49,8 @@ public sealed class MainView : UserControl
     private readonly TextBlock _destinationName;
     private readonly Button _chooseDestination;
     private readonly Button _extract;
+    private readonly CheckBox _resumeExisting;
+    private readonly CheckBox _verifyPackage;
 
     // Monitor
     private readonly TextBlock _stateTitle, _counter, _percent, _elapsed, _status;
@@ -169,10 +171,12 @@ public sealed class MainView : UserControl
         _extract.Margin = new Thickness(0, 6, 0, 0);
         _extract.Click += async (_, _) => await ExtractAsync();
 
+        _resumeExisting = new CheckBox { IsVisible = false };
+        _verifyPackage = new CheckBox();
         _settingsCard = Section("Configuração",
             "Defina onde salvar os arquivos extraídos.",
             Field("Pasta de destino", _destinationName), _chooseDestination,
-            _extract);
+            _resumeExisting, _verifyPackage, _extract);
 
         // ---------- Monitor de extração ----------
         _stateTitle = UiTheme.Text("Pronto para extrair", 18, UiTheme.TextPrimary, FontWeight.SemiBold);
@@ -608,6 +612,8 @@ public sealed class MainView : UserControl
     {
         foreach (var (label, original) in _localizedLabels) label.Text = AppLanguage.Message(original);
         foreach (var (button, original) in _localizedButtons) button.Content = AppLanguage.Text(original);
+        _resumeExisting.Content = AppLanguage.Text("Retomar e verificar arquivos existentes");
+        _verifyPackage.Content = AppLanguage.Text("Verificar SHA-256 do PKG antes de extrair");
         if (_pauseGate is not null) _pause.Content = AppLanguage.Text(_extractionPaused ? "Retomar" : "Pausar");
         foreach (var (button, (mode, label, name, check)) in _languageChoices)
         {
@@ -1121,6 +1127,8 @@ public sealed class MainView : UserControl
         if (files.Count == 0) return;
 
         _packages = files.DistinctBy(file => file.Path).ToArray();
+        _resumeExisting.IsChecked = false;
+        _resumeExisting.IsVisible = _packages.Count == 1;
         var names = _packages.Select(file => file.Name).ToArray();
         _previewRequest?.Cancel();
         if (names.Length == 1) SetLiteral(_fileName, names[0]);
@@ -1286,6 +1294,9 @@ public sealed class MainView : UserControl
         _artworkStatus.IsVisible = false;
         _previewPicker.IsEnabled = false;
         var localPath = OperatingSystem.IsAndroid() ? null : selectedFolder.TryGetLocalPath();
+        bool resumeExisting = packages.Count == 1 && _resumeExisting.IsChecked == true;
+        bool verifyPackage = _verifyPackage.IsChecked == true;
+        _resumeExisting.IsEnabled = _verifyPackage.IsEnabled = false;
         _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _extract.IsEnabled = false;
         _run = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
         var pauseGate = _pauseGate = new ExtractionPauseGate();
@@ -1330,13 +1341,14 @@ public sealed class MainView : UserControl
             _progress.IsIndeterminate = false;
             _progress.Value = fraction * 100;
             _percent.Text = $"{fraction:P0}";
-            if (!_extractionPaused) SetLocalized(_stateTitle, () => AppLanguage.Text("Extraindo"));
+            string stage = snapshots.Any(snapshot => snapshot.Verifying) ? "Verificando" : "Extraindo";
+            if (!_extractionPaused) SetLocalized(_stateTitle, () => AppLanguage.Text(stage));
             SetLocalized(_counter, Detail);
             var second = (long)elapsed.TotalSeconds;
             if (lastNotificationSecond == second) return;
             lastNotificationSecond = second;
             AppNotificationHelper.UpdateElapsed(elapsed);
-            AppNotificationHelper.UpdateProgress((long)(fraction * 1000), 1000, "Extraindo", Detail());
+            AppNotificationHelper.UpdateProgress((long)(fraction * 1000), 1000, stage, Detail());
         };
 
         try
@@ -1363,6 +1375,11 @@ public sealed class MainView : UserControl
             Log($"CPU: {hardware.Processors}; {AppLanguage.Text("RAM para o lote")}: {FormatSize((ulong)hardware.Bytes)}; " +
                 $"{AppLanguage.Text("estimativa por extração")}: {FormatSize((ulong)estimatedWorkerBytes)}.");
             bool directOutput = packages.Count == 1;
+            // Spend the CPU budget inside one local package, or across groups, not both.
+            int fileWorkers = plan.Groups.Count == 1 && !limitedIo && !hardware.Pressure
+                ? Math.Clamp(Math.Min(hardware.Processors / 2, (int)Math.Min(4,
+                    Math.Max(0, hardware.Bytes - estimatedWorkerBytes) / (16 * 1024 * 1024))), 1, 4)
+                : 1;
             var results = await ParallelExtraction.RunAsync(plan.Groups, WorkerLimit, async (group, stop) =>
             {
                 await pauseGate.WaitAsync(stop);
@@ -1380,7 +1397,7 @@ public sealed class MainView : UserControl
                             ?? CreateDirectDestination(selectedFolder, localPath);
                         Log($"{group.OutputName} · {(member == group.Packages[0] ? AppLanguage.Text("Extraindo PKG") : AppLanguage.Text("Aplicando update"))}: {member.Name}");
                         var result = await ExtractPackageAsync(packages[member.Index], member.Metadata,
-                            destination, extractor, slot, pauseGate, stop);
+                            destination, extractor, slot, pauseGate, fileWorkers, resumeExisting, verifyPackage, stop);
                         files += result.FilesExtracted;
                         bytes += result.BytesExtracted;
                         if (result.PerformanceSummary is not null) Log($"{member.Name} · {result.PerformanceSummary}");
@@ -1469,6 +1486,7 @@ public sealed class MainView : UserControl
                 historyStartedAt, batchName, selectedFolder.Name, historyResult,
                 historyFiles, historyBytes, (long)_clock.Elapsed.TotalSeconds, SnapshotSessionEvents()));
             _choosePackage.IsEnabled = _chooseDestination.IsEnabled = _extract.IsEnabled = true;
+            _resumeExisting.IsEnabled = _verifyPackage.IsEnabled = true;
             _previewPicker.IsEnabled = true;
         }
     }
@@ -1499,7 +1517,8 @@ public sealed class MainView : UserControl
 
     private async Task<ExtractionResult> ExtractPackageAsync(
         IStorageFile package, PackageMetadata expected, IExtractionDestination destination, IPkgExtractor extractor,
-        IProgress<ExtractionProgress> progress, ExtractionPauseGate gate, CancellationToken token)
+        IProgress<ExtractionProgress> progress, ExtractionPauseGate gate, int fileWorkers,
+        bool resumeExisting, bool verifyPackage, CancellationToken token)
     {
         await using var original = await package.OpenReadAsync();
         async Task<ExtractionResult> ExtractStreamAsync(Stream input)
@@ -1508,7 +1527,8 @@ public sealed class MainView : UserControl
             if (current != expected)
                 throw new PkgExtractionException($"Os metadados mudaram antes da extração: {package.Name}");
             return await extractor.ExtractAsync(new ExtractionRequest(input, string.Empty,
-                Destination: destination, PauseGate: gate), progress, token);
+                Destination: destination, PauseGate: gate, MaxFileWorkers: fileWorkers,
+                ResumeExistingFiles: resumeExisting, VerifyPackageIntegrity: verifyPackage), progress, token);
         }
 
         if (original.CanSeek)
@@ -1590,7 +1610,7 @@ public sealed class MainView : UserControl
         return (processors, Math.Max(0, memory.TotalAvailableMemoryBytes / 3), pressure);
     }
 
-    private sealed record ProgressSnapshot(bool Active, bool Completed, double Fraction);
+    private sealed record ProgressSnapshot(bool Active, bool Completed, double Fraction, bool Verifying = false);
 
     private sealed class PackageProgress : IProgress<ExtractionProgress>
     {
@@ -1605,7 +1625,10 @@ public sealed class MainView : UserControl
             var fraction = value.BytesTotal is > 0 ? (double)value.BytesCompleted / value.BytesTotal.Value
                 : value.FilesTotal is > 0 ? (double)value.FilesCompleted / value.FilesTotal.Value : Snapshot.Fraction;
             fraction = Math.Clamp(fraction, 0, 1);
-            if (Snapshot.Fraction != fraction) Volatile.Write(ref _snapshot, new(true, false, fraction));
+            bool verifying = value.State == "Verificando";
+            var previous = Snapshot;
+            if (previous.Fraction != fraction || previous.Verifying != verifying)
+                Volatile.Write(ref _snapshot, new(true, false, fraction, verifying));
         }
     }
 
@@ -1698,7 +1721,7 @@ public sealed class MainView : UserControl
     }
 #endif
 
-    private sealed class StorageFolderExtractionDestination : IExtractionDestination
+    private sealed class StorageFolderExtractionDestination : IResumableExtractionDestination
     {
         private readonly IStorageFolder _root;
         private readonly Action<string> _log;
@@ -1714,6 +1737,38 @@ public sealed class MainView : UserControl
             _log = log ?? (_ => { });
             _privateWorkspace = privateWorkspace;
             _overwrite = overwrite;
+        }
+
+        public async Task<Stream?> OpenExistingFileAsync(string relativePath, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var segments = SafeExtractionPath.GetSegments(relativePath);
+            var folder = _root;
+            var prefix = "";
+            foreach (var segment in segments[..^1])
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                prefix = prefix.Length == 0 ? segment : prefix + "/" + segment;
+                if (_folders.TryGetValue(prefix, out var cached))
+                {
+                    folder = cached;
+                    continue;
+                }
+                var child = await folder.GetFolderAsync(segment);
+                if (child is null) return null;
+                if (!string.Equals(child.Name, segment, StringComparison.Ordinal))
+                {
+                    child.Dispose();
+                    throw new PkgExtractionException($"O provedor alterou o nome da pasta '{segment}'.");
+                }
+                _folders[prefix] = folder = child;
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            using var file = await folder.GetFileAsync(segments[^1]);
+            if (file is null) return null;
+            if (!string.Equals(file.Name, segments[^1], StringComparison.Ordinal))
+                throw new PkgExtractionException($"O provedor alterou o nome de '{relativePath}'.");
+            return await file.OpenReadAsync();
         }
 
         public async Task<Stream> CreateTemporaryFileAsync(string relativePath, CancellationToken cancellationToken = default)

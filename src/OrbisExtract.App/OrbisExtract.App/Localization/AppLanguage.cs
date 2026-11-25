@@ -108,6 +108,16 @@ public static class AppLanguage
         ["Não foi possível abrir o arquivo temporário para escrita: '"] = "Could not open the temporary file for writing: '",
         ["Arquivo temporário de destino inválido."] = "Invalid temporary destination file.",
         ["O arquivo já existe:"] = "File already exists:",
+        ["Retomar e verificar arquivos existentes"] = "Resume and verify existing files",
+        ["Verificar SHA-256 do PKG antes de extrair"] = "Verify PKG SHA-256 before extracting",
+        ["Verificando"] = "Verifying",
+        ["Arquivo existente diferente do PKG:"] = "Existing file differs from the PKG:",
+        ["Espaço insuficiente no destino."] = "Not enough space at the destination.",
+        ["Uma pasta ocupa o caminho do arquivo:"] = "A directory occupies the file path:",
+        ["Corpo fora dos limites do PKG."] = "Package body is outside the PKG bounds.",
+        ["O PKG não fornece um SHA-256 verificável para"] = "The PKG does not provide a verifiable SHA-256 for",
+        ["Falha na verificação SHA-256 do PKG"] = "PKG SHA-256 verification failed",
+        ["Este destino não permite verificar arquivos existentes."] = "This destination does not support verifying existing files.",
         ["Destino local recebeu um temporário inválido."] = "Local destination received an invalid temporary file.",
         ["• Configurações de idioma: automático, português ou inglês.\n• Idioma inicial de acordo com o sistema; escolha manual salva no aparelho."] = "• Language settings: automatic, Portuguese or English.\n• Initial language follows the system; manual choice is saved on the device."
     };

@@ -1,6 +1,6 @@
 namespace LibOrbisPkg.PFS
 {
-  // Per-extraction counters; readers are used sequentially, not concurrently.
+  // Per-extraction counters; readers increment them atomically across file workers.
   public sealed class ReadTimings
   {
     public long PackageReadTicks;

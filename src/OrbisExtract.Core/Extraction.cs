@@ -10,7 +10,10 @@ public sealed record ExtractionRequest(
     string? Passcode = null,
     bool FailOnExistingFiles = true,
     IExtractionDestination? Destination = null,
-    ExtractionPauseGate? PauseGate = null);
+    ExtractionPauseGate? PauseGate = null,
+    int MaxFileWorkers = 1,
+    bool ResumeExistingFiles = false,
+    bool VerifyPackageIntegrity = false);
 
 public sealed class ExtractionPauseGate
 {
@@ -57,7 +60,12 @@ public interface IExtractionDestination
     Task DeleteTemporaryFileAsync(Stream temporaryFile, CancellationToken cancellationToken = default);
 }
 
-public sealed class LocalExtractionDestination : IExtractionDestination
+public interface IResumableExtractionDestination : IExtractionDestination
+{
+    Task<Stream?> OpenExistingFileAsync(string relativePath, CancellationToken cancellationToken = default);
+}
+
+public sealed class LocalExtractionDestination : IResumableExtractionDestination
 {
     private readonly string root;
     private readonly bool failOnExistingFiles;
@@ -67,6 +75,48 @@ public sealed class LocalExtractionDestination : IExtractionDestination
         this.root = Path.GetFullPath(root);
         this.failOnExistingFiles = failOnExistingFiles;
         Directory.CreateDirectory(this.root);
+    }
+
+    public void CheckAvailableSpace(long requiredBytes)
+    {
+        if (requiredBytes <= 0 || root.StartsWith(@"\\", System.StringComparison.Ordinal)) return;
+        long available;
+        try
+        {
+            // On Unix the destination may be on a nested mount rather than '/'.
+            var comparison = System.OperatingSystem.IsWindows()
+                ? System.StringComparison.OrdinalIgnoreCase : System.StringComparison.Ordinal;
+            DriveInfo? match = null;
+            var path = Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar;
+            foreach (var drive in DriveInfo.GetDrives())
+            {
+                var prefix = Path.EndsInDirectorySeparator(drive.Name) ? drive.Name : drive.Name + Path.DirectorySeparatorChar;
+                if (path.StartsWith(prefix, comparison) && (match is null || drive.Name.Length > match.Name.Length))
+                    match = drive;
+            }
+            if (match is null) return;
+            available = match.AvailableFreeSpace;
+        }
+        catch (IOException) { return; }
+        catch (System.UnauthorizedAccessException) { return; }
+        if (requiredBytes > available)
+            throw new PkgExtractionException($"Espaço insuficiente no destino. Necessário: {requiredBytes:N0} bytes; disponível: {available:N0} bytes.");
+    }
+
+    public Task<Stream?> OpenExistingFileAsync(string relativePath, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var output = SafeExtractionPath.Resolve(root, relativePath);
+        EnsureNoReparsePoints(relativePath);
+        if (Directory.Exists(output))
+            throw new PkgExtractionException($"Uma pasta ocupa o caminho do arquivo: {relativePath}");
+        try
+        {
+            Stream file = new FileStream(output, FileMode.Open, FileAccess.Read, FileShare.Read, 1, FileOptions.SequentialScan | FileOptions.Asynchronous);
+            return Task.FromResult<Stream?>(file);
+        }
+        catch (FileNotFoundException) { return Task.FromResult<Stream?>(null); }
+        catch (DirectoryNotFoundException) { return Task.FromResult<Stream?>(null); }
     }
 
     public Task<Stream> CreateTemporaryFileAsync(string relativePath, CancellationToken cancellationToken = default)

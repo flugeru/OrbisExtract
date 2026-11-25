@@ -195,6 +195,147 @@ public sealed class ExtractionEngineTests
         Assert.Equal(payload, destination.Payload);
     }
 
+    [Fact]
+    public async Task ParallelLocalFileExtractionMatchesSequentialOutputAndReportsIncreasingProgress()
+    {
+        using var workspace = new TestDirectory();
+        using var generated = CreatePackage(out var payload, payloadLength: 9 * 1024 * 1024 + 37);
+        var packagePath = Path.Combine(workspace.Root, "game.pkg");
+        await File.WriteAllBytesAsync(packagePath, generated.ToArray());
+        var sequential = Path.Combine(workspace.Root, "sequential");
+        var parallel = Path.Combine(workspace.Root, "parallel");
+        var extractor = new OpenOrbisPkgExtractor();
+        var expected = await extractor.ExtractAsync(new ExtractionRequest(generated, sequential, MaxFileWorkers: 4));
+        Assert.Contains("file-workers=1;", expected.PerformanceSummary);
+        await using var file = File.OpenRead(packagePath);
+        long bytes = 0, files = 0;
+        var progress = new CallbackProgress(value =>
+        {
+            Assert.True(value.BytesCompleted >= bytes);
+            Assert.True(value.FilesCompleted >= files);
+            if (value.BytesTotal is long total) Assert.True(value.BytesCompleted <= total);
+            bytes = value.BytesCompleted;
+            files = value.FilesCompleted;
+        });
+
+        var actual = await extractor.ExtractAsync(new ExtractionRequest(file, parallel, MaxFileWorkers: 4), progress);
+        Assert.Contains("file-workers=4;", actual.PerformanceSummary);
+        Assert.Equal(expected.FilesExtracted, files);
+        Assert.Equal(expected.BytesExtracted, bytes);
+        Assert.Equal(expected.FilesExtracted, actual.FilesExtracted);
+        Assert.Equal(expected.BytesExtracted, actual.BytesExtracted);
+        foreach (var entry in Directory.GetFiles(sequential, "*", SearchOption.AllDirectories))
+            Assert.Equal(await File.ReadAllBytesAsync(entry), await File.ReadAllBytesAsync(
+                Path.Combine(parallel, Path.GetRelativePath(sequential, entry))));
+        Assert.Equal(payload, await File.ReadAllBytesAsync(Path.Combine(parallel, "data", "payload.bin")));
+        Assert.Empty(Directory.GetFiles(parallel, "*.tmp", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task ResumesAfterCancellationAndLeavesMatchingExistingFilesUntouched()
+    {
+        using var workspace = new TestDirectory();
+        using var generated = CreatePackage(out var payload);
+        var extractor = new OpenOrbisPkgExtractor();
+        using var cancellation = new CancellationTokenSource();
+        var progress = new CallbackProgress(value =>
+        {
+            if (value.CurrentPath == "data/payload.bin") cancellation.Cancel();
+        });
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => extractor.ExtractAsync(
+            new ExtractionRequest(generated, workspace.Root), progress, cancellation.Token));
+        var empty = Path.Combine(workspace.Root, "data", "empty.bin");
+        File.SetLastWriteTimeUtc(empty, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var timestamp = File.GetLastWriteTimeUtc(empty);
+        var output = Path.Combine(workspace.Root, "data", "payload.bin");
+        Assert.False(File.Exists(output));
+
+        using var reopened = new MemoryStream(generated.ToArray());
+        await extractor.ExtractAsync(new ExtractionRequest(reopened, workspace.Root, ResumeExistingFiles: true));
+        Assert.Equal(timestamp, File.GetLastWriteTimeUtc(empty));
+        Assert.Equal(payload, await File.ReadAllBytesAsync(output));
+    }
+
+    [Fact]
+    public async Task ResumeRejectsSameLengthCorruptionWithoutWritingMissingFiles()
+    {
+        using var workspace = new TestDirectory();
+        using var package = CreatePackage(out var payload);
+        Directory.CreateDirectory(Path.Combine(workspace.Root, "data"));
+        var output = Path.Combine(workspace.Root, "data", "payload.bin");
+        payload[0] ^= 0xff;
+        await File.WriteAllBytesAsync(output, payload);
+
+        var error = await Assert.ThrowsAsync<PkgExtractionException>(() => new OpenOrbisPkgExtractor().ExtractAsync(
+            new ExtractionRequest(package, workspace.Root, ResumeExistingFiles: true)));
+        Assert.Contains("data/payload.bin", error.Message);
+        Assert.Equal(payload, await File.ReadAllBytesAsync(output));
+        Assert.False(File.Exists(Path.Combine(workspace.Root, "data", "empty.bin")));
+    }
+
+    [Fact]
+    public async Task ResumeRejectsExtraBytesFromNonSeekableDestination()
+    {
+        using var workspace = new TestDirectory();
+        using var package = CreatePackage(out _);
+        var destination = new NonSeekableExistingDestination();
+        var error = await Assert.ThrowsAsync<PkgExtractionException>(() => new OpenOrbisPkgExtractor().ExtractAsync(
+            new ExtractionRequest(package, workspace.Root, Destination: destination, ResumeExistingFiles: true)));
+        Assert.Contains("data/empty.bin", error.Message);
+    }
+
+    private sealed class NonSeekableExistingDestination : IResumableExtractionDestination
+    {
+        public Task<Stream?> OpenExistingFileAsync(string relativePath, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Stream?>(relativePath == "data/empty.bin" ? new ForwardOnlyStream([1]) : null);
+
+        public Task<Stream> CreateTemporaryFileAsync(string relativePath, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Resume must verify all existing files before opening any output.");
+
+        public Task CommitAsync(Stream temporaryFile, string relativePath, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task DeleteTemporaryFileAsync(Stream temporaryFile, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task VerifiesBodyAndPfsDigestsBeforeExtraction(bool corruptPfs)
+    {
+        using var workspace = new TestDirectory();
+        using var package = CreatePackage(out _);
+        var extractor = new OpenOrbisPkgExtractor();
+        Assert.True((await extractor.ExtractAsync(new ExtractionRequest(package,
+            Path.Combine(workspace.Root, "valid"), VerifyPackageIntegrity: true))).FilesExtracted > 0);
+        var header = new PkgReader(package).ReadPkg(readOptionalEntries: false).Header;
+        long position = corruptPfs
+            ? (long)(header.pfs_image_offset + header.pfs_image_size - 1)
+            : (long)(header.body_offset + header.body_size - 1);
+        package.Position = position;
+        var original = package.ReadByte();
+        Assert.NotEqual(-1, original);
+        package.Position = position;
+        package.WriteByte((byte)(original ^ 0xff));
+        var rejected = Path.Combine(workspace.Root, "rejected");
+        var error = await Assert.ThrowsAsync<PkgExtractionException>(() => extractor.ExtractAsync(
+            new ExtractionRequest(package, rejected, VerifyPackageIntegrity: true)));
+        Assert.Contains(corruptPfs ? "SHA-256 do PKG (PFS)" : "SHA-256 do PKG (corpo)", error.Message);
+        Assert.False(Directory.Exists(rejected));
+    }
+
+    [Fact]
+    public void LocalDestinationRejectsInsufficientSpace()
+    {
+        using var workspace = new TestDirectory();
+        if (workspace.Root.StartsWith(@"\\", StringComparison.Ordinal)) return;
+        var destination = new LocalExtractionDestination(workspace.Root);
+        destination.CheckAvailableSpace(0);
+        Assert.Throws<PkgExtractionException>(() => destination.CheckAvailableSpace(long.MaxValue));
+        Assert.Empty(Directory.GetFileSystemEntries(workspace.Root));
+    }
+
     private static readonly byte[] Artwork = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAA00lEQVR4AQHIADf/APjTeFUim2Qim3Mim4Iim5Eim6Aim/jTeABGK6X403hkK6VzK6WCK6WRK6X403ivK6UARjSvVTSv+NN4czSvgjSv+NN4oDSvrzSvAEY9uVU9uWQ9ufjTePjTeJE9uaA9ua89uQBGRsNVRsNkRsP403j403iRRsOgRsOvRsMARk/NVU/N+NN4c0/Ngk/N+NN4oE/Nr0/NAEZY1/jTeGRY13NY14JY15FY1/jTeK9Y1wD403hVYeFkYeFzYeGCYeGRYeGgYeH403jQyWsRvyJ4ZAAAAABJRU5ErkJggg==");
 

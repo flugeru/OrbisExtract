@@ -143,7 +143,7 @@ namespace LibOrbisPkg.PFS
         long started = timings == null ? 0 : System.Diagnostics.Stopwatch.GetTimestamp();
         DecryptSectors(ctx, sectorBuf, (ulong)currentSector, (int)sectorSize);
         if (timings != null)
-          timings.DecryptionTicks += System.Diagnostics.Stopwatch.GetTimestamp() - started;
+          System.Threading.Interlocked.Add(ref timings.DecryptionTicks, System.Diagnostics.Stopwatch.GetTimestamp() - started);
       }
     }
 

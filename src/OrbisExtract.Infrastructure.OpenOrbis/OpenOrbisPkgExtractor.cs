@@ -30,6 +30,16 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             package.Header.pfs_image_size > packageLength - package.Header.pfs_image_offset ||
             package.Header.pfs_image_size == 0)
             throw new PkgExtractionException("Imagem PFS ausente ou fora dos limites do PKG.");
+        if (request.VerifyPackageIntegrity)
+        {
+            var header = package.Header;
+            if (header.body_offset > packageLength || header.body_size > packageLength - header.body_offset)
+                throw new PkgExtractionException("Corpo fora dos limites do PKG.");
+            progress?.Report(new ExtractionProgress("Verificando", null, 0, null, 0, null));
+            await VerifyRegionAsync(header.body_offset, header.body_size, header.body_digest, "corpo", request, cancellationToken).ConfigureAwait(false);
+            await VerifyRegionAsync(header.pfs_image_offset, header.pfs_image_size, header.pfs_image_digest, "PFS", request, cancellationToken).ConfigureAwait(false);
+        }
+
         // Fake PKGs commonly use the all-zero passcode. Verify it against the
         // package digest rather than assuming it applies to every PKG.
         var passcode = request.Passcode;
@@ -45,10 +55,10 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             throw new PkgExtractionException("Este PKG é criptografado ou exige passcode.");
 
         cancellationToken.ThrowIfCancellationRequested();
-        request.Package.Position = 0;
         var timings = new ReadTimings();
+        var packageSource = new PackageSource(request.Package);
         var imageLength = (long)package.Header.pfs_image_size;
-        using var accessor = new PkgMemoryReader(request.Package, (long)package.Header.pfs_image_offset, imageLength, timings, cancellationToken);
+        using var accessor = new PkgMemoryReader(packageSource, (long)package.Header.pfs_image_offset, imageLength, timings, cancellationToken);
         var outer = new PfsReader(accessor, package.Header.pfs_flags, ekpfs, timings: timings, imageLength: imageLength);
         var innerImage = outer.GetFile("pfs_image.dat") ??
             throw new PkgExtractionException("O PKG não contém a imagem interna pfs_image.dat.");
@@ -110,7 +120,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             if ((ulong)entry.DataOffset + (ulong)readSize > (ulong)request.Package.Length)
                 throw new PkgExtractionException($"Entrada PKG fora dos limites: {path}");
             files.Add((path, entry.DataSize,
-                () => OpenPkgEntry(request.Package, package, entry, passcode, readSize)));
+                () => OpenPkgEntry(packageSource, package, entry, passcode, readSize)));
         }
 
         files = files
@@ -135,51 +145,103 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             }
         }
         long count = 0, bytes = 0;
+        var totalFiles = files.Count;
         var totalBytes = files.Sum(item => item.Size);
-        using var buffers = new CopyBuffers(files.Any(file => file.Size >= ReadAheadMinimum));
+        var progressLock = new object();
         cancellationToken.ThrowIfCancellationRequested();
         var destination = request.Destination ?? new LocalExtractionDestination(request.DestinationDirectory, request.FailOnExistingFiles);
+        var localDestination = destination as LocalExtractionDestination;
+        if (request.ResumeExistingFiles)
+        {
+            if (destination is not IResumableExtractionDestination resumable)
+                throw new PkgExtractionException("Este destino não permite verificar arquivos existentes.");
+
+            var pending = new List<(string RelativePath, long Size, Func<Stream> Open)>();
+            foreach (var item in files)
+            {
+                if (request.PauseGate is not null) await request.PauseGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                using var existing = await resumable.OpenExistingFileAsync(item.RelativePath, cancellationToken).ConfigureAwait(false);
+                if (existing is null)
+                {
+                    pending.Add(item);
+                    continue;
+                }
+                // Compare with the current package, not a size, timestamp, or untrusted sidecar.
+                if (existing.CanSeek && existing.Length != item.Size)
+                    throw ExistingFileMismatch(item.RelativePath);
+                using var source = item.Open();
+                var sourceHash = await HashContentsAsync(source, item.Size, request.PauseGate, cancellationToken).ConfigureAwait(false);
+                byte[] existingHash;
+                try
+                {
+                    existingHash = await HashContentsAsync(existing, item.Size, request.PauseGate, cancellationToken, requireEof: true).ConfigureAwait(false);
+                }
+                catch (EndOfStreamException) { throw ExistingFileMismatch(item.RelativePath); }
+                if (!CryptographicOperations.FixedTimeEquals(sourceHash, existingHash))
+                    throw ExistingFileMismatch(item.RelativePath);
+                count++;
+                bytes += item.Size;
+                progress?.Report(new ExtractionProgress("Verificando", item.RelativePath, count, totalFiles, bytes, totalBytes));
+            }
+            files = pending;
+        }
+
+        localDestination?.CheckAvailableSpace(totalBytes - bytes);
+        // Only opt in when both ends support independent file operations.
+        var workers = packageSource.SupportsPositionalReads && localDestination is not null
+            ? Math.Min(files.Count, Math.Clamp(request.MaxFileWorkers, 1, 4)) : 1;
         var preparationTime = Stopwatch.GetElapsedTime(preparationStarted);
         long readTicks = 0, writeTicks = 0, destinationTicks = 0;
-        async ValueTask<int> ReadChunkAsync(Stream source, byte[] buffer, long remaining)
+        void Report(string path, long written = 0, bool completed = false)
+        {
+            lock (progressLock)
+            {
+                bytes += written;
+                if (completed) count++;
+                progress?.Report(new ExtractionProgress("Extraindo", path, count, totalFiles, bytes, totalBytes));
+            }
+        }
+        async ValueTask<int> ReadChunkAsync(Stream source, byte[] buffer, long remaining, CancellationToken token)
         {
             var start = Stopwatch.GetTimestamp();
-            int read = await source.ReadAsync(buffer.AsMemory(0, (int)Math.Min(CopyBlockSize, remaining)),
-                cancellationToken).ConfigureAwait(false);
-            readTicks += Stopwatch.GetTimestamp() - start;
+            int read = await source.ReadAsync(buffer.AsMemory(0, (int)Math.Min(Math.Min(CopyBlockSize, buffer.Length), remaining)),
+                token).ConfigureAwait(false);
+            Interlocked.Add(ref readTicks, Stopwatch.GetTimestamp() - start);
             return read;
         }
 
-        async ValueTask WriteChunkAsync(Stream destination, byte[] buffer, int count)
+        async ValueTask WriteChunkAsync(Stream destination, byte[] buffer, int count, CancellationToken token)
         {
             var start = Stopwatch.GetTimestamp();
-            await destination.WriteAsync(buffer.AsMemory(0, count), cancellationToken).ConfigureAwait(false);
-            writeTicks += Stopwatch.GetTimestamp() - start;
+            await destination.WriteAsync(buffer.AsMemory(0, count), token).ConfigureAwait(false);
+            Interlocked.Add(ref writeTicks, Stopwatch.GetTimestamp() - start);
         }
 
-        foreach (var item in files)
+        async ValueTask ExtractFileAsync((string RelativePath, long Size, Func<Stream> Open) item, CopyBuffers buffers, CancellationToken token)
         {
-            if (request.PauseGate is not null) await request.PauseGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
+            if (request.PauseGate is not null) await request.PauseGate.WaitAsync(token).ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
             Stream? target = null;
             try
             {
                 var relativePath = item.RelativePath;
                 var operationStarted = Stopwatch.GetTimestamp();
-                target = await destination.CreateTemporaryFileAsync(relativePath, cancellationToken).ConfigureAwait(false);
-                destinationTicks += Stopwatch.GetTimestamp() - operationStarted;
+                target = await destination.CreateTemporaryFileAsync(relativePath, token).ConfigureAwait(false);
+                Interlocked.Add(ref destinationTicks, Stopwatch.GetTimestamp() - operationStarted);
                 using var source = item.Open();
                 long fileBytes = 0;
-                var buffer = buffers.First;
+                var buffer = buffers.GetFirst(item.Size);
                 var spare = item.Size >= ReadAheadMinimum ? buffers.Second : null;
                 int? prefetched = null;
-                var lastReport = System.Diagnostics.Stopwatch.StartNew();
-                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Count, bytes, totalBytes));
+                var lastReport = Stopwatch.StartNew();
+                long reportedFileBytes = 0;
+                Report(relativePath);
                 while (fileBytes < item.Size)
                 {
-                    if (request.PauseGate is not null) await request.PauseGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var read = prefetched ?? await ReadChunkAsync(source, buffer, item.Size - fileBytes).ConfigureAwait(false);
+                    if (request.PauseGate is not null) await request.PauseGate.WaitAsync(token).ConfigureAwait(false);
+                    token.ThrowIfCancellationRequested();
+                    var read = prefetched ?? await ReadChunkAsync(source, buffer, item.Size - fileBytes, token).ConfigureAwait(false);
                     prefetched = null;
                     if (read == 0) break;
                     var remaining = item.Size - fileBytes - read;
@@ -188,8 +250,8 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                         // At most one read and one write are in flight. A
                         // failed write must drain the read before returning
                         // memory to the pool or disposing the source.
-                        var writing = WriteChunkAsync(target, buffer, read);
-                        var reading = ReadChunkAsync(source, spare, remaining);
+                        var writing = WriteChunkAsync(target, buffer, read, token);
+                        var reading = ReadChunkAsync(source, spare, remaining, token);
                         try { await writing.ConfigureAwait(false); }
                         catch
                         {
@@ -201,12 +263,13 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                     }
                     else
                     {
-                        await WriteChunkAsync(target, buffer, read).ConfigureAwait(false);
+                        await WriteChunkAsync(target, buffer, read, token).ConfigureAwait(false);
                     }
                     fileBytes += read;
                     if (lastReport.ElapsedMilliseconds >= 150 || fileBytes == item.Size)
                     {
-                        progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Count, bytes + fileBytes, totalBytes));
+                        Report(relativePath, fileBytes - reportedFileBytes);
+                        reportedFileBytes = fileBytes;
                         lastReport.Restart();
                     }
                 }
@@ -214,15 +277,13 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 if (fileBytes != item.Size)
                     throw new PkgExtractionException($"Arquivo truncado: {relativePath} ({fileBytes}/{item.Size} bytes).");
 
-                if (request.PauseGate is not null) await request.PauseGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                if (request.PauseGate is not null) await request.PauseGate.WaitAsync(token).ConfigureAwait(false);
                 operationStarted = Stopwatch.GetTimestamp();
-                await target.FlushAsync(cancellationToken).ConfigureAwait(false);
-                await destination.CommitAsync(target, relativePath, cancellationToken).ConfigureAwait(false);
-                destinationTicks += Stopwatch.GetTimestamp() - operationStarted;
+                await target.FlushAsync(token).ConfigureAwait(false);
+                await destination.CommitAsync(target, relativePath, token).ConfigureAwait(false);
+                Interlocked.Add(ref destinationTicks, Stopwatch.GetTimestamp() - operationStarted);
                 target = null;
-                count++;
-                bytes += fileBytes;
-                progress?.Report(new ExtractionProgress("Extraindo", relativePath, count, files.Count, bytes, totalBytes));
+                Report(relativePath, fileBytes - reportedFileBytes, completed: true);
             }
             catch
             {
@@ -243,24 +304,96 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
                 throw;
             }
         }
-        progress?.Report(new ExtractionProgress("Concluído", null, count, files.Count, bytes, null));
+        if (workers > 1)
+        {
+            int next = -1;
+            await Parallel.ForEachAsync(Enumerable.Range(0, workers), new ParallelOptions
+            {
+                MaxDegreeOfParallelism = workers,
+                CancellationToken = cancellationToken,
+            }, async (_, token) =>
+            {
+                using var buffers = new CopyBuffers();
+                int index;
+                while (!token.IsCancellationRequested && (index = Interlocked.Increment(ref next)) < files.Count)
+                    await ExtractFileAsync(files[index], buffers, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+        else if (files.Count != 0)
+        {
+            using var buffers = new CopyBuffers();
+            foreach (var item in files)
+                await ExtractFileAsync(item, buffers, cancellationToken).ConfigureAwait(false);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        progress?.Report(new ExtractionProgress("Concluído", null, count, totalFiles, bytes, null));
         return new ExtractionResult(count, bytes)
         {
-            // The accumulated read and write timings can overlap.
+            // The accumulated read and write timings can overlap across files.
             PerformanceSummary = FormattableString.Invariant(
-                $"Performance: preparation={preparationTime.TotalSeconds:F2}s; read+decrypt+decompress={(double)readTicks / Stopwatch.Frequency:F2}s; write={(double)writeTicks / Stopwatch.Frequency:F2}s; create+commit={(double)destinationTicks / Stopwatch.Frequency:F2}s; PKG-read={(double)timings.PackageReadTicks / Stopwatch.Frequency:F2}s; AES-XTS={(double)timings.DecryptionTicks / Stopwatch.Frequency:F2}s; deflate={(double)timings.DecompressionTicks / Stopwatch.Frequency:F2}s")
+                $"Performance: file-workers={(files.Count == 0 ? 0 : workers)}; preparation={preparationTime.TotalSeconds:F2}s; read+decrypt+decompress={(double)readTicks / Stopwatch.Frequency:F2}s; write={(double)writeTicks / Stopwatch.Frequency:F2}s; create+commit={(double)destinationTicks / Stopwatch.Frequency:F2}s; PKG-read={(double)timings.PackageReadTicks / Stopwatch.Frequency:F2}s; AES-XTS={(double)timings.DecryptionTicks / Stopwatch.Frequency:F2}s; deflate={(double)timings.DecompressionTicks / Stopwatch.Frequency:F2}s")
         };
     }
 
-    private sealed class CopyBuffers(bool readAhead) : IDisposable
+    private static async Task VerifyRegionAsync(ulong start, ulong size, byte[] expected, string name,
+        ExtractionRequest request, CancellationToken token)
     {
-        public byte[] First { get; } = ArrayPool<byte>.Shared.Rent(CopyBlockSize);
-        public byte[]? Second { get; } = readAhead ? ArrayPool<byte>.Shared.Rent(CopyBlockSize) : null;
+        if (size == 0 || expected.Length != 32 || !expected.Any(value => value != 0))
+            throw new PkgExtractionException($"O PKG não fornece um SHA-256 verificável para {name}.");
+        request.Package.Position = (long)start;
+        var actual = await HashContentsAsync(request.Package, (long)size, request.PauseGate, token).ConfigureAwait(false);
+        if (!CryptographicOperations.FixedTimeEquals(expected, actual))
+            throw new PkgExtractionException($"Falha na verificação SHA-256 do PKG ({name}).");
+    }
+
+    private static PkgExtractionException ExistingFileMismatch(string path) =>
+        new($"Arquivo existente diferente do PKG: {path}. Escolha outra pasta ou mova o arquivo antes de retomar.");
+
+    private static async Task<byte[]> HashContentsAsync(Stream source, long size, ExtractionPauseGate? pauseGate,
+        CancellationToken token, bool requireEof = false)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var buffer = ArrayPool<byte>.Shared.Rent((int)Math.Clamp(size, 1, CopyBlockSize));
+        try
+        {
+            while (size > 0)
+            {
+                if (pauseGate is not null) await pauseGate.WaitAsync(token).ConfigureAwait(false);
+                int read = await source.ReadAsync(buffer.AsMemory(0, (int)Math.Min(size, CopyBlockSize)), token).ConfigureAwait(false);
+                if (read == 0) throw new EndOfStreamException("Arquivo truncado durante a verificação.");
+                hash.AppendData(buffer, 0, read);
+                size -= read;
+            }
+            if (requireEof && await source.ReadAsync(buffer.AsMemory(0, 1), token).ConfigureAwait(false) != 0)
+                throw new EndOfStreamException("O arquivo contém bytes além do tamanho esperado.");
+            return hash.GetHashAndReset();
+        }
+        finally { ArrayPool<byte>.Shared.Return(buffer); }
+    }
+
+    private sealed class CopyBuffers : IDisposable
+    {
+        private byte[]? first, second;
+        public byte[] GetFirst(long fileSize)
+        {
+            if (fileSize == 0) return Array.Empty<byte>();
+            int size = (int)Math.Clamp(fileSize, 4096, CopyBlockSize);
+            if (first is null || first.Length < size)
+            {
+                var next = ArrayPool<byte>.Shared.Rent(size);
+                if (first is not null) ArrayPool<byte>.Shared.Return(first);
+                first = next;
+            }
+            return first;
+        }
+
+        public byte[] Second => second ??= ArrayPool<byte>.Shared.Rent(CopyBlockSize);
 
         public void Dispose()
         {
-            ArrayPool<byte>.Shared.Return(First);
-            if (Second is not null) ArrayPool<byte>.Shared.Return(Second);
+            if (first is not null) ArrayPool<byte>.Shared.Return(first);
+            if (second is not null) ArrayPool<byte>.Shared.Return(second);
         }
     }
 
@@ -290,7 +423,7 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             : path;
     }
 
-    private static Stream OpenPkgEntry(Stream stream, Pkg package, MetaEntry entry, string? passcode, long readSize)
+    private static Stream OpenPkgEntry(PackageSource stream, Pkg package, MetaEntry entry, string? passcode, long readSize)
     {
         if (!entry.Encrypted)
             return new PkgStreamAccessor(stream, entry.DataOffset, entry.DataSize);
@@ -348,12 +481,30 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
+    private sealed class PackageSource(Stream stream)
+    {
+        // Android document providers may expose unusual descriptors. Keep them on
+        // the buffered stream path; use an OS file offset only for desktop files.
+        private readonly Microsoft.Win32.SafeHandles.SafeFileHandle? handle =
+            !OperatingSystem.IsAndroid() && stream is FileStream file && stream.GetType() == typeof(FileStream)
+                ? file.SafeFileHandle : null;
+        public bool SupportsPositionalReads => handle is not null;
+
+        public int Read(long position, byte[] buffer, int offset, int count)
+        {
+            if (handle is not null)
+                return RandomAccess.Read(handle, buffer.AsSpan(offset, count), position);
+            if (stream.Position != position) stream.Seek(position, SeekOrigin.Begin);
+            return stream.Read(buffer, offset, count);
+        }
+    }
+
     private sealed class PkgMemoryReader : IMemoryReader
     {
-        private readonly Stream stream; private readonly long start, length;
+        private readonly PackageSource stream; private readonly long start, length;
         private readonly ReadTimings timings;
         private readonly CancellationToken cancellationToken;
-        public PkgMemoryReader(Stream stream, long start, long length, ReadTimings timings, CancellationToken cancellationToken)
+        public PkgMemoryReader(PackageSource stream, long start, long length, ReadTimings timings, CancellationToken cancellationToken)
         {
             this.stream = stream;
             this.start = start;
@@ -366,29 +517,26 @@ public sealed class OpenOrbisPkgExtractor : IPkgExtractor
             cancellationToken.ThrowIfCancellationRequested();
             if (position < 0 || count < 0 || position > length - count) throw new EndOfStreamException("Leitura fora dos limites do PKG.");
             var started = Stopwatch.GetTimestamp();
-            // Do not invalidate BufferedStream's read-ahead for sequential sectors.
-            if (stream.Position != start + position)
-                stream.Seek(start + position, SeekOrigin.Begin);
             var read = 0;
             while (read < count)
             {
-                var n = stream.Read(buffer, offset + read, count - read);
+                var n = stream.Read(start + position + read, buffer, offset + read, count - read);
                 if (n == 0) throw new EndOfStreamException("PKG truncado.");
                 read += n;
             }
-            timings.PackageReadTicks += Stopwatch.GetTimestamp() - started;
+            Interlocked.Add(ref timings.PackageReadTicks, Stopwatch.GetTimestamp() - started);
         }
         public void Dispose() { }
     }
 
     private sealed class PkgStreamAccessor : Stream
     {
-        private readonly Stream inner; private readonly long start, length; private long position;
-        public PkgStreamAccessor(Stream inner, long start, long length) { this.inner = inner; this.start = start; this.length = length; }
+        private readonly PackageSource inner; private readonly long start, length; private long position;
+        public PkgStreamAccessor(PackageSource inner, long start, long length) { this.inner = inner; this.start = start; this.length = length; }
         public override bool CanRead => true; public override bool CanSeek => true; public override bool CanWrite => false;
         public override long Length => length; public override long Position { get => position; set => Seek(value, SeekOrigin.Begin); }
         public override void Flush() { }
-        public override int Read(byte[] buffer, int offset, int count) { var allowed = (int)Math.Min(count, length - position); if (allowed <= 0) return 0; var absolute = start + position; if (inner.Position != absolute) inner.Position = absolute; var n = inner.Read(buffer, offset, allowed); position += n; return n; }
+        public override int Read(byte[] buffer, int offset, int count) { var allowed = (int)Math.Min(count, length - position); if (allowed <= 0) return 0; var n = inner.Read(start + position, buffer, offset, allowed); position += n; return n; }
         public override long Seek(long offset, SeekOrigin origin) { var next = origin switch { SeekOrigin.Begin => offset, SeekOrigin.Current => position + offset, SeekOrigin.End => length + offset, _ => throw new ArgumentOutOfRangeException(nameof(origin)) }; if (next < 0 || next > length) throw new IOException("Seek fora dos limites do PFS."); position = next; return position; }
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
